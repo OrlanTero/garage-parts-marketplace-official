@@ -1,0 +1,666 @@
+/* ==========================================================================
+   Cars Marketplace Page Styles
+   ========================================================================== */
+
+.marketplace-page {
+  padding-bottom: 80px;
+  background: var(--color-background);
+}
+
+/* ==========================================================================
+   1. Marketplace Hero Header
+   ========================================================================== */
+
+.marketplace-hero {
+  background: linear-gradient(180deg, #181b20 0%, #1f2329 100%);
+  color: #ffffff;
+  padding: 48px 0 36px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.marketplace-hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(224, 108, 53, 0.18) 0%, rgba(224, 108, 53, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.marketplace-hero-inner {
+  width: min(1320px, 94vw);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.marketplace-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ff9f6b;
+}
+
+.marketplace-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.15;
+}
+
+.marketplace-lead {
+  margin: 0;
+  font-size: 15px;
+  color: #c2c8d0;
+  max-width: 680px;
+  line-height: 1.6;
+}
+
+/* Hero Quick Presets Bar */
+.marketplace-presets {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding-top: 8px;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.marketplace-presets::-webkit-scrollbar {
+  display: none;
+}
+
+.preset-pill {
+  padding: 7px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  color: #e4e7eb;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preset-pill:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+.preset-pill.active {
+  background: var(--gradient-rust);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(146, 68, 36, 0.4);
+}
+
+/* ==========================================================================
+   2. Filter & Controls Toolbar
+   ========================================================================== */
+
+.marketplace-container {
+  width: min(1320px, 94vw);
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+.marketplace-toolbar {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.toolbar-primary-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-input-box {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.search-input-box svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.search-input-box input {
+  width: 100%;
+  padding: 10px 36px 10px 40px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-sand-light);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-heading);
+  outline: none;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+  box-sizing: border-box;
+}
+
+.search-input-box input:focus {
+  border-color: var(--color-rust);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(224, 108, 53, 0.12);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+}
+
+.filter-select {
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: #ffffff;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-heading);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.filter-select:focus, .filter-select:hover {
+  border-color: var(--color-rust);
+}
+
+.filter-price-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-price-input {
+  width: 105px;
+  padding: 10px 12px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: #ffffff;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-heading);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.filter-price-input:focus {
+  border-color: var(--color-rust);
+  box-shadow: 0 0 0 3px rgba(224, 108, 53, 0.12);
+}
+
+.price-sep {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.toolbar-secondary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.results-count-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.results-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.verified-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #147043;
+  background: #e6f7ef;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(20, 112, 67, 0.2);
+}
+
+.view-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.view-mode-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--color-sand-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+}
+
+.view-mode-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--color-metal);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+
+.view-mode-btn.active {
+  background: #ffffff;
+  color: var(--color-rust);
+  box-shadow: var(--shadow-sm);
+}
+
+.mobile-filter-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: #ffffff;
+  color: var(--color-heading);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   3. Active Filters Chips Bar
+   ========================================================================== */
+
+.active-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  padding: 10px 16px;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-border);
+}
+
+.active-filters-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-right: 4px;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-sand-light);
+  border: 1px solid var(--color-border);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.active-filter-chip button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: grid;
+  place-items: center;
+  transition: color 0.15s;
+}
+
+.active-filter-chip button:hover {
+  color: var(--color-error);
+}
+
+.clear-all-filters-btn {
+  background: none;
+  border: none;
+  color: var(--color-rust);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-left: auto;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   4. Cars Grid & List Views
+   ========================================================================== */
+
+.marketplace-cars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.marketplace-cars-grid.list-view {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+/* Skeleton Loading Cards */
+.car-skeleton-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-media {
+  aspect-ratio: 16 / 11;
+  background: linear-gradient(90deg, #f0f1f4 25%, #e4e6eb 50%, #f0f1f4 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+.skeleton-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-line {
+  height: 14px;
+  background: linear-gradient(90deg, #f0f1f4 25%, #e4e6eb 50%, #f0f1f4 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Empty State */
+.marketplace-empty-state {
+  text-align: center;
+  padding: 64px 24px;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  margin: 20px 0;
+}
+
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-orange-light);
+  color: var(--color-rust);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+}
+
+.marketplace-empty-state h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.marketplace-empty-state p {
+  color: var(--color-text-muted);
+  font-size: 14.5px;
+  max-width: 480px;
+  margin: 0 auto 24px;
+}
+
+.empty-state-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   5. Pagination Controls
+   ========================================================================== */
+
+.marketplace-pagination {
+  margin-top: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-border);
+  background: #ffffff;
+  color: var(--color-heading);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--color-rust);
+  color: var(--color-rust);
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-pill {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  background: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-metal);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+
+.page-pill:hover {
+  border-color: var(--color-rust);
+  color: var(--color-rust);
+}
+
+.page-pill.active {
+  background: var(--gradient-rust);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(146, 68, 36, 0.3);
+}
+
+/* ==========================================================================
+   6. Escrow & Sell CTA Banners
+   ========================================================================== */
+
+.marketplace-trust-banner {
+  margin-top: 56px;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  padding: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.trust-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.trust-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--color-orange-light);
+  color: var(--color-rust);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.trust-item-text h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.trust-item-text p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.marketplace-sell-cta {
+  margin-top: 32px;
+  background: linear-gradient(135deg, #242930 0%, #17191d 100%);
+  border-radius: var(--radius-2xl);
+  padding: 40px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.sell-cta-content h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: #ffffff;
+}
+
+.sell-cta-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #b8bec8;
+  max-width: 580px;
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+
+@media (max-width: 1140px) {
+  .marketplace-cars-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .marketplace-trust-banner {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .toolbar-primary-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-price-inputs {
+    justify-content: space-between;
+  }
+  .filter-price-input {
+    flex: 1;
+    width: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .marketplace-cars-grid {
+    grid-template-columns: 1fr;
+  }
+  .marketplace-hero {
+    padding: 32px 0 24px;
+  }
+  .marketplace-sell-cta {
+    padding: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

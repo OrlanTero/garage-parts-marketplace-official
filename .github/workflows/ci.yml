@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (PHP 8.2 + Laravel)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: garage_parts
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -psecret"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, bcmath, intl, pdo_mysql, redis
+          coverage: none
+      - uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.json') }}
+      - run: cp backend/.env.example backend/.env
+        working-directory: .
+      - run: composer install --no-progress --prefer-dist --no-interaction
+        working-directory: backend
+      - run: php artisan key:generate
+        working-directory: backend
+      - run: php vendor/bin/phpunit --testsuite=Feature
+        working-directory: backend
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: garage_parts
+          DB_USERNAME: root
+          DB_PASSWORD: secret
+
+  frontend:
+    name: Frontend (React build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci || npm install
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend

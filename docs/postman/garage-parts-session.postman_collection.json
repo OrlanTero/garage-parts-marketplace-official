@@ -1,0 +1,262 @@
+{
+  "info": {
+    "name": "Garage Parts — Session + Cars + Parts Modules",
+    "description": "Import, set baseUrl=http://localhost:8000. Register/login auto-saves {{token}}; create-car auto-saves {{carId}}; create-part auto-saves {{partId}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "token", "value": "" },
+    { "key": "carId", "value": "" },
+    { "key": "partId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "GET health",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/health" }
+        }
+      ]
+    },
+    {
+      "name": "Session - public",
+      "item": [
+        {
+          "name": "POST register (buyer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.token) pm.collectionVariables.set('token', j.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Buyer One\",\n  \"email\": \"buyer1@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"buyer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST register (seller)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Seller One\",\n  \"email\": \"seller1@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"seller\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.token) pm.collectionVariables.set('token', j.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"seller1@example.com\",\n  \"password\": \"password123\",\n  \"device_name\": \"postman\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET oauth google redirect",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/auth/oauth/google/redirect?role=buyer",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "GET oauth callback (paste from browser)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/auth/oauth/google/callback?code=PASTE_CODE_HERE",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session - authenticated",
+      "item": [
+        { "name": "GET auth me", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/auth/me" } },
+        { "name": "GET me (legacy alias)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/me" } },
+        { "name": "GET ping-buyer (role:buyer)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/_session/ping-buyer" } },
+        { "name": "GET ping-seller (role:seller)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/_session/ping-seller" } },
+        { "name": "POST logout (current token)", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/auth/logout" } },
+        { "name": "POST logout-all (all tokens)", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/auth/logout-all" } }
+      ]
+    },
+    {
+      "name": "Marketplace - public (no auth)",
+      "item": [
+        {
+          "name": "GET list cars",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/marketplace/cars?sort=newest&per_page=15",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "GET list filtered (brand + price sort)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/marketplace/cars?brand=Toyota&sort=price_asc",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "GET single car",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/marketplace/cars/{{carId}}",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seller inventory (role:seller)",
+      "item": [
+        {
+          "name": "POST create car (draft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.id) pm.collectionVariables.set('carId', j.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/seller/cars",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"2019 Toyota Vios 1.3 E CVT\",\n  \"brand\": \"Toyota\",\n  \"model\": \"Vios\",\n  \"year\": 2019,\n  \"price\": 528000,\n  \"mileage_km\": 42000,\n  \"body_style\": \"sedan\",\n  \"fuel_type\": \"petrol\",\n  \"transmission\": \"automatic\",\n  \"condition\": \"used\",\n  \"city\": \"Cebu City\",\n  \"description\": \"Well maintained, new tires.\"\n}"
+            }
+          }
+        },
+        { "name": "GET my cars", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/cars" } },
+        { "name": "GET my car", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}" } },
+        {
+          "name": "PATCH update car",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 515000,\n  \"city\": \"Mandaue City\"\n}" }
+          }
+        },
+        { "name": "POST publish car", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/publish" } },
+        { "name": "POST unpublish car", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/unpublish" } },
+        { "name": "POST mark sold", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/sold" } },
+        { "name": "DELETE car", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}" } }
+      ]
+    },
+    {
+      "name": "Parts marketplace - public (no auth)",
+      "item": [
+        {
+          "name": "GET list parts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/marketplace/parts?sort=newest&per_page=15",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "GET list filtered (category + price sort)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/marketplace/parts?category=brakes&sort=price_asc",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "GET single part",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/marketplace/parts/{{partId}}",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parts seller inventory (role:seller)",
+      "item": [
+        {
+          "name": "POST create part (draft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.id) pm.collectionVariables.set('partId', j.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/seller/parts",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bosch Front Brake Pads Set\",\n  \"category\": \"brakes\",\n  \"brand\": \"Bosch\",\n  \"part_number\": \"BP-0986-AB1\",\n  \"compatibility\": \"Toyota Vios 2019+\",\n  \"condition\": \"new\",\n  \"quantity\": 4,\n  \"price\": 3850,\n  \"city\": \"Cebu City\",\n  \"description\": \"Genuine pads, sealed pack.\"\n}"
+            }
+          }
+        },
+        { "name": "GET my parts", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/parts" } },
+        { "name": "GET my part", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}" } },
+        {
+          "name": "PATCH update part",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 3599,\n  \"quantity\": 6\n}" }
+          }
+        },
+        { "name": "POST publish part", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/publish" } },
+        { "name": "POST unpublish part", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/unpublish" } },
+        { "name": "POST mark sold", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/sold" } },
+        { "name": "DELETE part", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}" } }
+      ]
+    }
+  ]
+}

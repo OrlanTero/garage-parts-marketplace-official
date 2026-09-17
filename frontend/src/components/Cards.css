@@ -1,0 +1,594 @@
+/* ==========================================================================
+   Reusable Card Components Styles (CarCard, PartCard, CategoryCard)
+   ========================================================================== */
+
+/* ==========================================================================
+   1. CarCard (Grid & List Variants)
+   ========================================================================== */
+
+.modern-car-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.modern-car-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(224, 108, 53, 0.3);
+}
+
+.modern-car-card .car-card-media {
+  position: relative;
+  aspect-ratio: 16 / 11;
+  overflow: hidden;
+  background: var(--color-sand-light);
+}
+
+.modern-car-card .car-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.modern-car-card:hover .car-card-media img {
+  transform: scale(1.06);
+}
+
+.car-card-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(20, 23, 26, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.car-card-score {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #1b8755;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 2;
+}
+
+.car-wishlist-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--color-metal);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s, color 0.2s;
+  z-index: 2;
+}
+
+.car-wishlist-btn:hover {
+  transform: scale(1.12);
+  background: #ffffff;
+  color: var(--color-rust);
+}
+
+.car-wishlist-btn.active {
+  color: var(--color-rust);
+  background: #ffffff;
+}
+
+.modern-car-card .car-card-content {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.car-card-top-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.car-card-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.car-body-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: var(--color-sand-light);
+  color: var(--color-steel);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+}
+
+.car-card-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.car-card-title a {
+  color: var(--color-heading);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.car-card-title a:hover {
+  color: var(--color-rust);
+}
+
+.car-card-specs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.spec-dot {
+  opacity: 0.45;
+}
+
+.spec-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modern-car-card .car-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.car-price-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.car-price-main {
+  font-family: var(--font-display);
+  font-size: 17.5px;
+  font-weight: 800;
+  color: var(--color-rust);
+  line-height: 1;
+}
+
+.car-price-orig {
+  font-size: 11.5px;
+  color: var(--color-text-light);
+  text-decoration: line-through;
+  margin-top: 3px;
+}
+
+.car-view-btn {
+  padding: 8px 14px;
+  font-size: 12.5px;
+}
+
+/* --- List View Layout for CarCard --- */
+.modern-car-card--list {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  flex-direction: unset;
+}
+
+.modern-car-card--list .car-card-media {
+  aspect-ratio: unset;
+  height: 100%;
+  min-height: 200px;
+}
+
+.car-card-desc-snippet {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .modern-car-card--list {
+    grid-template-columns: 1fr;
+  }
+  .modern-car-card--list .car-card-media {
+    aspect-ratio: 16 / 10;
+    min-height: auto;
+  }
+}
+
+/* ==========================================================================
+   2. PartCard (Grid & List Variants)
+   ========================================================================== */
+
+.modern-part-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 14px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease, box-shadow 0.22s ease;
+  position: relative;
+}
+
+.modern-part-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(224, 108, 53, 0.4);
+  box-shadow: var(--shadow-hover);
+}
+
+.part-card-media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-sand-light);
+}
+
+.part-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.modern-part-card:hover .part-card-media img {
+  transform: scale(1.08);
+}
+
+.part-card-category {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(20, 23, 26, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  z-index: 2;
+}
+
+.part-card-freeship {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: #e6f7ef;
+  color: #147043;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid rgba(20, 112, 67, 0.2);
+  z-index: 2;
+}
+
+.part-wishlist-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: var(--color-metal);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.15s, color 0.15s, background 0.15s;
+  z-index: 2;
+}
+
+.part-wishlist-btn:hover {
+  transform: scale(1.12);
+  background: #ffffff;
+  color: var(--color-rust);
+}
+
+.part-wishlist-btn.active {
+  color: var(--color-rust);
+  background: #ffffff;
+}
+
+.part-card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.part-card-cond {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.cond-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-steel);
+}
+
+.part-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.part-card-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.part-card-title a {
+  color: var(--color-heading);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.part-card-title a:hover {
+  color: var(--color-rust);
+}
+
+.part-card-brand-sub {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.part-card-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.part-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.part-card-compat-snippet {
+  font-size: 12px;
+  color: var(--color-metal);
+  background: var(--color-sand-light);
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.modern-part-card .part-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.part-price-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.part-price-main {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-rust);
+  line-height: 1;
+}
+
+.part-price-orig {
+  font-size: 11px;
+  color: var(--color-text-light);
+  text-decoration: line-through;
+  margin-top: 2px;
+}
+
+.part-inquire-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* --- List View Layout for PartCard --- */
+.modern-part-card--list {
+  grid-template-columns: 200px 1fr;
+  padding: 16px;
+  gap: 18px;
+}
+
+.modern-part-card--list .part-card-media {
+  aspect-ratio: 16 / 12;
+}
+
+.part-card-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.part-brand-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-heading);
+  background: var(--color-sand-light);
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+}
+
+@media (max-width: 600px) {
+  .modern-part-card {
+    grid-template-columns: 100px 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+  .modern-part-card--list {
+    grid-template-columns: 1fr;
+  }
+  .modern-part-card--list .part-card-media {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* ==========================================================================
+   3. CategoryCard
+   ========================================================================== */
+
+.category-card {
+  position: relative;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  background: #1e2227;
+  display: block;
+}
+
+.category-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+}
+
+.category-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.category-card:hover .category-img {
+  transform: scale(1.08);
+}
+
+.category-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 23, 26, 0.15) 0%, rgba(20, 23, 26, 0.85) 75%, #14171a 100%);
+  padding: 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.category-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.category-meta {
+  flex: 1;
+}
+
+.category-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.category-count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+}
+
+.category-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.category-card:hover .category-arrow {
+  background: var(--color-orange);
+  transform: translate(2px, -2px);
+}

@@ -1,0 +1,34 @@
+services:
+  # MySQL 8 — primary database
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: garage_parts
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis — optional / when required (cache + queue)
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  # Laravel API (PHP 8.2 + Nginx in prod; artisan serve for local)
+  # Build: docker build -f deploy/docker/php.Dockerfile ./backend
+  # Run locally without Docker: see backend/README.md
+
+volumes:
+  mysql-data:
+  redis-data:
