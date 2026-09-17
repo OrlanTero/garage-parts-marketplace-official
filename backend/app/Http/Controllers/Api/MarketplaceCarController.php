@@ -42,6 +42,6 @@ class MarketplaceCarController extends Controller
     {
         $this->authorize('view', $car);
 
-        return new CarResource($car->loadMissing('seller:id,name'));
+        return new CarResource($car->loadMissing(['seller:id,name', 'media']));
     }
 }

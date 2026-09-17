@@ -28,6 +28,7 @@ class SellerPartController extends Controller
 
         $query = Part::query()
             ->ofSeller((int) $request->user()->id)
+            ->with('media')
             ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('created_at');
 
@@ -46,7 +47,7 @@ class SellerPartController extends Controller
     {
         $this->authorize('view', $part);
 
-        return new PartResource($part->loadMissing('seller:id,name'));
+        return new PartResource($part->loadMissing(['seller:id,name', 'media']));
     }
 
     public function update(UpdatePartRequest $request, Part $part): PartResource

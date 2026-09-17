@@ -8,7 +8,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // No business modules yet — seed nothing by default.
-        // \App\Models\User::factory()->create(['email' => 'admin@example.com']);
+        $this->call([
+            UserSeeder::class,
+            CarSeeder::class,
+            PartSeeder::class,
+        ]);
     }
 }

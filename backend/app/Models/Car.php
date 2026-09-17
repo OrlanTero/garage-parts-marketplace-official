@@ -24,18 +24,28 @@ class Car extends Model
         'model',
         'year',
         'price',
+        'original_price',
         'mileage_km',
         'body_style',
         'fuel_type',
         'transmission',
         'condition',
+        'tag',
         'color',
         'vin',
         'description',
         'city',
+        'location',
         'status',
+        'rating',
+        'inspection_score',
         'published_at',
         'sold_at',
+    ];
+
+    protected $appends = [
+        'primary_image_url',
+        'image_urls',
     ];
 
     protected function casts(): array
@@ -43,7 +53,9 @@ class Car extends Model
         return [
             'year' => 'integer',
             'price' => 'decimal:2',
+            'original_price' => 'decimal:2',
             'mileage_km' => 'integer',
+            'rating' => 'decimal:2',
             'body_style' => BodyStyle::class,
             'fuel_type' => FuelType::class,
             'transmission' => Transmission::class,
@@ -57,6 +69,49 @@ class Car extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function media(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Media::class, 'mediable')
+            ->orderByDesc('is_primary')
+            ->orderBy('order')
+            ->orderBy('id');
+    }
+
+    public function images(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Media::class, 'mediable')
+            ->where('type', 'image')
+            ->orderByDesc('is_primary')
+            ->orderBy('order')
+            ->orderBy('id');
+    }
+
+    public function primaryMedia(): \Illuminate\Database\Eloquent\Relations\MorphOne
+    {
+        return $this->morphOne(Media::class, 'mediable')
+            ->ofMany(['order' => 'min', 'id' => 'min'], fn ($q) => $q->where('is_primary', true)->orWhere('type', 'image'));
+    }
+
+    public function getPrimaryImageUrlAttribute(): ?string
+    {
+        if ($this->relationLoaded('media')) {
+            $primary = $this->media->firstWhere('is_primary', true) ?? $this->media->first();
+            return $primary?->url;
+        }
+
+        return $this->media()->where('is_primary', true)->value('url') 
+            ?? $this->media()->value('url');
+    }
+
+    public function getImageUrlsAttribute(): array
+    {
+        if ($this->relationLoaded('media')) {
+            return $this->media->pluck('url')->all();
+        }
+
+        return $this->media()->pluck('url')->all();
     }
 
     /** Public marketplace scope: active listings, newest first. */

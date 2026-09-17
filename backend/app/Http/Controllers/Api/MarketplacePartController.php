@@ -37,6 +37,6 @@ class MarketplacePartController extends Controller
     {
         $this->authorize('view', $part);
 
-        return new PartResource($part->loadMissing('seller:id,name'));
+        return new PartResource($part->loadMissing(['seller:id,name', 'media']));
     }
 }

@@ -16,18 +16,55 @@ class CarService
 {
     public function create(User $seller, array $data): Car
     {
+        $images = $data['images'] ?? $data['media'] ?? null;
+        unset($data['images'], $data['media']);
+
         $car = Car::create([...$data, 'seller_id' => $seller->id]);
 
-        // Reload so DB defaults (e.g. status=draft) reflect on the instance.
-        return $car->refresh();
+        if (is_array($images)) {
+            $this->syncMedia($car, $images);
+        }
+
+        // Reload so DB defaults and relations reflect on the instance.
+        return $car->loadMissing(['seller:id,name', 'media'])->refresh();
     }
 
     public function update(Car $car, array $data): Car
     {
-        unset($data['status'], $data['seller_id'], $data['published_at'], $data['sold_at']);
+        $images = $data['images'] ?? $data['media'] ?? null;
+        unset($data['status'], $data['seller_id'], $data['published_at'], $data['sold_at'], $data['images'], $data['media']);
+
         $car->fill($data)->save();
 
-        return $car->refresh();
+        if (is_array($images)) {
+            $this->syncMedia($car, $images);
+        }
+
+        return $car->loadMissing(['seller:id,name', 'media'])->refresh();
+    }
+
+    public function syncMedia(Car $car, array $items): void
+    {
+        $car->media()->delete();
+
+        foreach (array_values($items) as $index => $item) {
+            if (is_string($item) && filter_var($item, FILTER_VALIDATE_URL)) {
+                $car->media()->create([
+                    'url' => $item,
+                    'type' => 'image',
+                    'is_primary' => $index === 0,
+                    'order' => $index,
+                ]);
+            } elseif (is_array($item) && !empty($item['url'])) {
+                $car->media()->create([
+                    'url' => $item['url'],
+                    'type' => $item['type'] ?? 'image',
+                    'is_primary' => (bool) ($item['is_primary'] ?? ($index === 0)),
+                    'order' => (int) ($item['order'] ?? $index),
+                    'caption' => $item['caption'] ?? null,
+                ]);
+            }
+        }
     }
 
     /** @throws ValidationException on illegal transition */
@@ -83,7 +120,7 @@ class CarService
     {
         return Car::query()
             ->listed()
-            ->with('seller:id,name')
+            ->with(['seller:id,name', 'media'])
             ->filter($filters)
             ->paginate(min(max($perPage, 1), 50));
     }

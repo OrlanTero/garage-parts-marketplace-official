@@ -106,4 +106,37 @@ class CarTest extends TestCase
 
         $this->getJson("/api/v1/marketplace/cars/{$car->id}")->assertForbidden();
     }
+
+    public function test_car_supports_multiple_images_and_marketplace_serialization(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $headers = $this->sellerToken($seller);
+
+        $payload = array_merge($this->carPayload(), [
+            'original_price' => 580000,
+            'tag' => 'Restored Classic',
+            'location' => 'Makati Showroom Floor',
+            'images' => [
+                'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7',
+                'https://images.unsplash.com/photo-1503376780353-7e6692767b70',
+            ],
+        ]);
+
+        $create = $this->postJson('/api/v1/seller/cars', $payload, $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.origPrice', '580000.00')
+            ->assertJsonPath('data.tag', 'Restored Classic')
+            ->assertJsonCount(2, 'data.images');
+
+        $carId = $create->json('data.id');
+        $this->postJson("/api/v1/seller/cars/{$carId}/publish", [], $headers)->assertOk();
+
+        $get = $this->getJson("/api/v1/marketplace/cars/{$carId}")
+            ->assertOk()
+            ->assertJsonPath('data.title', $payload['title'])
+            ->assertJsonPath('data.tag', 'Restored Classic')
+            ->assertJsonCount(2, 'data.images')
+            ->assertJsonCount(2, 'data.image_urls')
+            ->assertJsonPath('data.primary_image_url', 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7');
+    }
 }

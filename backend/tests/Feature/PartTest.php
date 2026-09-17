@@ -107,4 +107,39 @@ class PartTest extends TestCase
 
         $this->getJson("/api/v1/marketplace/parts/{$part->id}")->assertForbidden();
     }
+
+    public function test_part_supports_multiple_images_and_marketplace_serialization(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $headers = $this->sellerToken($seller);
+
+        $payload = array_merge($this->partPayload(), [
+            'original_price' => 4500,
+            'tag' => 'Brand New OEM',
+            'free_shipping' => true,
+            'location' => 'Makati Showroom Hub',
+            'images' => [
+                'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3',
+                'https://images.unsplash.com/photo-1613214149922-f1809c99b414',
+            ],
+        ]);
+
+        $create = $this->postJson('/api/v1/seller/parts', $payload, $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.origPrice', '4500.00')
+            ->assertJsonPath('data.freeShip', true)
+            ->assertJsonPath('data.tag', 'Brand New OEM')
+            ->assertJsonCount(2, 'data.images');
+
+        $partId = $create->json('data.id');
+        $this->postJson("/api/v1/seller/parts/{$partId}/publish", [], $headers)->assertOk();
+
+        $get = $this->getJson("/api/v1/marketplace/parts/{$partId}")
+            ->assertOk()
+            ->assertJsonPath('data.title', $payload['title'])
+            ->assertJsonPath('data.freeShip', true)
+            ->assertJsonCount(2, 'data.images')
+            ->assertJsonCount(2, 'data.image_urls')
+            ->assertJsonPath('data.primary_image_url', 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3');
+    }
 }

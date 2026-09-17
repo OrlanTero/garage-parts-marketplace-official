@@ -28,6 +28,7 @@ class SellerCarController extends Controller
 
         $query = Car::query()
             ->ofSeller((int) $request->user()->id)
+            ->with('media')
             ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('created_at');
 
@@ -46,7 +47,7 @@ class SellerCarController extends Controller
     {
         $this->authorize('view', $car);
 
-        return new CarResource($car->loadMissing('seller:id,name'));
+        return new CarResource($car->loadMissing(['seller:id,name', 'media']));
     }
 
     public function update(UpdateCarRequest $request, Car $car): CarResource
