@@ -3,6 +3,10 @@
 namespace App\Services;
 
 use App\Enums\PartStatus;
+use App\Events\PartCreated;
+use App\Events\PartSold;
+use App\Events\PartStatusChanged;
+use App\Events\PartUpdated;
 use App\Models\Part;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -26,7 +30,11 @@ class PartService
         }
 
         // Reload so DB defaults and relations reflect on the instance.
-        return $part->loadMissing(['seller:id,name', 'media'])->refresh();
+        $part = $part->loadMissing(['seller:id,name', 'media'])->refresh();
+
+        event(new PartCreated($part));
+
+        return $part;
     }
 
     public function update(Part $part, array $data): Part
@@ -40,7 +48,11 @@ class PartService
             $this->syncMedia($part, $images);
         }
 
-        return $part->loadMissing(['seller:id,name', 'media'])->refresh();
+        $part = $part->loadMissing(['seller:id,name', 'media'])->refresh();
+
+        event(new PartUpdated($part));
+
+        return $part;
     }
 
     public function syncMedia(Part $part, array $items): void
@@ -76,13 +88,19 @@ class PartService
             ]);
         }
 
+        $prev = $part->status->value ?? (string) $part->status;
+
         $part->forceFill([
             'status' => PartStatus::Active->value,
             'published_at' => $part->published_at ?? now(),
             'sold_at' => null,
         ])->save();
 
-        return $part->refresh();
+        $part = $part->refresh();
+
+        event(new PartStatusChanged($part, $prev));
+
+        return $part;
     }
 
     /** @throws ValidationException on illegal transition */
@@ -94,9 +112,15 @@ class PartService
             ]);
         }
 
+        $prev = $part->status->value ?? (string) $part->status;
+
         $part->forceFill(['status' => PartStatus::Draft->value])->save();
 
-        return $part->refresh();
+        $part = $part->refresh();
+
+        event(new PartStatusChanged($part, $prev));
+
+        return $part;
     }
 
     /** @throws ValidationException on illegal transition */
@@ -113,7 +137,11 @@ class PartService
             'sold_at' => now(),
         ])->save();
 
-        return $part->refresh();
+        $part = $part->refresh();
+
+        event(new PartSold($part));
+
+        return $part;
     }
 
     public function marketplace(array $filters, int $perPage = 15): LengthAwarePaginator

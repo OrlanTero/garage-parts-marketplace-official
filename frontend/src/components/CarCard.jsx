@@ -58,7 +58,7 @@ export default function CarCard({
   const bodyStyle = car.body_style ? car.body_style.replace('_', ' ') : ''
 
   // Image resolution
-  const imageUrl = car.img || car.primary_image_url || car.image_url || (Array.isArray(car.images) && car.images[0]?.url) || (Array.isArray(car.images) && typeof car.images[0] === 'string' ? car.images[0] : null) || getFallbackImage(id)
+  const imageUrl = car.img || car.primary_image_url || car.image_url || (Array.isArray(car.images) && car.images[0]?.url) || (Array.isArray(car.images) && typeof car.images[0] === 'string' ? car.images[0] : null) || (Array.isArray(car.image_urls) && car.image_urls[0]) || getFallbackImage(id)
 
   const saved = isSaved !== undefined ? isSaved : internalSaved
 

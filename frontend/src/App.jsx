@@ -27,6 +27,7 @@ import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import SearchModal from './components/SearchModal.jsx'
 import AuthModal from './components/AuthModal.jsx'
+import UserMenu from './components/UserMenu.jsx'
 import { useAuth } from './auth/AuthContext.jsx'
 
 const NAV = [
@@ -225,16 +226,11 @@ export default function App() {
             </Link>
 
             {isAuthenticated ? (
-              <div className="user-pill">
-                <div className="user-avatar">{user?.name ? user.name.charAt(0).toUpperCase() : 'U'}</div>
-                <div className="user-info hide-mobile">
-                  <span className="user-name">{user?.name}</span>
-                  <span className="user-role">{user?.role}</span>
-                </div>
-                <button className="logout-btn" onClick={logout} title="Log out" aria-label="Log out">
-                  <LogOut size={16} />
-                </button>
-              </div>
+              <UserMenu 
+                user={user} 
+                logout={logout} 
+                isTransparent={isHome && !scrolled} 
+              />
             ) : (
               <button 
                 type="button" 
@@ -321,12 +317,54 @@ export default function App() {
 
           <div className="mobile-drawer-footer">
             {isAuthenticated ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: 'var(--color-heading)' }}>{user?.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{user?.role}</div>
+              <div className="mobile-drawer-user-card">
+                <div className="mobile-drawer-user-header">
+                  <div className="mobile-drawer-user-avatar">
+                    {user?.avatar_url ? (
+                      <img src={user.avatar_url} alt={user?.name || 'User'} className="mobile-drawer-avatar-img" />
+                    ) : (
+                      <div className="mobile-drawer-avatar-fallback">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mobile-drawer-user-meta">
+                    <div className="mobile-drawer-user-name">{user?.name}</div>
+                    <div className="mobile-drawer-user-email">{user?.email}</div>
+                    <span className="mobile-drawer-user-badge">{user?.role}</span>
+                  </div>
                 </div>
-                <button className="btn btn-ghost" onClick={logout}>Log out</button>
+
+                <div className="mobile-drawer-user-links">
+                  <Link 
+                    to="/sell" 
+                    className="mobile-drawer-quicklink" 
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Sparkles size={15} />
+                    <span>Sell Your Build / Parts</span>
+                  </Link>
+                  <Link 
+                    to="/marketplace" 
+                    className="mobile-drawer-quicklink" 
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Heart size={15} />
+                    <span>Saved Wishlist & Cars</span>
+                  </Link>
+                </div>
+
+                <button 
+                  type="button" 
+                  className="btn btn-secondary mobile-drawer-logout-btn" 
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    logout()
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Log Out of Session</span>
+                </button>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

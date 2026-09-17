@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { marketplaceCars } from '../api/cars.js'
+import { useChannel } from '../realtime/useChannel.js'
 
 /**
- * Marketplace listing state: filters + paginated results.
+ * Marketplace listing state: filters + paginated results + real-time sync.
  * Usage: const { cars, meta, filters, setFilter, page, setPage, loading, error, reload } = useMarketplaceCars()
  */
 const DEFAULT_FILTERS = {
@@ -21,7 +22,7 @@ const DEFAULT_FILTERS = {
   sort: 'newest',
 }
 
-export function useMarketplaceCars(initial = {}) {
+export function useMarketplaceCars(initial = {}, { enableRealtime = true } = {}) {
   const [filters, setFilters] = useState({ ...DEFAULT_FILTERS, ...initial })
   const [page, setPage] = useState(1)
   const [cars, setCars] = useState([])
@@ -54,6 +55,34 @@ export function useMarketplaceCars(initial = {}) {
   useEffect(() => {
     reload()
   }, [reload])
+
+  // Real-time synchronization over WebSocket
+  useChannel(enableRealtime ? 'marketplace.cars' : null, {
+    'car.created': () => {
+      reload()
+    },
+    'car.updated': (payload) => {
+      if (payload?.car?.id) {
+        setCars((prev) =>
+          prev.map((c) => (c.id === payload.car.id ? { ...c, ...payload.car } : c)),
+        )
+      }
+    },
+    'car.status_changed': () => {
+      reload()
+    },
+    'car.sold': (payload) => {
+      if (payload?.car?.id) {
+        setCars((prev) =>
+          prev.map((c) =>
+            c.id === payload.car.id
+              ? { ...c, status: 'sold', sold_at: payload.sold_at }
+              : c,
+          ),
+        )
+      }
+    },
+  })
 
   return { cars, meta, filters, setFilter, page, setPage, loading, error, reload }
 }

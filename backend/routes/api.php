@@ -43,6 +43,11 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll'])->name('api.auth.logoutAll');
 
+        // WebSocket / Reverb Channel Authorization
+        Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
+            return Broadcast::auth($request);
+        })->name('api.broadcasting.auth');
+
         // Legacy alias (pre-session-module clients)
         Route::get('/me', [AuthController::class, 'me'])->name('api.me');
 

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { marketplaceParts } from '../api/parts.js'
+import { useChannel } from '../realtime/useChannel.js'
 
 /**
- * Parts marketplace listing state: filters + paginated results.
+ * Parts marketplace listing state: filters + paginated results + real-time sync.
  * Usage: const { parts, meta, filters, setFilter, page, setPage, loading, error, reload } = useMarketplaceParts()
  */
 const DEFAULT_FILTERS = {
@@ -17,7 +18,7 @@ const DEFAULT_FILTERS = {
   sort: 'newest',
 }
 
-export function useMarketplaceParts(initial = {}) {
+export function useMarketplaceParts(initial = {}, { enableRealtime = true } = {}) {
   const [filters, setFilters] = useState({ ...DEFAULT_FILTERS, ...initial })
   const [page, setPage] = useState(1)
   const [parts, setParts] = useState([])
@@ -50,6 +51,34 @@ export function useMarketplaceParts(initial = {}) {
   useEffect(() => {
     reload()
   }, [reload])
+
+  // Real-time synchronization over WebSocket
+  useChannel(enableRealtime ? 'marketplace.parts' : null, {
+    'part.created': () => {
+      reload()
+    },
+    'part.updated': (payload) => {
+      if (payload?.part?.id) {
+        setParts((prev) =>
+          prev.map((p) => (p.id === payload.part.id ? { ...p, ...payload.part } : p)),
+        )
+      }
+    },
+    'part.status_changed': () => {
+      reload()
+    },
+    'part.sold': (payload) => {
+      if (payload?.part?.id) {
+        setParts((prev) =>
+          prev.map((p) =>
+            p.id === payload.part.id
+              ? { ...p, status: 'sold', sold_at: payload.sold_at }
+              : p,
+          ),
+        )
+      }
+    },
+  })
 
   return { parts, meta, filters, setFilter, page, setPage, loading, error, reload }
 }

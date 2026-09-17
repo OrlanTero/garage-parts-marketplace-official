@@ -4,6 +4,8 @@ return [
 
     'default' => env('BROADCAST_CONNECTION', 'reverb'),
 
+    'guard' => 'sanctum',
+
     'connections' => [
         'reverb' => [
             'driver' => 'reverb',

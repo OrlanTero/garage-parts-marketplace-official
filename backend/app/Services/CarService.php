@@ -3,6 +3,10 @@
 namespace App\Services;
 
 use App\Enums\CarStatus;
+use App\Events\CarCreated;
+use App\Events\CarSold;
+use App\Events\CarStatusChanged;
+use App\Events\CarUpdated;
 use App\Models\Car;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -26,7 +30,11 @@ class CarService
         }
 
         // Reload so DB defaults and relations reflect on the instance.
-        return $car->loadMissing(['seller:id,name', 'media'])->refresh();
+        $car = $car->loadMissing(['seller:id,name', 'media'])->refresh();
+
+        event(new CarCreated($car));
+
+        return $car;
     }
 
     public function update(Car $car, array $data): Car
@@ -40,7 +48,11 @@ class CarService
             $this->syncMedia($car, $images);
         }
 
-        return $car->loadMissing(['seller:id,name', 'media'])->refresh();
+        $car = $car->loadMissing(['seller:id,name', 'media'])->refresh();
+
+        event(new CarUpdated($car));
+
+        return $car;
     }
 
     public function syncMedia(Car $car, array $items): void
@@ -76,13 +88,19 @@ class CarService
             ]);
         }
 
+        $prev = $car->status->value ?? (string) $car->status;
+
         $car->forceFill([
             'status' => CarStatus::Active->value,
             'published_at' => $car->published_at ?? now(),
             'sold_at' => null,
         ])->save();
 
-        return $car->refresh();
+        $car = $car->refresh();
+
+        event(new CarStatusChanged($car, $prev));
+
+        return $car;
     }
 
     /** @throws ValidationException on illegal transition */
@@ -94,9 +112,15 @@ class CarService
             ]);
         }
 
+        $prev = $car->status->value ?? (string) $car->status;
+
         $car->forceFill(['status' => CarStatus::Draft->value])->save();
 
-        return $car->refresh();
+        $car = $car->refresh();
+
+        event(new CarStatusChanged($car, $prev));
+
+        return $car;
     }
 
     /** @throws ValidationException on illegal transition */
@@ -113,7 +137,11 @@ class CarService
             'sold_at' => now(),
         ])->save();
 
-        return $car->refresh();
+        $car = $car->refresh();
+
+        event(new CarSold($car));
+
+        return $car;
     }
 
     public function marketplace(array $filters, int $perPage = 15): LengthAwarePaginator

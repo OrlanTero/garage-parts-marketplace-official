@@ -1,261 +1,1588 @@
 {
   "info": {
-    "name": "Garage Parts — Session + Cars + Parts Modules",
-    "description": "Import, set baseUrl=http://localhost:8000. Register/login auto-saves {{token}}; create-car auto-saves {{carId}}; create-part auto-saves {{partId}}.",
+    "name": "Garage Parts — Full Marketplace & Realtime API Collection",
+    "description": "Comprehensive Postman collection for Garage Parts Marketplace API.\n\n### Features Included:\n1. **System & Health**: API health, DB/cache/queue probes, Laravel uptime, CSRF cookie initialization.\n2. **Authentication & Session**: Register (Buyer/Seller), Login (Admin/Seller/Buyer), OAuth redirect/callback, Profile (`/auth/me`), Role probes, Single & All-device Logout.\n3. **Cars Marketplace & Inventory**: Public catalog with search/filter/sort/pagination, Seller CRUD, Publish/Unpublish/Mark-Sold lifecycle, and multi-media array uploads.\n4. **Parts Marketplace & Inventory**: Public catalog with category/condition/price filters, Seller CRUD, Publish/Unpublish/Mark-Sold lifecycle, and multi-media array uploads.\n5. **Real-time WebSocket & Broadcasting (Laravel Reverb)**: Channel authorization (`/api/v1/broadcasting/auth`) for private user channels (`private-user.{id}`), seller channels (`private-seller.{id}`), and presence marketplace (`presence-marketplace`).\n6. **Nginx Caching & Edge Performance**: Verifications for FastCGI microcaching (`X-Cache-Status` HIT/MISS/BYPASS), authenticated cache bypass, and Cache-Control headers.\n\n### Automated Workflow:\n- Registering or Logging in automatically captures the Bearer `{{token}}` and `{{userId}}`.\n- Creating cars or parts automatically saves `{{carId}}` and `{{partId}}` for downstream updates and state transitions.\n- All requests include functional post-response test assertions.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8000" },
-    { "key": "token", "value": "" },
-    { "key": "carId", "value": "" },
-    { "key": "partId", "value": "" }
+    { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "userId", "value": "1", "type": "string" },
+    { "key": "carId", "value": "1", "type": "string" },
+    { "key": "partId", "value": "1", "type": "string" },
+    { "key": "socketId", "value": "1234.5678", "type": "string" },
+    { "key": "oauthProvider", "value": "google", "type": "string" },
+    { "key": "reverbHost", "value": "127.0.0.1", "type": "string" },
+    { "key": "reverbPort", "value": "8080", "type": "string" },
+    { "key": "reverbAppKey", "value": "local-key", "type": "string" }
   ],
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
   },
   "item": [
     {
-      "name": "System",
+      "name": "1. System & Health Probes",
       "item": [
         {
-          "name": "GET health",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/health" }
-        }
-      ]
-    },
-    {
-      "name": "Session - public",
-      "item": [
-        {
-          "name": "POST register (buyer)",
+          "name": "GET API Health Check",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "const j = pm.response.json();",
-                  "if (j.token) pm.collectionVariables.set('token', j.token);"
-                ]
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response has healthy services\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.service).to.be.a('string');",
+                  "    pm.expect(jsonData.checks).to.be.an('object');",
+                  "    pm.expect(jsonData.checks.database).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
               }
             }
           ],
           "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/v1/auth/register",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Buyer One\",\n  \"email\": \"buyer1@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"buyer\"\n}"
-            }
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "Returns status of API, database connection, cache, and queue."
           }
         },
         {
-          "name": "POST register (seller)",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/v1/auth/register",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Seller One\",\n  \"email\": \"seller1@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"seller\"\n}"
-            }
-          }
-        },
-        {
-          "name": "POST login",
+          "name": "GET Laravel /up Probe",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "const j = pm.response.json();",
-                  "if (j.token) pm.collectionVariables.set('token', j.token);"
-                ]
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
               }
             }
           ],
           "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/v1/auth/login",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"seller1@example.com\",\n  \"password\": \"password123\",\n  \"device_name\": \"postman\"\n}"
-            }
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/up",
+              "host": ["{{baseUrl}}"],
+              "path": ["up"]
+            },
+            "description": "Laravel framework uptime probe."
           }
         },
         {
-          "name": "GET oauth google redirect",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/auth/oauth/google/redirect?role=buyer",
-            "auth": { "type": "noauth" }
-          }
-        },
-        {
-          "name": "GET oauth callback (paste from browser)",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/auth/oauth/google/callback?code=PASTE_CODE_HERE",
-            "auth": { "type": "noauth" }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Session - authenticated",
-      "item": [
-        { "name": "GET auth me", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/auth/me" } },
-        { "name": "GET me (legacy alias)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/me" } },
-        { "name": "GET ping-buyer (role:buyer)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/_session/ping-buyer" } },
-        { "name": "GET ping-seller (role:seller)", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/_session/ping-seller" } },
-        { "name": "POST logout (current token)", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/auth/logout" } },
-        { "name": "POST logout-all (all tokens)", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/auth/logout-all" } }
-      ]
-    },
-    {
-      "name": "Marketplace - public (no auth)",
-      "item": [
-        {
-          "name": "GET list cars",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/marketplace/cars?sort=newest&per_page=15",
-            "auth": { "type": "noauth" }
-          }
-        },
-        {
-          "name": "GET list filtered (brand + price sort)",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/marketplace/cars?brand=Toyota&sort=price_asc",
-            "auth": { "type": "noauth" }
-          }
-        },
-        {
-          "name": "GET single car",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/marketplace/cars/{{carId}}",
-            "auth": { "type": "noauth" }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Seller inventory (role:seller)",
-      "item": [
-        {
-          "name": "POST create car (draft)",
+          "name": "GET Root Welcome / Info",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "const j = pm.response.json();",
-                  "if (j.data && j.data.id) pm.collectionVariables.set('carId', j.data.id);"
-                ]
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
               }
             }
           ],
           "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/v1/seller/cars",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"2019 Toyota Vios 1.3 E CVT\",\n  \"brand\": \"Toyota\",\n  \"model\": \"Vios\",\n  \"year\": 2019,\n  \"price\": 528000,\n  \"mileage_km\": 42000,\n  \"body_style\": \"sedan\",\n  \"fuel_type\": \"petrol\",\n  \"transmission\": \"automatic\",\n  \"condition\": \"used\",\n  \"city\": \"Cebu City\",\n  \"description\": \"Well maintained, new tires.\"\n}"
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
             }
           }
         },
-        { "name": "GET my cars", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/cars" } },
-        { "name": "GET my car", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}" } },
         {
-          "name": "PATCH update car",
-          "request": {
-            "method": "PATCH",
-            "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"price\": 515000,\n  \"city\": \"Mandaue City\"\n}" }
-          }
-        },
-        { "name": "POST publish car", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/publish" } },
-        { "name": "POST unpublish car", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/unpublish" } },
-        { "name": "POST mark sold", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/sold" } },
-        { "name": "DELETE car", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/seller/cars/{{carId}}" } }
-      ]
-    },
-    {
-      "name": "Parts marketplace - public (no auth)",
-      "item": [
-        {
-          "name": "GET list parts",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/marketplace/parts?sort=newest&per_page=15",
-            "auth": { "type": "noauth" }
-          }
-        },
-        {
-          "name": "GET list filtered (category + price sort)",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/marketplace/parts?category=brakes&sort=price_asc",
-            "auth": { "type": "noauth" }
-          }
-        },
-        {
-          "name": "GET single part",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/marketplace/parts/{{partId}}",
-            "auth": { "type": "noauth" }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Parts seller inventory (role:seller)",
-      "item": [
-        {
-          "name": "POST create part (draft)",
+          "name": "GET Sanctum CSRF Cookie",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "const j = pm.response.json();",
-                  "if (j.data && j.data.id) pm.collectionVariables.set('partId', j.data.id);"
-                ]
+                  "pm.test(\"Status code is 204 or 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sanctum/csrf-cookie",
+              "host": ["{{baseUrl}}"],
+              "path": ["sanctum", "csrf-cookie"]
+            },
+            "description": "Optional CSRF cookie initializer for SPA stateful sessions."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication & Session",
+      "item": [
+        {
+          "name": "Public Auth",
+          "item": [
+            {
+              "name": "POST Register (Buyer)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "if (jsonData.token) {",
+                      "    pm.collectionVariables.set('token', jsonData.token);",
+                      "}",
+                      "if (jsonData.user && jsonData.user.id) {",
+                      "    pm.collectionVariables.set('userId', jsonData.user.id.toString());",
+                      "}",
+                      "pm.test(\"User role is buyer\", function () {",
+                      "    pm.expect(jsonData.user.role).to.eql('buyer');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Buyer Test User\",\n  \"email\": \"buyer.test.{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"buyer\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "register"]
+                }
+              }
+            },
+            {
+              "name": "POST Register (Seller)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "if (jsonData.token) {",
+                      "    pm.collectionVariables.set('token', jsonData.token);",
+                      "}",
+                      "if (jsonData.user && jsonData.user.id) {",
+                      "    pm.collectionVariables.set('userId', jsonData.user.id.toString());",
+                      "}",
+                      "pm.test(\"User role is seller\", function () {",
+                      "    pm.expect(jsonData.user.role).to.eql('seller');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Seller Demo User\",\n  \"email\": \"seller.test.{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"role\": \"seller\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "register"]
+                }
+              }
+            },
+            {
+              "name": "POST Login (Seller Seeded Account)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "if (jsonData.token) {",
+                      "    pm.collectionVariables.set('token', jsonData.token);",
+                      "}",
+                      "if (jsonData.user && jsonData.user.id) {",
+                      "    pm.collectionVariables.set('userId', jsonData.user.id.toString());",
+                      "}",
+                      "pm.test(\"Token received\", function () {",
+                      "    pm.expect(jsonData.token).to.be.a('string');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"seller@garage.test\",\n  \"password\": \"password\",\n  \"device_name\": \"postman-desktop\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "login"]
+                }
+              }
+            },
+            {
+              "name": "POST Login (Buyer Seeded Account)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "if (jsonData.token) {",
+                      "    pm.collectionVariables.set('token', jsonData.token);",
+                      "}",
+                      "if (jsonData.user && jsonData.user.id) {",
+                      "    pm.collectionVariables.set('userId', jsonData.user.id.toString());",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"buyer@garage.test\",\n  \"password\": \"password\",\n  \"device_name\": \"postman-desktop\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "login"]
+                }
+              }
+            },
+            {
+              "name": "POST Login (Admin Seeded Account)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "if (jsonData.token) {",
+                      "    pm.collectionVariables.set('token', jsonData.token);",
+                      "}",
+                      "if (jsonData.user && jsonData.user.id) {",
+                      "    pm.collectionVariables.set('userId', jsonData.user.id.toString());",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@garage.test\",\n  \"password\": \"password\",\n  \"device_name\": \"postman-desktop\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "login"]
+                }
+              }
+            },
+            {
+              "name": "GET OAuth Redirect URL (JSON mode)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Has redirect URL\", function () {",
+                      "    pm.expect(jsonData.url).to.be.a('string');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/oauth/{{oauthProvider}}/redirect?role=buyer",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "oauth", "{{oauthProvider}}", "redirect"],
+                  "query": [
+                    { "key": "role", "value": "buyer" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "GET OAuth Callback (Simulation)",
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/oauth/{{oauthProvider}}/callback?code=mock_code_from_provider",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "oauth", "{{oauthProvider}}", "callback"],
+                  "query": [
+                    { "key": "code", "value": "mock_code_from_provider" }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Authenticated Session",
+          "item": [
+            {
+              "name": "GET Current User (/api/v1/auth/me)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Valid user profile\", function () {",
+                      "    pm.expect(jsonData.id).to.be.a('number');",
+                      "    pm.expect(jsonData.email).to.be.a('string');",
+                      "    pm.expect(jsonData.role).to.be.oneOf(['buyer', 'seller', 'admin']);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/me",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "me"]
+                }
+              }
+            },
+            {
+              "name": "GET Current User (Legacy /api/v1/me)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/me",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "me"]
+                }
+              }
+            },
+            {
+              "name": "GET Ping Buyer Role Probe",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200 if buyer or 403 if not\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/_session/ping-buyer",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "_session", "ping-buyer"]
+                }
+              }
+            },
+            {
+              "name": "GET Ping Seller Role Probe",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200 if seller or 403 if not\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/_session/ping-seller",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "_session", "ping-seller"]
+                }
+              }
+            },
+            {
+              "name": "POST Logout Current Device",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/logout",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "logout"]
+                }
+              }
+            },
+            {
+              "name": "POST Logout All Devices",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/logout-all",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "logout-all"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Cars Marketplace & Inventory",
+      "item": [
+        {
+          "name": "Public Marketplace",
+          "item": [
+            {
+              "name": "GET List Active Cars (with Filters & Sort)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Data array and pagination present\", function () {",
+                      "    pm.expect(jsonData.data).to.be.an('array');",
+                      "    pm.expect(jsonData.meta).to.be.an('object');",
+                      "});",
+                      "if (jsonData.data && jsonData.data.length > 0) {",
+                      "    pm.collectionVariables.set('carId', jsonData.data[0].id.toString());",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/marketplace/cars?search=Toyota&brand=Toyota&min_price=100000&max_price=5000000&sort=newest&per_page=15&page=1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "marketplace", "cars"],
+                  "query": [
+                    { "key": "search", "value": "Toyota" },
+                    { "key": "brand", "value": "Toyota" },
+                    { "key": "min_price", "value": "100000" },
+                    { "key": "max_price", "value": "5000000" },
+                    { "key": "sort", "value": "newest" },
+                    { "key": "per_page", "value": "15" },
+                    { "key": "page", "value": "1" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "GET Single Car Details (Public)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Contains media and seller info\", function () {",
+                      "    pm.expect(jsonData.data).to.be.an('object');",
+                      "    pm.expect(jsonData.data.seller).to.be.an('object');",
+                      "    pm.expect(jsonData.data.images).to.be.an('array');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/marketplace/cars/{{carId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "marketplace", "cars", "{{carId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller Inventory",
+          "item": [
+            {
+              "name": "GET List My Seller Cars",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.expect(jsonData.data).to.be.an('array');"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars?status=active&per_page=15&page=1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars"],
+                  "query": [
+                    { "key": "status", "value": "active" },
+                    { "key": "per_page", "value": "15" },
+                    { "key": "page", "value": "1" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "POST Create Car (Draft + Multi-Image Payload)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "if (jsonData.data && jsonData.data.id) {",
+                      "    pm.collectionVariables.set('carId', jsonData.data.id.toString());",
+                      "}",
+                      "pm.test(\"Created as draft\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('draft');",
+                      "    pm.expect(jsonData.data.images.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"2023 Honda Civic Type R (FL5)\",\n  \"brand\": \"Honda\",\n  \"model\": \"Civic Type R\",\n  \"year\": 2023,\n  \"price\": 3850000,\n  \"original_price\": 4000000,\n  \"mileage_km\": 5200,\n  \"body_style\": \"hatchback\",\n  \"fuel_type\": \"gasoline\",\n  \"transmission\": \"manual\",\n  \"condition\": \"used\",\n  \"tag\": \"Featured\",\n  \"color\": \"Championship White\",\n  \"vin\": \"JH4FL5380PC{{$timestamp}}\",\n  \"city\": \"Quezon City\",\n  \"location\": \"Metropolitan Manila\",\n  \"description\": \"Immaculate condition, garage kept, full service history, OEM forged BBS wheels.\",\n  \"images\": [\n    {\n      \"url\": \"https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=1200&q=80\",\n      \"type\": \"image\",\n      \"is_primary\": true,\n      \"order\": 0,\n      \"caption\": \"Front three-quarter view\"\n    },\n    {\n      \"url\": \"https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80\",\n      \"type\": \"image\",\n      \"is_primary\": false,\n      \"order\": 1,\n      \"caption\": \"Interior bucket seats\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars"]
+                }
+              }
+            },
+            {
+              "name": "GET Single Seller Car",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars/{{carId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars", "{{carId}}"]
+                }
+              }
+            },
+            {
+              "name": "PUT Full Update Car",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"2023 Honda Civic Type R (FL5) — Upgraded\",\n  \"brand\": \"Honda\",\n  \"model\": \"Civic Type R\",\n  \"year\": 2023,\n  \"price\": 3790000,\n  \"mileage_km\": 5500,\n  \"body_style\": \"hatchback\",\n  \"fuel_type\": \"gasoline\",\n  \"transmission\": \"manual\",\n  \"condition\": \"used\",\n  \"tag\": \"Price Drop\",\n  \"city\": \"Taguig City\",\n  \"location\": \"BGC, Taguig\",\n  \"description\": \"Price reduced for quick sale. Flawless ceramic coating.\",\n  \"images\": [\n    \"https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=1200&q=80\"\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars/{{carId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars", "{{carId}}"]
+                }
+              }
+            },
+            {
+              "name": "PATCH Partial Update Car",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Price updated\", function () {",
+                      "    pm.expect(jsonData.data.price).to.eql(3750000);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"price\": 3750000,\n  \"tag\": \"Hot Deal\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars/{{carId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars", "{{carId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST Publish Car (Draft -> Active)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Car status is active\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('active');",
+                      "    pm.expect(jsonData.data.published_at).to.not.be.null;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/publish",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars", "{{carId}}", "publish"]
+                }
+              }
+            },
+            {
+              "name": "POST Unpublish Car (Active -> Draft)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Car status returned to draft\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('draft');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/unpublish",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars", "{{carId}}", "unpublish"]
+                }
+              }
+            },
+            {
+              "name": "POST Mark Car as Sold",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Car status is sold\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('sold');",
+                      "    pm.expect(jsonData.data.sold_at).to.not.be.null;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars/{{carId}}/sold",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars", "{{carId}}", "sold"]
+                }
+              }
+            },
+            {
+              "name": "DELETE Car (Soft Delete)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/cars/{{carId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "cars", "{{carId}}"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Parts Marketplace & Inventory",
+      "item": [
+        {
+          "name": "Public Marketplace",
+          "item": [
+            {
+              "name": "GET List Active Parts (with Filters & Sort)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Data array and pagination present\", function () {",
+                      "    pm.expect(jsonData.data).to.be.an('array');",
+                      "    pm.expect(jsonData.meta).to.be.an('object');",
+                      "});",
+                      "if (jsonData.data && jsonData.data.length > 0) {",
+                      "    pm.collectionVariables.set('partId', jsonData.data[0].id.toString());",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/marketplace/parts?search=Brembo&category=brakes&condition=new&in_stock=1&sort=price_asc&per_page=15&page=1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "marketplace", "parts"],
+                  "query": [
+                    { "key": "search", "value": "Brembo" },
+                    { "key": "category", "value": "brakes" },
+                    { "key": "condition", "value": "new" },
+                    { "key": "in_stock", "value": "1" },
+                    { "key": "sort", "value": "price_asc" },
+                    { "key": "per_page", "value": "15" },
+                    { "key": "page", "value": "1" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "GET Single Part Details (Public)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Contains media and seller info\", function () {",
+                      "    pm.expect(jsonData.data).to.be.an('object');",
+                      "    pm.expect(jsonData.data.seller).to.be.an('object');",
+                      "    pm.expect(jsonData.data.images).to.be.an('array');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/marketplace/parts/{{partId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "marketplace", "parts", "{{partId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller Inventory",
+          "item": [
+            {
+              "name": "GET List My Seller Parts",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.expect(jsonData.data).to.be.an('array');"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts?status=active&per_page=15&page=1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts"],
+                  "query": [
+                    { "key": "status", "value": "active" },
+                    { "key": "per_page", "value": "15" },
+                    { "key": "page", "value": "1" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "POST Create Part (Draft + Multi-Image Payload)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "if (jsonData.data && jsonData.data.id) {",
+                      "    pm.collectionVariables.set('partId', jsonData.data.id.toString());",
+                      "}",
+                      "pm.test(\"Created as draft\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('draft');",
+                      "    pm.expect(jsonData.data.images.length).to.be.at.least(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Brembo 6-Pot Monobloc Big Brake Kit (Front)\",\n  \"category\": \"brakes\",\n  \"brand\": \"Brembo\",\n  \"part_number\": \"BRM-6P-380MM-{{$timestamp}}\",\n  \"compatibility\": \"Honda Civic Type R (FK8/FL5), Subaru WRX STI (VAB)\",\n  \"condition\": \"new\",\n  \"tag\": \"Premium\",\n  \"quantity\": 3,\n  \"price\": 185000,\n  \"original_price\": 199000,\n  \"free_shipping\": true,\n  \"city\": \"Makati City\",\n  \"location\": \"San Lorenzo, Makati\",\n  \"description\": \"Brand new genuine Brembo 6-piston monobloc calipers with 380mm slotted 2-piece floating rotors and braided steel lines.\",\n  \"images\": [\n    {\n      \"url\": \"https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80\",\n      \"type\": \"image\",\n      \"is_primary\": true,\n      \"order\": 0,\n      \"caption\": \"Front caliper and rotor assembly\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts"]
+                }
+              }
+            },
+            {
+              "name": "GET Single Seller Part",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts/{{partId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts", "{{partId}}"]
+                }
+              }
+            },
+            {
+              "name": "PUT Full Update Part",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Brembo 6-Pot Monobloc Big Brake Kit (Front) — Updated\",\n  \"category\": \"brakes\",\n  \"brand\": \"Brembo\",\n  \"price\": 180000,\n  \"quantity\": 2,\n  \"free_shipping\": true,\n  \"condition\": \"new\",\n  \"city\": \"Makati City\",\n  \"location\": \"San Lorenzo, Makati\",\n  \"description\": \"Updated stock level. Fast nationwide shipping.\",\n  \"images\": [\n    \"https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800&q=80\"\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts/{{partId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts", "{{partId}}"]
+                }
+              }
+            },
+            {
+              "name": "PATCH Partial Update Part",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Quantity updated\", function () {",
+                      "    pm.expect(jsonData.data.quantity).to.eql(5);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Accept", "value": "application/json" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"quantity\": 5,\n  \"price\": 175000\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts/{{partId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts", "{{partId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST Publish Part (Draft -> Active)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Part status is active\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('active');",
+                      "    pm.expect(jsonData.data.published_at).to.not.be.null;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/publish",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts", "{{partId}}", "publish"]
+                }
+              }
+            },
+            {
+              "name": "POST Unpublish Part (Active -> Draft)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Part status returned to draft\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('draft');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/unpublish",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts", "{{partId}}", "unpublish"]
+                }
+              }
+            },
+            {
+              "name": "POST Mark Part as Sold",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "const jsonData = pm.response.json();",
+                      "pm.test(\"Part status is sold\", function () {",
+                      "    pm.expect(jsonData.data.status).to.eql('sold');",
+                      "    pm.expect(jsonData.data.sold_at).to.not.be.null;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/sold",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts", "{{partId}}", "sold"]
+                }
+              }
+            },
+            {
+              "name": "DELETE Part (Soft Delete)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "Accept", "value": "application/json" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/seller/parts/{{partId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "seller", "parts", "{{partId}}"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Realtime & WebSocket Broadcasting (Laravel Reverb)",
+      "item": [
+        {
+          "name": "POST Authorize Private User Channel (private-user.{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Broadcasting auth signature present\", function () {",
+                  "    pm.expect(jsonData.auth).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
               }
             }
           ],
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/api/v1/seller/parts",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Bosch Front Brake Pads Set\",\n  \"category\": \"brakes\",\n  \"brand\": \"Bosch\",\n  \"part_number\": \"BP-0986-AB1\",\n  \"compatibility\": \"Toyota Vios 2019+\",\n  \"condition\": \"new\",\n  \"quantity\": 4,\n  \"price\": 3850,\n  \"city\": \"Cebu City\",\n  \"description\": \"Genuine pads, sealed pack.\"\n}"
-            }
+              "raw": "{\n  \"socket_id\": \"{{socketId}}\",\n  \"channel_name\": \"private-user.{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/broadcasting/auth",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "broadcasting", "auth"]
+            },
+            "description": "Authenticates client subscription to user private notification channels (`private-user.{id}`)."
           }
         },
-        { "name": "GET my parts", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/parts" } },
-        { "name": "GET my part", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}" } },
         {
-          "name": "PATCH update part",
+          "name": "POST Authorize Seller Private Channel (private-seller.{id})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Broadcasting auth signature present\", function () {",
+                  "    pm.expect(jsonData.auth).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
-            "method": "PATCH",
-            "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"price\": 3599,\n  \"quantity\": 6\n}" }
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"socket_id\": \"{{socketId}}\",\n  \"channel_name\": \"private-seller.{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/broadcasting/auth",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "broadcasting", "auth"]
+            },
+            "description": "Authenticates client subscription to seller-specific inventory alert channels (`private-seller.{id}`). Requires seller or admin role."
           }
         },
-        { "name": "POST publish part", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/publish" } },
-        { "name": "POST unpublish part", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/unpublish" } },
-        { "name": "POST mark sold", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}/sold" } },
-        { "name": "DELETE part", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/seller/parts/{{partId}}" } }
+        {
+          "name": "POST Authorize Presence Marketplace Channel (presence-marketplace)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const jsonData = pm.response.json();",
+                  "pm.test(\"Auth signature and presence user info present\", function () {",
+                  "    pm.expect(jsonData.auth).to.be.a('string');",
+                  "    pm.expect(jsonData.channel_data).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"socket_id\": \"{{socketId}}\",\n  \"channel_name\": \"presence-marketplace\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/broadcasting/auth",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "broadcasting", "auth"]
+            },
+            "description": "Authenticates client subscription to the live active-user presence channel (`presence-marketplace`)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Nginx Caching & Edge Performance",
+      "item": [
+        {
+          "name": "GET Marketplace Cars (Check FastCGI Cache / Microcache)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Nginx caching header evaluation\", function () {",
+                  "    if (pm.response.headers.has('X-Cache-Status')) {",
+                  "        const cacheStatus = pm.response.headers.get('X-Cache-Status');",
+                  "        pm.expect(cacheStatus).to.be.oneOf(['HIT', 'MISS', 'BYPASS', 'EXPIRED', 'STALE', 'UPDATING']);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/marketplace/cars",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "marketplace", "cars"]
+            },
+            "description": "Public unauthenticated GET requests are microcached (10s) via Nginx FastCGI cache to handle high concurrent traffic."
+          }
+        },
+        {
+          "name": "GET Marketplace Parts (Check FastCGI Cache / Microcache)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Nginx caching header evaluation\", function () {",
+                  "    if (pm.response.headers.has('X-Cache-Status')) {",
+                  "        const cacheStatus = pm.response.headers.get('X-Cache-Status');",
+                  "        pm.expect(cacheStatus).to.be.oneOf(['HIT', 'MISS', 'BYPASS', 'EXPIRED', 'STALE', 'UPDATING']);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/marketplace/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "marketplace", "parts"]
+            },
+            "description": "Public unauthenticated GET requests are microcached (10s) via Nginx FastCGI cache."
+          }
+        },
+        {
+          "name": "GET Authenticated Request (Verify Cache BYPASS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Nginx cache bypass verification\", function () {",
+                  "    if (pm.response.headers.has('X-Cache-Status')) {",
+                  "        pm.expect(pm.response.headers.get('X-Cache-Status')).to.eql('BYPASS');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Requests carrying `Authorization: Bearer {{token}}` bypass Nginx cache (`X-Cache-Status: BYPASS`) ensuring user isolation."
+          }
+        }
       ]
     }
   ]

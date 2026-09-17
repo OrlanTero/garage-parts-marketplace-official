@@ -71,7 +71,7 @@ export default function PartCard({
   const stockText = part.quantity != null ? (part.quantity > 0 ? `${part.quantity} in stock` : 'Made to Order') : 'In Stock'
 
   // Image resolution
-  const imageUrl = part.img || part.primary_image_url || part.image_url || (Array.isArray(part.images) && part.images[0]?.url) || (Array.isArray(part.images) && typeof part.images[0] === 'string' ? part.images[0] : null) || getFallbackImage(rawCat)
+  const imageUrl = part.img || part.primary_image_url || part.image_url || (Array.isArray(part.images) && part.images[0]?.url) || (Array.isArray(part.images) && typeof part.images[0] === 'string' ? part.images[0] : null) || (Array.isArray(part.image_urls) && part.image_urls[0]) || getFallbackImage(rawCat)
 
   const saved = isSaved !== undefined ? isSaved : internalSaved
 
