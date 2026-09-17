@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { tokenStorage } from '../auth/tokenStorage.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || '/api/v1'
 
 // Sanctum Bearer-token HTTP client (stateless).

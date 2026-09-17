@@ -12,25 +12,47 @@ class HealthController extends Controller
 {
     /**
      * GET /api/v1/health
-     * Minimal dependency check — no business modules here.
+     * Dependency health probe with latency telemetry.
      */
     public function __invoke(): JsonResponse
     {
+        $start = microtime(true);
+
+        $dbStart = microtime(true);
+        $dbStatus = $this->checkDatabase();
+        $dbMs = round((microtime(true) - $dbStart) * 1000, 2);
+
+        $cacheStart = microtime(true);
+        $cacheStatus = $this->checkCache();
+        $cacheMs = round((microtime(true) - $cacheStart) * 1000, 2);
+
+        $queueStart = microtime(true);
+        $queueStatus = $this->checkQueue();
+        $queueMs = round((microtime(true) - $queueStart) * 1000, 2);
+
         $checks = [
             'api' => 'ok',
-            'database' => $this->checkDatabase(),
-            'cache' => $this->checkCache(),
-            'queue' => $this->checkQueue(),
+            'database' => $dbStatus,
+            'cache' => $cacheStatus,
+            'queue' => $queueStatus,
         ];
 
-        $status = in_array('fail', $checks, true) ? 503 : 200;
+        $isHealthy = !in_array('fail', $checks, true);
+        $executionMs = round((microtime(true) - $start) * 1000, 2);
 
         return response()->json([
+            'status' => $isHealthy ? 'ok' : 'degraded',
             'service' => config('app.name'),
             'version' => '0.1.0',
             'timestamp' => now()->toIso8601String(),
+            'execution_ms' => $executionMs,
             'checks' => $checks,
-        ], $status);
+            'telemetry' => [
+                'database_ms' => $dbMs,
+                'cache_ms' => $cacheMs,
+                'queue_ms' => $queueMs,
+            ],
+        ], $isHealthy ? 200 : 503);
     }
 
     private function checkDatabase(): string

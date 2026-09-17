@@ -87,4 +87,26 @@ class AuthTest extends TestCase
         // whereIn constraint → 404 for unknown providers.
         $this->getJson('/api/v1/auth/oauth/apple/redirect')->assertNotFound();
     }
+
+    public function test_cors_preflight_and_admin_origin_allowed(): void
+    {
+        // Admin Origin preflight
+        $res = $this->call('OPTIONS', '/api/v1/auth/login', [], [], [], [
+            'HTTP_ORIGIN' => 'http://localhost:5174',
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
+            'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'content-type,accept',
+        ]);
+
+        $res->assertStatus(204)
+            ->assertHeader('Access-Control-Allow-Origin', 'http://localhost:5174');
+
+        // Storefront Origin preflight
+        $resStorefront = $this->call('OPTIONS', '/api/v1/auth/login', [], [], [], [
+            'HTTP_ORIGIN' => 'http://localhost:5173',
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
+        ]);
+
+        $resStorefront->assertStatus(204)
+            ->assertHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+    }
 }

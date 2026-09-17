@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    port: 5174,
     host: true,
     proxy: {
       // Local dev: forward /api to Laravel so CORS isn't needed.
@@ -15,5 +15,5 @@ export default defineConfig({
       },
     },
   },
-  preview: { port: 5173 },
+  preview: { port: 5174 },
 })

@@ -1,0 +1,353 @@
+/**
+ * Garage Parts & Builds — Admin Master CSS
+ */
+
+:root {
+  --color-rust: #924424;
+  --color-rust-hover: #7b371b;
+  --color-rust-dark: #3a1e12;
+  --color-orange: #d8622c;
+  --color-orange-light: #fbeee7;
+  --color-metal: #4a4d52;
+  --color-steel: #2c4250;
+  --color-steel-light: #edf2f5;
+
+  /* Admin Surfaces */
+  --admin-bg-app: #f8fafc;
+  --admin-bg-sidebar: #0f172a;
+  --admin-bg-sidebar-hover: #1e293b;
+  --admin-bg-sidebar-active: #334155;
+  --admin-bg-header: #ffffff;
+  --admin-bg-card: #ffffff;
+  --admin-bg-subtle: #f1f5f9;
+
+  /* Admin Text */
+  --admin-text-primary: #0f172a;
+  --admin-text-secondary: #475569;
+  --admin-text-muted: #94a3b8;
+  --admin-text-light: #cbd5e1;
+
+  /* Borders */
+  --admin-border: #e2e8f0;
+  --admin-border-subtle: #f1f5f9;
+  --admin-border-dark: #1e293b;
+
+  /* Status */
+  --admin-success: #10b981;
+  --admin-success-bg: #ecfdf5;
+  --admin-warning: #f59e0b;
+  --admin-warning-bg: #fffbeb;
+  --admin-danger: #ef4444;
+  --admin-danger-bg: #fef2f2;
+  --admin-info: #3b82f6;
+  --admin-info-bg: #eff6ff;
+
+  /* Fonts */
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+
+  /* Dimensions & Spacing */
+  --sidebar-width: 270px;
+  --sidebar-collapsed-width: 80px;
+  --header-height: 70px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+  
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--admin-text-primary);
+  background-color: var(--admin-bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================================================================
+   Base Elements & Form Controls
+   ========================================================================== */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+.admin-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--admin-text-primary);
+  transition: all 0.15s ease;
+  outline: none;
+}
+.admin-input:focus {
+  border-color: var(--color-rust);
+  box-shadow: 0 0 0 3px rgba(146, 68, 36, 0.15);
+}
+
+.admin-select {
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--admin-text-primary);
+  outline: none;
+  cursor: pointer;
+}
+.admin-select:focus {
+  border-color: var(--color-rust);
+  box-shadow: 0 0 0 3px rgba(146, 68, 36, 0.15);
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-rust) 0%, #6d3018 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(146, 68, 36, 0.3);
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a64f2b 0%, var(--color-rust) 100%);
+  box-shadow: 0 4px 12px rgba(146, 68, 36, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--admin-bg-subtle);
+  color: var(--admin-text-secondary);
+  border-color: var(--admin-border);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: var(--admin-text-primary);
+}
+
+.btn-danger {
+  background: var(--admin-danger-bg);
+  color: var(--admin-danger);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--admin-danger);
+  color: #ffffff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--admin-text-secondary);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--admin-bg-subtle);
+  color: var(--admin-text-primary);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+/* ==========================================================================
+   Badges & Pills
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.badge-admin {
+  background: #fdf2f8;
+  color: #db2777;
+  border: 1px solid #fbcfe8;
+}
+
+.badge-seller {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.badge-buyer {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-success {
+  background: var(--admin-success-bg);
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-warning {
+  background: var(--admin-warning-bg);
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.badge-danger {
+  background: var(--admin-danger-bg);
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.badge-neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* ==========================================================================
+   Cards & Data Containers
+   ========================================================================== */
+.admin-card {
+  background: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.admin-card-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+/* ==========================================================================
+   Data Table
+   ========================================================================== */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--admin-border);
+  background: #ffffff;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.admin-table th {
+  background: #f8fafc;
+  padding: 14px 18px;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--admin-text-secondary);
+  border-bottom: 1px solid var(--admin-border);
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 16px 18px;
+  color: var(--admin-text-primary);
+  border-bottom: 1px solid var(--admin-border-subtle);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background-color: #fafbfc;
+}
+
+/* ==========================================================================
+   Admin Shell Layout Grid
+   ========================================================================== */
+.admin-app {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--admin-bg-app);
+}
+
+.admin-main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition: all 0.25s ease;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 32px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .admin-content {
+    padding: 20px 16px;
+  }
+}
