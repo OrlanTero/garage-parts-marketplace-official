@@ -235,7 +235,7 @@ Verification will be performed at each deployment stage to ensure cross-service 
 
 # Delivery Steps
 
-### * Step 1: Setup Free Cloud Database, Storage & WebSockets
+### ✓ Step 1: Setup Free Cloud Database, Storage & WebSockets
 Create and configure the free persistent database and object storage layers with zero hosting fees.
 
 - Create a free **TiDB Cloud Serverless** instance (25 GB free MySQL 8.0-compatible storage) or **Aiven MySQL** free cluster.
@@ -244,7 +244,7 @@ Create and configure the free persistent database and object storage layers with
 - Generate R2 API tokens (Access Key ID and Secret Access Key) and configure the public bucket URL domain for media assets.
 - Create a free **Pusher Channels** account (Sandbox tier: 200,000 free messages/day) to obtain WebSocket app credentials.
 
-###   Step 2: Deploy Laravel Backend API on Free Cloud Host
+### ✓ Step 2: Deploy Laravel Backend API on Free Cloud Host
 Containerize and deploy the Laravel 11 REST API to a free web hosting tier.
 
 - Create a `Dockerfile` in `backend/` optimized for PHP 8.2+ FPM with Nginx/Caddy or deploy directly on **Render.com** (Free Web Service) / **Koyeb** (Free Eco tier).
@@ -252,7 +252,7 @@ Containerize and deploy the Laravel 11 REST API to a free web hosting tier.
 - Execute database migrations and seeders (`php artisan migrate --force`, `php artisan db:seed --force`) against the live TiDB database.
 - Verify health check endpoint at `https://<backend-app>.onrender.com/api/v1/health` returning HTTP 200 OK.
 
-###   Step 3: Deploy Frontend Marketplace & Admin Portal on Vercel
+### * Step 3: Deploy Frontend Marketplace & Admin Portal on Vercel
 Deploy both React Single Page Applications (Marketplace & Admin Portal) to edge CDNs with automatic SSL.
 
 - Connect the GitHub repository to **Vercel** or **Cloudflare Pages** for the main marketplace (`frontend/` directory).
