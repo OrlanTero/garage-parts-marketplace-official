@@ -19,7 +19,8 @@ mkdir -p /var/www/html/storage/framework/sessions \
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 3. Create storage symlink
+# 3. Discover packages and create storage symlink
+php artisan package:discover --ansi || true
 php artisan storage:link --force || true
 
 # 4. Optional Auto-Migration and Seeding (if enabled via env)

@@ -47,8 +47,8 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-in
 # Copy application source code
 COPY . .
 
-# Finish composer autoload dump and optimization
-RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
+# Finish composer autoload dump and optimization without executing build-time scripts
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative --no-scripts
 
 # Ensure proper storage directories and permissions
 RUN mkdir -p storage/framework/sessions \
