@@ -47,17 +47,20 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-in
 # Copy application source code
 COPY . .
 
-# Finish composer autoload dump and optimization without executing build-time scripts
-RUN composer dump-autoload --optimize --no-dev --classmap-authoritative --no-scripts
+# Remove any copied local caches or logs and finish composer autoload dump without executing build-time scripts
+RUN rm -rf bootstrap/cache/*.php storage/logs/*.log \
+    && composer dump-autoload --optimize --no-dev --classmap-authoritative --no-scripts
 
 # Ensure proper storage directories and permissions
 RUN mkdir -p storage/framework/sessions \
              storage/framework/views \
              storage/framework/cache \
+             storage/logs \
              storage/app/public \
              bootstrap/cache \
+    && touch storage/logs/laravel.log \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    && chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Copy Nginx configuration and entrypoint script
 COPY docker/nginx.conf /etc/nginx/nginx.conf

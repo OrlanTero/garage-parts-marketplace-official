@@ -4,12 +4,14 @@
 .vscode
 node_modules
 tests
+bootstrap/cache/*
+!bootstrap/cache/.gitignore
 storage/*.key
 storage/framework/cache/*
 storage/framework/sessions/*
 storage/framework/views/*
 storage/logs/*
 .env
-.env.backup
+.env.*
 .phpunit.result.cache
 *.log

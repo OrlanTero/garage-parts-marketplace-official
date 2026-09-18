@@ -9,15 +9,16 @@ echo "Configuring Nginx to listen on port: $PORT"
 sed -i "s/listen 80 default_server;/listen $PORT default_server;/g" /etc/nginx/nginx.conf
 sed -i "s/listen \[::\]:80 default_server;/listen [::]:$PORT default_server;/g" /etc/nginx/nginx.conf
 
-# 2. Ensure storage and bootstrap permissions
-mkdir -p /var/www/html/storage/framework/sessions \
+# 2. Clean any stale cache files and ensure storage and bootstrap directories exist
+rm -f /var/www/html/bootstrap/cache/*.php
+mkdir -p /var/www/html/storage/logs \
+         /var/www/html/storage/framework/sessions \
          /var/www/html/storage/framework/views \
          /var/www/html/storage/framework/cache \
          /var/www/html/storage/app/public \
          /var/www/html/bootstrap/cache
 
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+touch /var/www/html/storage/logs/laravel.log
 
 # 3. Discover packages and create storage symlink
 php artisan package:discover --ansi || true
@@ -42,10 +43,14 @@ if [ "$APP_ENV" = "production" ]; then
     php artisan view:cache || true
 fi
 
-# 6. Start PHP-FPM in background
+# 6. Final ownership & permissions fix right before starting web & php processes
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# 7. Start PHP-FPM in background
 echo "Starting PHP-FPM..."
 php-fpm -D
 
-# 7. Start Nginx in foreground
+# 8. Start Nginx in foreground
 echo "Starting Nginx web server on port $PORT..."
 exec nginx -g "daemon off;"
