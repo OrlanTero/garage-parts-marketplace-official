@@ -24,23 +24,25 @@ RUN apk add --no-cache \
 # Install latest stable Composer binary
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Configure PHP production opcache settings
+# Configure PHP production opcache and memory settings
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.enable_cli=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.memory_consumption=128" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.interned_strings_buffer=8" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.max_accelerated_files=10000" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
     && echo "opcache.revalidate_freq=2" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
-    && echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
+    && echo "opcache.fast_shutdown=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+    && echo "memory_limit=-1" >> /usr/local/etc/php/conf.d/docker-php-ext-memory.ini
 
 # Copy composer manifest files first for caching layers
 COPY composer.json composer.lock* ./
 
-# Set Composer environment variable for non-root build
-ENV COMPOSER_ALLOW_SUPERUSER=1
+# Set Composer environment variables for non-root CI build and unlimited memory
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    COMPOSER_MEMORY_LIMIT=-1
 
 # Install composer dependencies without dev packages
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction --no-progress
 
 # Copy application source code
 COPY . .

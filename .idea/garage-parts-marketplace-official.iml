@@ -141,6 +141,12 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/voku/portable-ascii" />
       <excludeFolder url="file://$MODULE_DIR$/backend/storage/framework" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/_laravel_idea" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/firebase/php-jwt" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/laravel/socialite" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/league/oauth1-client" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/paragonie/constant_time_encoding" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/phpseclib/phpseclib" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/polyfill-php82" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
