@@ -54,6 +54,21 @@ class PartTest extends TestCase
         $this->getJson("/api/v1/marketplace/parts/{$partId}")->assertOk();
     }
 
+    public function test_parts_seller_can_create_and_publish_parts(): void
+    {
+        $partsSeller = User::factory()->create(['role' => 'parts_seller']);
+        $headers = $this->sellerToken($partsSeller);
+
+        $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft');
+
+        $partId = $create->json('data.id');
+        $this->postJson("/api/v1/seller/parts/{$partId}/publish", [], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
+    }
+
     public function test_buyer_cannot_create_parts(): void
     {
         $buyer = User::factory()->create(['role' => 'buyer']);

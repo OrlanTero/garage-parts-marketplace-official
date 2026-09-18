@@ -16,8 +16,10 @@ import {
   ExternalLink,
   CheckCircle2
 } from 'lucide-react'
+import { useFavorites } from '../context/FavoritesContext.jsx'
 
 export default function UserMenu({ user, logout, isTransparent = false }) {
+  const { favoritesCount, carsCount, partsCount } = useFavorites()
   const [isOpen, setIsOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const menuRef = useRef(null)
@@ -206,13 +208,13 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </>
             ) : (
               <>
-                <Link to="/marketplace" className="user-dropdown-item" onClick={handleLinkClick}>
+                <Link to="/favorites" className="user-dropdown-item" onClick={handleLinkClick}>
                   <div className="user-dropdown-item-icon">
                     <Heart size={16} />
                   </div>
                   <div className="user-dropdown-item-text">
                     <span className="user-dropdown-item-title">Saved Vehicles & Wishlist</span>
-                    <span className="user-dropdown-item-desc">2 cars currently tracked</span>
+                    <span className="user-dropdown-item-desc">{favoritesCount} {favoritesCount === 1 ? 'item' : 'items'} saved in garage</span>
                   </div>
                 </Link>
 

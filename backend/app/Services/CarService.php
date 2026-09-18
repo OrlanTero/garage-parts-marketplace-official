@@ -60,7 +60,7 @@ class CarService
         $car->media()->delete();
 
         foreach (array_values($items) as $index => $item) {
-            if (is_string($item) && filter_var($item, FILTER_VALIDATE_URL)) {
+            if (is_string($item) && (filter_var($item, FILTER_VALIDATE_URL) || str_starts_with($item, '/') || str_starts_with($item, 'http'))) {
                 $car->media()->create([
                     'url' => $item,
                     'type' => 'image',
@@ -74,6 +74,10 @@ class CarService
                     'is_primary' => (bool) ($item['is_primary'] ?? ($index === 0)),
                     'order' => (int) ($item['order'] ?? $index),
                     'caption' => $item['caption'] ?? null,
+                    'file_path' => $item['file_path'] ?? null,
+                    'file_name' => $item['file_name'] ?? null,
+                    'mime_type' => $item['mime_type'] ?? null,
+                    'size_bytes' => isset($item['size_bytes']) ? (int) $item['size_bytes'] : null,
                 ]);
             }
         }

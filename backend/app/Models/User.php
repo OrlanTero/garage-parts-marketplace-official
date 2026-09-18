@@ -87,4 +87,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Part::class, 'seller_id');
     }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
 }

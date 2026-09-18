@@ -94,6 +94,11 @@ class Car extends Model
             ->ofMany(['order' => 'min', 'id' => 'min'], fn ($q) => $q->where('is_primary', true)->orWhere('type', 'image'));
     }
 
+    public function favorites(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
     public function getPrimaryImageUrlAttribute(): ?string
     {
         if ($this->relationLoaded('media')) {

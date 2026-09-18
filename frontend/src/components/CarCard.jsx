@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ShieldCheck, MapPin, Heart, ArrowRight, Gauge, Cog, Fuel } from 'lucide-react'
+import { useFavorites } from '../context/FavoritesContext.jsx'
 import './Cards.css'
 
 // High-quality automotive placeholder images based on category or body style
@@ -33,7 +34,7 @@ export default function CarCard({
   variant = 'grid', 
   className = '' 
 }) {
-  const [internalSaved, setInternalSaved] = useState(false)
+  const { isCarSaved, toggleCarFavorite } = useFavorites()
   const [imgLoaded, setImgLoaded] = useState(false)
 
   if (!car) return null
@@ -60,7 +61,7 @@ export default function CarCard({
   // Image resolution
   const imageUrl = car.img || car.primary_image_url || car.image_url || (Array.isArray(car.images) && car.images[0]?.url) || (Array.isArray(car.images) && typeof car.images[0] === 'string' ? car.images[0] : null) || (Array.isArray(car.image_urls) && car.image_urls[0]) || getFallbackImage(id)
 
-  const saved = isSaved !== undefined ? isSaved : internalSaved
+  const saved = isSaved !== undefined ? isSaved : isCarSaved(id)
 
   const handleWishlist = (e) => {
     e.preventDefault()
@@ -68,7 +69,7 @@ export default function CarCard({
     if (onToggleSave) {
       onToggleSave(id, e)
     } else {
-      setInternalSaved(!internalSaved)
+      toggleCarFavorite(car)
     }
   }
 

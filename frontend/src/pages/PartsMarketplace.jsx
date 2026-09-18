@@ -65,7 +65,6 @@ export default function PartsMarketplace() {
 
   const [activeCategoryTab, setActiveCategoryTab] = useState(initialCategory || 'all')
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'list'
-  const [savedPartIds, setSavedPartIds] = useState([201, 204])
 
   // Sync category tab with filter and URL
   useEffect(() => {
@@ -88,20 +87,11 @@ export default function PartsMarketplace() {
     }
   }
 
-  // Toggle part save
-  const toggleSavePart = (id, e) => {
-    e.preventDefault()
-    setSavedPartIds((prev) => 
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
-  }
-
-  // Merged and filtered parts
   const displayedParts = useMemo(() => {
-    let source = apiParts.length > 0 ? apiParts : CURATED_SAMPLE_PARTS
+    let source = error && apiParts.length === 0 ? CURATED_SAMPLE_PARTS : apiParts
 
-    // Category filtering
-    if (filters.category && filters.category !== 'all') {
+    // Local category filtering for sample catalog offline fallback
+    if (filters.category && filters.category !== 'all' && error && apiParts.length === 0) {
       source = source.filter(p => {
         const pCat = (p.category || p.cat || '').toLowerCase()
         return pCat.includes(filters.category.toLowerCase()) || filters.category.toLowerCase().includes(pCat)
@@ -109,13 +99,13 @@ export default function PartsMarketplace() {
     }
 
     // Local filters for sample inventory fallback
-    if (apiParts.length === 0) {
+    if (error && apiParts.length === 0) {
       if (filters.search) {
         const q = filters.search.toLowerCase()
         source = source.filter(p => 
           (p.title?.toLowerCase().includes(q)) || 
           (p.brand?.toLowerCase().includes(q)) || 
-          (p.part_number?.toLowerCase().includes(q)) ||
+          (p.part_number?.toLowerCase().includes(q)) || 
           (p.compatibility?.toLowerCase().includes(q))
         )
       }
@@ -143,7 +133,7 @@ export default function PartsMarketplace() {
     }
 
     return source
-  }, [apiParts, filters])
+  }, [apiParts, error, filters])
 
   // Active filter chip representations
   const activeFilterList = useMemo(() => {
@@ -414,8 +404,6 @@ export default function PartsMarketplace() {
                 key={part.id}
                 part={part}
                 variant={viewMode}
-                isSaved={savedPartIds.includes(part.id)}
-                onToggleSave={toggleSavePart}
               />
             ))}
           </div>
@@ -434,9 +422,9 @@ export default function PartsMarketplace() {
                 <RotateCcw size={15} />
                 <span>Reset All Filters</span>
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => alert('Wanted Request form opened!')}>
-                <span>Post a Wanted Part Request</span>
-              </button>
+              <Link to="/sell/parts" className="btn btn-secondary">
+                <span>List Parts & Accessories</span>
+              </Link>
             </div>
           </div>
         )}

@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('media', function (Blueprint $table) {
             $table->id();
-            $table->string('mediable_type');
-            $table->unsignedBigInteger('mediable_id');
+            $table->string('mediable_type')->nullable();
+            $table->unsignedBigInteger('mediable_id')->nullable();
             $table->text('url');
             $table->string('type', 30)->default('image'); // image, video, document
             $table->boolean('is_primary')->default(false);

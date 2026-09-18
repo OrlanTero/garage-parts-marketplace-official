@@ -23,12 +23,15 @@ import Marketplace from './pages/Marketplace.jsx'
 import CarDetail from './pages/CarDetail.jsx'
 import PartsMarketplace from './pages/PartsMarketplace.jsx'
 import PartDetail from './pages/PartDetail.jsx'
+import CreateListing from './pages/CreateListing.jsx'
+import Favorites from './pages/Favorites.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import SearchModal from './components/SearchModal.jsx'
 import AuthModal from './components/AuthModal.jsx'
 import UserMenu from './components/UserMenu.jsx'
 import { useAuth } from './auth/AuthContext.jsx'
+import { useFavorites } from './context/FavoritesContext.jsx'
 
 const NAV = [
   { to: '/', label: 'Home', end: true },
@@ -74,6 +77,7 @@ export default function App() {
     openRegisterModal, 
     closeAuthModal 
   } = useAuth()
+  const { favoritesCount } = useFavorites()
   const location = useLocation()
   const navigate = useNavigate()
   const isAuthRoute = location.pathname === '/login' || location.pathname === '/register'
@@ -215,9 +219,9 @@ export default function App() {
               <Search size={18} />
             </button>
 
-            <Link to="/marketplace" className="action-btn" title="Saved Vehicles & Wishlist" aria-label="Wishlist">
-              <Heart size={18} />
-              <span className="action-badge">2</span>
+            <Link to="/favorites" className="action-btn" title="Saved Vehicles & Wishlist" aria-label="Wishlist">
+              <Heart size={18} fill={favoritesCount > 0 ? '#d8622c' : 'none'} color={favoritesCount > 0 ? '#d8622c' : 'currentColor'} />
+              {favoritesCount > 0 && <span className="action-badge">{favoritesCount}</span>}
             </Link>
 
             <Link to="/parts" className="action-btn" title="Parts Inquiries & Cart" aria-label="Parts Inquiries">
@@ -345,12 +349,12 @@ export default function App() {
                     <span>Sell Your Build / Parts</span>
                   </Link>
                   <Link 
-                    to="/marketplace" 
+                    to="/favorites" 
                     className="mobile-drawer-quicklink" 
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <Heart size={15} />
-                    <span>Saved Wishlist & Cars</span>
+                    <Heart size={15} fill={favoritesCount > 0 ? '#d8622c' : 'none'} color={favoritesCount > 0 ? '#d8622c' : 'currentColor'} />
+                    <span>Saved Wishlist & Cars ({favoritesCount})</span>
                   </Link>
                 </div>
 
@@ -418,8 +422,14 @@ export default function App() {
           <Route path="/marketplace/:id" element={<CarDetail />} />
           <Route path="/parts" element={<PartsMarketplace />} />
           <Route path="/parts/:id" element={<PartDetail />} />
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/saved" element={<Favorites />} />
+          <Route path="/wishlist" element={<Favorites />} />
+          <Route path="/sell" element={<CreateListing />} />
+          <Route path="/sell/cars" element={<CreateListing defaultType="car" />} />
+          <Route path="/sell/parts" element={<CreateListing defaultType="part" />} />
+          <Route path="/create-listing" element={<CreateListing />} />
           <Route path="/showroom" element={<Placeholder title="Showroom & Café" />} />
-          <Route path="/sell" element={<Placeholder title="Sell Your Build" />} />
           <Route path="/services" element={<Placeholder title="Garage Inspection Services" />} />
           <Route path="/about" element={<Placeholder title="About Garage Marketplace" />} />
           <Route path="/login" element={<Login />} />

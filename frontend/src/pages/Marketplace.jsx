@@ -57,7 +57,6 @@ export default function Marketplace() {
 
   const [activePreset, setActivePreset] = useState('all')
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'list'
-  const [savedCarIds, setSavedCarIds] = useState([101, 102])
 
   // Sync URL search param if changed externally
   useEffect(() => {
@@ -67,17 +66,10 @@ export default function Marketplace() {
     }
   }, [searchParams, filters.search, setFilter])
 
-  // Toggle vehicle save
-  const toggleSaveCar = (id, e) => {
-    e.preventDefault()
-    setSavedCarIds((prev) => 
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
-  }
-
-  // Combined and filtered car list (merges API results + curated sample inventory when clean/empty)
+  // Combined and filtered car list: live database records take precedence;
+  // curated sample inventory is only used as an offline/error fallback.
   const displayedCars = useMemo(() => {
-    let source = apiCars.length > 0 ? apiCars : CURATED_SAMPLE_CARS
+    let source = error && apiCars.length === 0 ? CURATED_SAMPLE_CARS : apiCars
 
     // Apply active preset filter
     if (activePreset !== 'all') {
@@ -87,8 +79,8 @@ export default function Marketplace() {
       }
     }
 
-    // Apply local search and brand filter if using sample dataset
-    if (apiCars.length === 0) {
+    // Apply local search and brand filter if using sample dataset in offline/error mode
+    if (error && apiCars.length === 0) {
       if (filters.search) {
         const q = filters.search.toLowerCase()
         source = source.filter(c => 
@@ -128,7 +120,7 @@ export default function Marketplace() {
     }
 
     return source
-  }, [apiCars, activePreset, filters])
+  }, [apiCars, activePreset, error, filters])
 
   // Count active filter tags
   const activeFilterList = useMemo(() => {
@@ -397,8 +389,6 @@ export default function Marketplace() {
                 key={car.id}
                 car={car}
                 variant={viewMode}
-                isSaved={savedCarIds.includes(car.id)}
-                onToggleSave={toggleSaveCar}
               />
             ))}
           </div>

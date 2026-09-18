@@ -15,6 +15,7 @@ import {
   MessageSquare
 } from 'lucide-react'
 import { marketplaceParts } from '../api/parts.js'
+import { useFavorites } from '../context/FavoritesContext.jsx'
 import './Details.css'
 
 const CATEGORY_PLACEHOLDERS = {
@@ -38,10 +39,12 @@ function formatPrice(val) {
 
 export default function PartDetail() {
   const { id } = useParams()
+  const { isPartSaved, togglePartFavorite } = useFavorites()
   const [part, setPart] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
-  const [isSaved, setIsSaved] = useState(false)
+
+  const isSaved = isPartSaved(id)
 
   useEffect(() => {
     marketplaceParts
@@ -236,10 +239,10 @@ export default function PartDetail() {
                 <button 
                   type="button" 
                   className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
-                  onClick={() => setIsSaved(!isSaved)}
-                  title="Save Part"
+                  onClick={() => togglePartFavorite(part)}
+                  title={isSaved ? 'Remove from Saved' : 'Save Part'}
                 >
-                  <Heart size={16} fill={isSaved ? '#d8622c' : 'none'} />
+                  <Heart size={16} fill={isSaved ? '#d8622c' : 'none'} color={isSaved ? '#d8622c' : 'currentColor'} />
                 </button>
               </div>
             </div>

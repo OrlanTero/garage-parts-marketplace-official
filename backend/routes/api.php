@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\MarketplaceCarController;
 use App\Http\Controllers\Api\MarketplacePartController;
+use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\OAuthController;
 use App\Http\Controllers\Api\SellerCarController;
 use App\Http\Controllers\Api\SellerPartController;
@@ -47,6 +49,23 @@ Route::prefix('v1')->group(function () {
         Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
             return Broadcast::auth($request);
         })->name('api.broadcasting.auth');
+
+        // Media upload & management (Laravel Storage / AWS S3 ready)
+        Route::prefix('media')->name('api.media.')->group(function () {
+            Route::post('/upload', [MediaController::class, 'upload'])->name('upload');
+            Route::get('/{media}', [MediaController::class, 'show'])->name('show');
+            Route::delete('/{media}', [MediaController::class, 'destroy'])->name('destroy');
+        });
+
+        // Saved & Favorites (Wishlist & Saved Vehicles/Parts)
+        Route::prefix('favorites')->name('api.favorites.')->group(function () {
+            Route::get('/', [FavoriteController::class, 'index'])->name('index');
+            Route::get('/ids', [FavoriteController::class, 'ids'])->name('ids');
+            Route::post('/toggle', [FavoriteController::class, 'toggle'])->name('toggle');
+            Route::post('/', [FavoriteController::class, 'store'])->name('store');
+            Route::delete('/clear', [FavoriteController::class, 'clear'])->name('clear');
+            Route::delete('/{id?}', [FavoriteController::class, 'destroy'])->name('destroy');
+        });
 
         // Legacy alias (pre-session-module clients)
         Route::get('/me', [AuthController::class, 'me'])->name('api.me');

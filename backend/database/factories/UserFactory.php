@@ -21,4 +21,39 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
         ];
     }
+
+    public function buyer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'buyer',
+        ]);
+    }
+
+    public function seller(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'seller',
+        ]);
+    }
+
+    public function dealer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'dealer',
+        ]);
+    }
+
+    public function partsSeller(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'parts_seller',
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+        ]);
+    }
 }

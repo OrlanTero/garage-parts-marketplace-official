@@ -17,6 +17,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { marketplaceCars } from '../api/cars.js'
+import { useFavorites } from '../context/FavoritesContext.jsx'
 import './Details.css'
 
 const DEFAULT_CAR_IMAGES = [
@@ -35,10 +36,12 @@ function formatPrice(val) {
 
 export default function CarDetail() {
   const { id } = useParams()
+  const { isCarSaved, toggleCarFavorite } = useFavorites()
   const [car, setCar] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
-  const [isSaved, setIsSaved] = useState(false)
+
+  const isSaved = isCarSaved(id)
 
   useEffect(() => {
     marketplaceCars
@@ -212,10 +215,10 @@ export default function CarDetail() {
                 <button 
                   type="button" 
                   className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
-                  onClick={() => setIsSaved(!isSaved)}
-                  title="Save Vehicle"
+                  onClick={() => toggleCarFavorite(car)}
+                  title={isSaved ? 'Remove from Saved' : 'Save Vehicle'}
                 >
-                  <Heart size={16} fill={isSaved ? '#d8622c' : 'none'} />
+                  <Heart size={16} fill={isSaved ? '#d8622c' : 'none'} color={isSaved ? '#d8622c' : 'currentColor'} />
                 </button>
               </div>
             </div>

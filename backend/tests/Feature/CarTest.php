@@ -56,6 +56,21 @@ class CarTest extends TestCase
         $this->getJson("/api/v1/marketplace/cars/{$carId}")->assertOk();
     }
 
+    public function test_dealer_can_create_and_publish_cars(): void
+    {
+        $dealer = User::factory()->create(['role' => 'dealer']);
+        $headers = $this->sellerToken($dealer);
+
+        $create = $this->postJson('/api/v1/seller/cars', $this->carPayload(), $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft');
+
+        $carId = $create->json('data.id');
+        $this->postJson("/api/v1/seller/cars/{$carId}/publish", [], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
+    }
+
     public function test_buyer_cannot_create_cars(): void
     {
         $buyer = User::factory()->create(['role' => 'buyer']);

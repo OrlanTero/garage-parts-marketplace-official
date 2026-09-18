@@ -30,6 +30,8 @@ import {
   Sliders,
   Radio
 } from 'lucide-react'
+import { marketplaceCars } from '../api/cars.js'
+import { marketplaceParts } from '../api/parts.js'
 import CarCard from '../components/CarCard.jsx'
 import PartCard from '../components/PartCard.jsx'
 import CategoryCard from '../components/CategoryCard.jsx'
@@ -123,8 +125,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('parts')
   const [carFilter, setCarFilter] = useState('all')
   const [partFilter, setPartFilter] = useState('all')
-  const [savedCars, setSavedCars] = useState([1, 2])
-  const [savedParts, setSavedParts] = useState([1])
   const [openFaq, setOpenFaq] = useState(0)
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false)
@@ -134,6 +134,28 @@ export default function Home() {
   const [finderMake, setFinderMake] = useState('')
   const [finderModel, setFinderModel] = useState('')
   const [finderCat, setFinderCat] = useState('')
+
+  // Live Database Records
+  const [liveCars, setLiveCars] = useState(null)
+  const [liveParts, setLiveParts] = useState(null)
+
+  useEffect(() => {
+    marketplaceCars.list({ per_page: 8, sort: 'newest' })
+      .then((res) => {
+        if (res?.data && res.data.length > 0) {
+          setLiveCars(res.data)
+        }
+      })
+      .catch(() => {})
+
+    marketplaceParts.list({ per_page: 9, sort: 'newest' })
+      .then((res) => {
+        if (res?.data && res.data.length > 0) {
+          setLiveParts(res.data)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Scroll Reveal Observer
   useEffect(() => {
@@ -152,18 +174,6 @@ export default function Home() {
     elements.forEach((el) => observer.observe(el))
     return () => observer.disconnect()
   }, [])
-
-  const toggleSaveCar = (id, e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setSavedCars((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
-  }
-
-  const toggleSavePart = (id, e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setSavedParts((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
-  }
 
   const handleFinderSubmit = (e) => {
     e.preventDefault()
@@ -185,13 +195,25 @@ export default function Home() {
     }, 3000)
   }
 
+  const baseCars = liveCars || FEATURED_CARS
+  const baseParts = liveParts || FEATURED_PARTS
+
   const filteredCars = carFilter === 'all' 
-    ? FEATURED_CARS 
-    : FEATURED_CARS.filter(c => c.category === carFilter)
+    ? baseCars 
+    : baseCars.filter(c => {
+        if (c.category) return c.category === carFilter
+        if (carFilter === 'jdm') return ['nissan', 'toyota', 'honda', 'mazda', 'subaru', 'mitsubishi'].includes((c.brand || c.make || '').toLowerCase())
+        if (carFilter === 'classics') return (c.year && Number(c.year) <= 1990)
+        if (carFilter === '4x4') return c.body_style === 'suv' || c.body_style === 'pickup'
+        return true
+      })
 
   const filteredParts = partFilter === 'all'
-    ? FEATURED_PARTS
-    : FEATURED_PARTS.filter(p => p.cat === partFilter)
+    ? baseParts
+    : baseParts.filter(p => {
+        const cat = (p.category || p.cat || '').toLowerCase()
+        return cat.includes(partFilter) || (partFilter === 'wheels' && cat.includes('tire'))
+      })
 
   return (
     <div className="home-modern">
@@ -486,8 +508,6 @@ export default function Home() {
               <CarCard
                 key={car.id}
                 car={car}
-                isSaved={savedCars.includes(car.id)}
-                onToggleSave={toggleSaveCar}
                 className={`reveal reveal-delay-${(i % 4) + 1}`}
               />
             ))}
@@ -571,8 +591,6 @@ export default function Home() {
               <PartCard
                 key={part.id}
                 part={part}
-                isSaved={savedParts.includes(part.id)}
-                onToggleSave={toggleSavePart}
                 className={`reveal reveal-delay-${(i % 3) + 1}`}
               />
             ))}

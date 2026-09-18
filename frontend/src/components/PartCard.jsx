@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Truck, Star, Heart, ArrowRight, PackageCheck, MapPin, Tag } from 'lucide-react'
+import { useFavorites } from '../context/FavoritesContext.jsx'
 import './Cards.css'
 
 const CATEGORY_PLACEHOLDERS = {
@@ -36,7 +37,7 @@ export default function PartCard({
   variant = 'grid', 
   className = '' 
 }) {
-  const [internalSaved, setInternalSaved] = useState(false)
+  const { isPartSaved, togglePartFavorite } = useFavorites()
   const [imgLoaded, setImgLoaded] = useState(false)
 
   if (!part) return null
@@ -73,7 +74,7 @@ export default function PartCard({
   // Image resolution
   const imageUrl = part.img || part.primary_image_url || part.image_url || (Array.isArray(part.images) && part.images[0]?.url) || (Array.isArray(part.images) && typeof part.images[0] === 'string' ? part.images[0] : null) || (Array.isArray(part.image_urls) && part.image_urls[0]) || getFallbackImage(rawCat)
 
-  const saved = isSaved !== undefined ? isSaved : internalSaved
+  const saved = isSaved !== undefined ? isSaved : isPartSaved(id)
 
   const handleWishlist = (e) => {
     e.preventDefault()
@@ -81,7 +82,7 @@ export default function PartCard({
     if (onToggleSave) {
       onToggleSave(id, e)
     } else {
-      setInternalSaved(!internalSaved)
+      togglePartFavorite(part)
     }
   }
 

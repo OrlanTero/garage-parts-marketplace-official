@@ -13,7 +13,7 @@ class StoreCarRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('seller', 'admin') ?? false;
+        return $this->user()?->hasRole('seller', 'dealer', 'admin') ?? false;
     }
 
     public function rules(): array
