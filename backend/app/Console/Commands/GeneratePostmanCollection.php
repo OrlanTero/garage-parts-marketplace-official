@@ -49,6 +49,8 @@ class GeneratePostmanCollection extends Command
                 ['key' => 'reverbHost', 'value' => '127.0.0.1', 'type' => 'string'],
                 ['key' => 'reverbPort', 'value' => '8080', 'type' => 'string'],
                 ['key' => 'reverbAppKey', 'value' => 'local-key', 'type' => 'string'],
+                ['key' => 'appKey', 'value' => 'base64:sM5Th/eioZw9bH6Hj6gsMw4ooLgjauK4bC1/9lpQr6E=', 'type' => 'string'],
+                ['key' => 'maintenanceToken', 'value' => '', 'type' => 'string'],
             ],
             'auth' => [
                 'type' => 'bearer',
@@ -182,6 +184,62 @@ class GeneratePostmanCollection extends Command
                         'header' => [['key' => 'Accept', 'value' => 'application/json']],
                         'url' => ['raw' => '{{baseUrl}}/sanctum/csrf-cookie', 'host' => ['{{baseUrl}}'], 'path' => ['sanctum', 'csrf-cookie']],
                         'description' => 'Initializes CSRF cookies for SPA cookie-based session authorization.',
+                    ],
+                ],
+                [
+                    'name' => 'GET Remote Migration Status',
+                    'event' => [$this->testStatus200('pm.test("Migration status output present", function () { const d = pm.response.json(); pm.expect(d.status).to.eql("success"); });')],
+                    'request' => [
+                        'auth' => ['type' => 'noauth'],
+                        'method' => 'GET',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'X-App-Key', 'value' => '{{appKey}}'],
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/system/migrate-status', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'system', 'migrate-status']],
+                        'description' => 'Checks database migration status (php artisan migrate:status) on remote deployment.',
+                    ],
+                ],
+                [
+                    'name' => 'POST Run Remote Migrations',
+                    'event' => [$this->testStatus200('pm.test("Migration completed", function () { const d = pm.response.json(); pm.expect(d.status).to.eql("success"); });')],
+                    'request' => [
+                        'auth' => ['type' => 'noauth'],
+                        'method' => 'POST',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'X-App-Key', 'value' => '{{appKey}}'],
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/system/migrate', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'system', 'migrate']],
+                        'description' => 'Executes database migrations (php artisan migrate --force) on remote deployment.',
+                    ],
+                ],
+                [
+                    'name' => 'POST Run Remote Seeders',
+                    'event' => [$this->testStatus200('pm.test("Seeding completed", function () { const d = pm.response.json(); pm.expect(d.status).to.eql("success"); });')],
+                    'request' => [
+                        'auth' => ['type' => 'noauth'],
+                        'method' => 'POST',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'X-App-Key', 'value' => '{{appKey}}'],
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/system/seed', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'system', 'seed']],
+                        'description' => 'Executes database seeders (php artisan db:seed --force) on remote deployment.',
+                    ],
+                ],
+                [
+                    'name' => 'POST Run Remote Migrate & Seed',
+                    'event' => [$this->testStatus200('pm.test("Migrate & Seed completed", function () { const d = pm.response.json(); pm.expect(d.status).to.eql("success"); });')],
+                    'request' => [
+                        'auth' => ['type' => 'noauth'],
+                        'method' => 'POST',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'X-App-Key', 'value' => '{{appKey}}'],
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/system/migrate-seed', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'system', 'migrate-seed']],
+                        'description' => 'Executes both database migrations and seeders together on remote deployment.',
                     ],
                 ],
             ],

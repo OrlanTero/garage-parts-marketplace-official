@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\OAuthController;
 use App\Http\Controllers\Api\SellerCarController;
 use App\Http\Controllers\Api\SellerPartController;
+use App\Http\Controllers\Api\SystemMaintenanceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,6 +24,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::get('/health', HealthController::class)->name('api.health');
+
+    // --- System & Database Maintenance (Remote Migration & Seeding) ---
+    Route::prefix('system')->name('api.system.')->group(function () {
+        Route::match(['get', 'post'], '/migrate-status', [SystemMaintenanceController::class, 'status'])->name('migrateStatus');
+        Route::post('/migrate', [SystemMaintenanceController::class, 'migrate'])->name('migrate');
+        Route::post('/seed', [SystemMaintenanceController::class, 'seed'])->name('seed');
+        Route::post('/migrate-seed', [SystemMaintenanceController::class, 'migrateAndSeed'])->name('migrateSeed');
+    });
 
     // --- Public session endpoints ---
     Route::prefix('auth')->name('api.auth.')->group(function () {
