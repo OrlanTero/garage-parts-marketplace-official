@@ -168,12 +168,12 @@ export default function Marketplace() {
       <section className="marketplace-hero">
         <div className="marketplace-hero-inner">
           <span className="marketplace-eyebrow">
-            <ShieldCheck size={16} /> 100-Point Inspected & Escrow Protected
+            <ShieldCheck size={16} /> Verified Enthusiast & Project Builds
           </span>
           <h1 className="marketplace-title">Enthusiast Cars & Project Builds</h1>
           <p className="marketplace-lead">
-            Every vehicle is verified on physical lift bays, authenticated against LTO/HPG records, 
-            and transacted securely through Garage 256-bit Escrow vault.
+            Explore authentic enthusiast cars and project builds, verified with genuine seller documentation 
+            and backed by our Buyer Protection Guarantee.
           </p>
 
           {/* Quick Presets */}
@@ -468,7 +468,7 @@ export default function Marketplace() {
         )}
 
         {/* ===================================================================
-            6. TRUST & ESCROW PILLARS
+            6. TRUST & BUYER PROTECTION PILLARS
             =================================================================== */}
         <div className="marketplace-trust-banner">
           <div className="trust-item">
@@ -476,8 +476,8 @@ export default function Marketplace() {
               <ShieldCheck size={22} />
             </div>
             <div className="trust-item-text">
-              <h4>100-Point Lift Bay Inspection</h4>
-              <p>Every engine, chassis, compression test, and flood inspection is independently conducted and certified.</p>
+              <h4>Verified Vehicle Specs</h4>
+              <p>Every engine, chassis, and modification specification is documented with verified seller photos.</p>
             </div>
           </div>
 
@@ -486,8 +486,8 @@ export default function Marketplace() {
               <Lock size={22} />
             </div>
             <div className="trust-item-text">
-              <h4>256-Bit Escrow Vault</h4>
-              <p>Your payment is secured until the vehicle is delivered and condition is verified against listing specs.</p>
+              <h4>Buyer Protection</h4>
+              <p>Direct communication and protected payment checkout with clear return policies for genuine confidence.</p>
             </div>
           </div>
 
@@ -496,8 +496,8 @@ export default function Marketplace() {
               <Truck size={22} />
             </div>
             <div className="trust-item-text">
-              <h4>Nationwide Insured Transport</h4>
-              <p>Door-to-door enclosed flatbed and inter-island roll-on/roll-off shipping with real-time GPS telemetry.</p>
+              <h4>Nationwide Transport</h4>
+              <p>Door-to-door enclosed flatbed and inter-island roll-on/roll-off shipping with verified couriers.</p>
             </div>
           </div>
         </div>
@@ -509,8 +509,8 @@ export default function Marketplace() {
           <div className="sell-cta-content">
             <h3>Ready to Pass the Torch on Your Build?</h3>
             <p>
-              List your enthusiast or project car on Garage. We handle buyer pre-qualification, 
-              escrow settlement, and verified inspection to keep low-ballers away.
+              List your enthusiast or project car on Garage. We handle buyer inquiries, 
+              direct messaging, and verified listings to connect you with real builders.
             </p>
           </div>
           <Link to="/sell" className="btn btn-primary" style={{ padding: '12px 24px', fontSize: 15 }}>

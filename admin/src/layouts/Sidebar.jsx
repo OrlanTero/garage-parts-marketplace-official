@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -10,55 +10,119 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ExternalLink,
   Wrench,
+  Tag,
+  ShoppingBag,
+  CreditCard,
+  AlertTriangle,
+  FileCheck,
+  Star,
+  Building2,
+  Radio,
+  LifeBuoy,
+  TrendingUp,
+  Shield,
+  Server,
+  Search,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 
-const NAV_ITEMS = [
+const NAV_GROUPS = [
   {
-    to: '/',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    end: true,
+    id: 'overview',
+    title: 'Overview',
+    items: [
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    ],
   },
   {
-    to: '/cars',
-    label: 'Car Builds',
-    icon: Car,
-    badge: 'Showroom',
+    id: 'marketplace',
+    title: 'Marketplace & Inventory',
+    items: [
+      { to: '/cars', label: 'Car Builds', icon: Car, badge: 'Showroom' },
+      { to: '/parts', label: 'Parts Catalog', icon: Layers, badge: 'Inventory' },
+      { to: '/taxonomy', label: 'Fitment & Taxonomy', icon: Tag },
+      { to: '/promotions', label: 'Promotions & Boosts', icon: Tag, badge: 'Vouchers' },
+    ],
   },
   {
-    to: '/parts',
-    label: 'Parts Catalog',
-    icon: Layers,
-    badge: 'Inventory',
+    id: 'orders',
+    title: 'Sales & Orders Operations',
+    items: [
+      { to: '/orders', label: 'Orders & Fulfillment', icon: ShoppingBag, badge: '4 Active' },
+      { to: '/payouts', label: 'Seller Payouts', icon: CreditCard },
+      { to: '/disputes', label: 'Disputes & Returns', icon: AlertTriangle, badge: { label: '1 Open', variant: 'danger' } },
+    ],
   },
   {
-    to: '/users',
-    label: 'Users & Roles',
-    icon: Users,
+    id: 'trust',
+    title: 'Trust & Governance',
+    items: [
+      { to: '/verifications', label: 'Seller KYC & Trust', icon: FileCheck, badge: { label: '1 Review', variant: 'warning' } },
+      { to: '/reviews', label: 'Customer Reviews', icon: Star },
+      { to: '/garages', label: 'Partner Garages', icon: Building2 },
+    ],
   },
   {
-    to: '/inspections',
-    label: 'Inspections',
-    icon: ShieldCheck,
+    id: 'communications',
+    title: 'Communications & Desk',
+    items: [
+      { to: '/notifications', label: 'WebSocket Broadcasts', icon: Radio, badge: { label: '8080', variant: 'success' } },
+      { to: '/support', label: 'Support Tickets', icon: LifeBuoy, badge: '2 Open' },
+    ],
   },
   {
-    to: '/system',
-    label: 'System & Health',
-    icon: Activity,
-  },
-  {
-    to: '/settings',
-    label: 'Admin Settings',
-    icon: Settings,
+    id: 'governance',
+    title: 'System & Governance',
+    items: [
+      { to: '/users', label: 'Users & Roles', icon: Users },
+      { to: '/analytics', label: 'Analytics & GMV', icon: TrendingUp },
+      { to: '/audit-logs', label: 'Security Audit Logs', icon: Shield },
+      { to: '/cache-manager', label: 'Nginx Cache & Redis', icon: Server },
+      { to: '/system', label: 'System & Edge Health', icon: Activity },
+      { to: '/settings', label: 'Admin Settings', icon: Settings },
+    ],
   },
 ]
 
 export function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) {
   const { user } = useAuth()
   const location = useLocation()
+  const [navSearch, setNavSearch] = useState('')
+  const [expandedGroups, setExpandedGroups] = useState([
+    'overview',
+    'marketplace',
+    'orders',
+    'trust',
+    'communications',
+    'governance',
+  ])
+
+  // Auto-expand group of current route
+  useEffect(() => {
+    const activeGroup = NAV_GROUPS.find((group) =>
+      group.items.some((item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to) && item.to !== '/'))
+    )
+    if (activeGroup && !expandedGroups.includes(activeGroup.id)) {
+      setExpandedGroups((prev) => [...prev, activeGroup.id])
+    }
+  }, [location.pathname])
+
+  const toggleGroup = (groupId) => {
+    setExpandedGroups((prev) =>
+      prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
+    )
+  }
+
+  const filteredGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      item.label.toLowerCase().includes(navSearch.toLowerCase()) ||
+      group.title.toLowerCase().includes(navSearch.toLowerCase())
+    ),
+  })).filter((group) => group.items.length > 0)
 
   return (
     <>
@@ -104,178 +168,230 @@ export function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) 
         <div
           style={{
             height: 'var(--header-height)',
-            padding: collapsed ? '0 16px' : '0 24px',
+            padding: collapsed ? '0 16px' : '0 20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'space-between',
             borderBottom: '1px solid #1E293B',
+            flexShrink: 0,
           }}
         >
-          {!collapsed ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 8,
-                  background: 'linear-gradient(135deg, var(--color-rust) 0%, #3A1E12 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
-                  boxShadow: '0 2px 8px rgba(146, 68, 36, 0.4)',
-                }}
-              >
-                <Wrench size={20} />
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 700,
-                    fontSize: 16,
-                    letterSpacing: '0.02em',
-                    color: '#FFFFFF',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  GARAGE<span style={{ color: 'var(--color-orange)' }}>OPS</span>
-                </div>
-                <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500, letterSpacing: '0.05em' }}>
-                  ADMIN CONTROL HUB
-                </div>
-              </div>
-            </div>
-          ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
             <div
               style={{
                 width: 38,
                 height: 38,
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, var(--color-rust) 0%, #3A1E12 100%)',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--color-rust)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#FFFFFF',
+                flexShrink: 0,
+                boxShadow: '0 4px 12px rgba(146, 68, 36, 0.4)',
               }}
-              title="Garage Operations Hub"
             >
-              <Wrench size={20} />
+              <Wrench size={20} color="#FFFFFF" />
             </div>
-          )}
 
-          {/* Desktop Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setCollapsed(!collapsed)}
-            className="sidebar-collapse-btn"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              background: '#1E293B',
-              border: '1px solid #334155',
-              color: '#94A3B8',
-              cursor: 'pointer',
-              ...(collapsed ? { display: 'none' } : {}),
-            }}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
+            {!collapsed && (
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 15,
+                    fontWeight: 800,
+                    letterSpacing: '0.04em',
+                    color: '#FFFFFF',
+                    whiteSpace: 'nowrap',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  GarageParts
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--color-rust)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.12em',
+                  }}
+                >
+                  Admin Control Portal
+                </span>
+              </div>
+            )}
+          </div>
+
+          {!collapsed && (
+            <button
+              onClick={() => setCollapsed(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                padding: 6,
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.15s ease',
+              }}
+              aria-label="Collapse Sidebar"
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
         </div>
 
-        {/* Navigation Links */}
-        <div style={{ flex: 1, padding: '20px 12px', overflowY: 'auto' }}>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: '#64748B',
-              padding: collapsed ? '0 0 12px 0' : '0 12px 12px 12px',
-              textAlign: collapsed ? 'center' : 'left',
-            }}
-          >
-            {collapsed ? '•' : 'Management'}
+        {/* Quick Nav Search (Expanded Only) */}
+        {!collapsed && (
+          <div style={{ padding: '12px 16px 4px 16px', flexShrink: 0 }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: 10, top: 9, color: '#64748b' }} />
+              <input
+                type="text"
+                placeholder="Jump to section..."
+                value={navSearch}
+                onChange={(e) => setNavSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '7px 10px 7px 30px',
+                  fontSize: 12,
+                  background: '#1e293b',
+                  border: '1px solid #334155',
+                  borderRadius: 'var(--radius-sm)',
+                  color: '#ffffff',
+                  outline: 'none',
+                }}
+              />
+            </div>
           </div>
+        )}
 
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon
-              const isActive = item.end
-                ? location.pathname === item.to
-                : location.pathname.startsWith(item.to)
+        {/* Navigation Sections with Accordion Groups */}
+        <nav
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: collapsed ? '16px 8px' : '10px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+          }}
+        >
+          {filteredGroups.map((group) => {
+            const isExpanded = expandedGroups.includes(group.id) || !!navSearch
 
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: collapsed ? '12px 0' : '10px 14px',
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    transition: 'all 0.18s ease',
-                    color: isActive ? '#FFFFFF' : '#94A3B8',
-                    backgroundColor: isActive ? 'var(--color-rust)' : 'transparent',
-                    boxShadow: isActive ? '0 2px 10px rgba(146, 68, 36, 0.35)' : 'none',
-                  }}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <Icon size={18} style={{ flexShrink: 0, color: isActive ? '#FFFFFF' : '#CBD5E1' }} />
-                  {!collapsed && (
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.label}
-                    </span>
-                  )}
-                  {!collapsed && item.badge && !isActive && (
-                    <span
+            return (
+              <div key={group.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                {/* Section Accordion Header */}
+                {!collapsed ? (
+                  <div
+                    onClick={() => toggleGroup(group.id)}
+                    className={`sidebar-nav-group-header ${isExpanded ? 'is-expanded' : ''}`}
+                  >
+                    <span>{group.title}</span>
+                    <ChevronDown
+                      size={14}
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        backgroundColor: '#1E293B',
-                        color: '#CBD5E1',
-                        letterSpacing: '0.02em',
+                        transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                        transition: 'transform 0.2s ease',
+                        color: '#64748b',
                       }}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </NavLink>
-              )
-            })}
-          </nav>
+                    />
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      height: 1,
+                      backgroundColor: '#1e293b',
+                      margin: '8px 0',
+                    }}
+                  />
+                )}
 
-          <div
-            style={{
-              margin: '24px 0 12px 0',
-              borderTop: '1px solid #1E293B',
-              paddingTop: 16,
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: '#64748B',
-              paddingLeft: collapsed ? 0 : 12,
-              textAlign: collapsed ? 'center' : 'left',
-            }}
-          >
-            {collapsed ? '•' : 'Storefront'}
-          </div>
+                {/* Sub items */}
+                {(isExpanded || collapsed) && (
+                  <div className={collapsed ? '' : 'sidebar-sub-nav'}>
+                    {group.items.map((item) => {
+                      const Icon = item.icon
+                      const badgeObj = typeof item.badge === 'object' ? item.badge : item.badge ? { label: item.badge, variant: 'neutral' } : null
 
+                      return (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.end}
+                          onClick={() => setMobileOpen(false)}
+                          className={({ isActive }) =>
+                            `sidebar-nav-link ${isActive ? 'active' : ''} ${!collapsed ? 'sub-link' : ''}`
+                          }
+                          title={collapsed ? item.label : undefined}
+                          style={{
+                            justifyContent: collapsed ? 'center' : 'flex-start',
+                          }}
+                        >
+                          <Icon size={18} style={{ flexShrink: 0 }} />
+                          {!collapsed && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                minWidth: 0,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {item.label}
+                              </span>
+                              {badgeObj && (
+                                <span
+                                  className={`badge badge-${badgeObj.variant || 'neutral'}`}
+                                  style={{
+                                    fontSize: 10,
+                                    padding: '1px 6px',
+                                    fontWeight: 700,
+                                    borderRadius: 'var(--radius-pill)',
+                                  }}
+                                >
+                                  {badgeObj.label}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </NavLink>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </nav>
+
+        {/* Footer info & collapse toggle */}
+        <div
+          style={{
+            padding: collapsed ? '16px 8px' : '16px 20px',
+            borderTop: '1px solid #1E293B',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            backgroundColor: '#090D16',
+            flexShrink: 0,
+          }}
+        >
+          {/* Link to public marketplace */}
           <a
             href="http://localhost:5173"
             target="_blank"
@@ -283,81 +399,62 @@ export function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) 
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
-              padding: collapsed ? '12px 0' : '10px 14px',
-              justifyContent: collapsed ? 'center' : 'flex-start',
-              borderRadius: 8,
-              fontSize: 13,
+              justifyContent: collapsed ? 'center' : 'space-between',
+              padding: '8px 12px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: '#1E293B',
+              color: '#94A3B8',
+              fontSize: 12,
               fontWeight: 600,
               textDecoration: 'none',
-              color: '#94A3B8',
-              backgroundColor: '#1E293B',
-              border: '1px solid #334155',
-              transition: 'all 0.18s ease',
+              transition: 'all 0.15s ease',
             }}
-            title="Open Live Marketplace"
-          >
-            <ExternalLink size={16} style={{ flexShrink: 0, color: '#38BDF8' }} />
-            {!collapsed && <span>Marketplace View</span>}
-          </a>
-        </div>
-
-        {/* User Badge / Footer */}
-        <div
-          style={{
-            padding: collapsed ? '16px 8px' : '16px 20px',
-            borderTop: '1px solid #1E293B',
-            backgroundColor: '#090D16',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              backgroundColor: 'var(--color-rust)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: 14,
-              color: '#FFFFFF',
-              flexShrink: 0,
-              border: '2px solid rgba(255,255,255,0.1)',
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#FFFFFF'
+              e.currentTarget.style.backgroundColor = '#334155'
             }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#94A3B8'
+              e.currentTarget.style.backgroundColor = '#1E293B'
+            }}
+            title={collapsed ? 'Open Storefront' : undefined}
           >
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
-          </div>
-
-          {!collapsed && (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: '#FFFFFF',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {user?.name || 'Administrator'}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: '#94A3B8',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {user?.email || 'admin@garagemarket.ph'}
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ExternalLink size={14} />
+              {!collapsed && <span>View Storefront</span>}
             </div>
+            {!collapsed && <span style={{ fontSize: 10, color: 'var(--color-rust)' }}>:5173</span>}
+          </a>
+
+          {/* Expand Toggle Button when collapsed */}
+          {collapsed && (
+            <button
+              onClick={() => setCollapsed(false)}
+              style={{
+                width: '100%',
+                background: '#1E293B',
+                border: 'none',
+                color: '#94A3B8',
+                padding: '8px 0',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              aria-label="Expand Sidebar"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#FFFFFF'
+                e.currentTarget.style.backgroundColor = '#334155'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#94A3B8'
+                e.currentTarget.style.backgroundColor = '#1E293B'
+              }}
+            >
+              <ChevronRight size={18} />
+            </button>
           )}
         </div>
       </aside>

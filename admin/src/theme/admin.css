@@ -249,6 +249,145 @@ input, select, textarea {
   border: 1px solid #e2e8f0;
 }
 
+.badge-info {
+  background: var(--admin-info-bg);
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-rust {
+  background: rgba(146, 68, 36, 0.1);
+  color: var(--color-rust);
+  border: 1px solid rgba(146, 68, 36, 0.25);
+}
+
+/* ==========================================================================
+   Accordion & Interactive Shell Enhancements
+   ========================================================================== */
+.admin-accordion-item.is-open {
+  border-color: #cbd5e1;
+}
+
+.sidebar-nav-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.sidebar-nav-group-header:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-nav-group-header.is-expanded {
+  color: #e2e8f0;
+}
+
+.sidebar-sub-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 10px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  border-left: 2px solid #1e293b;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  color: #94a3b8;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.sidebar-nav-link:hover {
+  color: #ffffff;
+  background-color: var(--admin-bg-sidebar-hover);
+}
+
+.sidebar-nav-link.active {
+  color: #ffffff;
+  background-color: var(--color-rust);
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(146, 68, 36, 0.35);
+}
+
+.sidebar-nav-link.sub-link {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--admin-text-secondary);
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: var(--admin-text-primary);
+  background: var(--admin-bg-subtle);
+}
+
+.tab-btn.active {
+  background: #ffffff;
+  color: var(--color-rust);
+  border-color: var(--admin-border);
+  box-shadow: var(--shadow-card);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.stat-box {
+  background: #ffffff;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stat-box-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ==========================================================================
    Cards & Data Containers
    ========================================================================== */

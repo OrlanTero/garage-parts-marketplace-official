@@ -21,6 +21,8 @@ import './AuthModal.css'
 const ROLES = [
   { value: 'buyer', label: 'Buyer (Shop cars & parts)' },
   { value: 'seller', label: 'Seller (List & sell builds)' },
+  { value: 'dealer', label: 'Dealer (Dealership & inventory)' },
+  { value: 'parts_seller', label: 'Parts Seller (Auto parts & accessories)' },
 ]
 
 export default function AuthModal({ isOpen, initialView = 'login', onClose, onSuccess }) {
@@ -219,7 +221,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
           <p>
             {activeTab === 'login' 
               ? 'Access your verified orders, saved wishlist, and garage inquiries.' 
-              : 'Buy genuine JDM/OEM parts and sell project builds with verified escrow.'}
+              : 'Buy genuine JDM/OEM parts and sell project builds directly.'}
           </p>
         </div>
 
@@ -529,10 +531,10 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
           )}
         </div>
 
-        {/* Security / Escrow Footer */}
+        {/* Security Footer */}
         <div className="auth-modal-footer">
           <ShieldCheck size={14} className="security-icon" />
-          <span>256-bit Encrypted · Verified Seller & Buyer Escrow Protection</span>
+          <span>256-bit Encrypted · Verified Seller & Secure Buyer Protection</span>
         </div>
       </div>
     </div>

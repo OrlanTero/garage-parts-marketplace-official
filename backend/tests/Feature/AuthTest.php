@@ -31,6 +31,33 @@ class AuthTest extends TestCase
             ->assertJsonPath('email', 'buyer@example.com');
     }
 
+    public function test_dealer_and_parts_seller_can_register(): void
+    {
+        $resDealer = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Metro Motors',
+            'email' => 'dealer@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'dealer',
+        ]);
+
+        $resDealer->assertCreated()
+            ->assertJsonPath('token_type', 'Bearer')
+            ->assertJsonPath('user.role', 'dealer');
+
+        $resParts = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Apex Parts Supply',
+            'email' => 'partsseller@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => 'parts_seller',
+        ]);
+
+        $resParts->assertCreated()
+            ->assertJsonPath('token_type', 'Bearer')
+            ->assertJsonPath('user.role', 'parts_seller');
+    }
+
     public function test_register_defaults_to_buyer_and_rejects_bad_role(): void
     {
         $this->postJson('/api/v1/auth/register', [
@@ -71,15 +98,61 @@ class AuthTest extends TestCase
     {
         $buyer = User::factory()->create(['role' => 'buyer']);
         $seller = User::factory()->create(['role' => 'seller']);
+        $dealer = User::factory()->create(['role' => 'dealer']);
+        $partsSeller = User::factory()->create(['role' => 'parts_seller']);
+        $admin = User::factory()->create(['role' => 'admin']);
 
         $buyerToken = $buyer->createToken('t')->plainTextToken;
         $sellerToken = $seller->createToken('t')->plainTextToken;
+        $dealerToken = $dealer->createToken('t')->plainTextToken;
+        $partsSellerToken = $partsSeller->createToken('t')->plainTextToken;
+        $adminToken = $admin->createToken('t')->plainTextToken;
 
         $this->getJson('/api/v1/_session/ping-seller', ['Authorization' => "Bearer {$buyerToken}"])
             ->assertForbidden();
         $this->getJson('/api/v1/_session/ping-seller', ['Authorization' => "Bearer {$sellerToken}"])
             ->assertOk();
+
+        $this->getJson('/api/v1/_session/ping-dealer', ['Authorization' => "Bearer {$dealerToken}"])
+            ->assertOk();
+        $this->getJson('/api/v1/_session/ping-dealer', ['Authorization' => "Bearer {$sellerToken}"])
+            ->assertForbidden();
+
+        $this->getJson('/api/v1/_session/ping-parts-seller', ['Authorization' => "Bearer {$partsSellerToken}"])
+            ->assertOk();
+        $this->getJson('/api/v1/_session/ping-parts-seller', ['Authorization' => "Bearer {$buyerToken}"])
+            ->assertForbidden();
+
+        $this->getJson('/api/v1/_session/ping-admin', ['Authorization' => "Bearer {$adminToken}"])
+            ->assertOk();
+        $this->getJson('/api/v1/_session/ping-admin', ['Authorization' => "Bearer {$dealerToken}"])
+            ->assertForbidden();
+
         $this->getJson('/api/v1/_session/ping-buyer')->assertUnauthorized();
+    }
+
+    public function test_user_role_helpers(): void
+    {
+        $buyer = User::factory()->make(['role' => 'buyer']);
+        $seller = User::factory()->make(['role' => 'seller']);
+        $dealer = User::factory()->make(['role' => 'dealer']);
+        $partsSeller = User::factory()->make(['role' => 'parts_seller']);
+        $admin = User::factory()->make(['role' => 'admin']);
+
+        $this->assertTrue($buyer->isBuyer());
+        $this->assertFalse($buyer->isSeller());
+        $this->assertFalse($buyer->isDealer());
+
+        $this->assertTrue($seller->isSeller());
+        $this->assertFalse($seller->isBuyer());
+
+        $this->assertTrue($dealer->isDealer());
+        $this->assertFalse($dealer->isPartsSeller());
+
+        $this->assertTrue($partsSeller->isPartsSeller());
+        $this->assertFalse($partsSeller->isSeller());
+
+        $this->assertTrue($admin->isAdmin());
     }
 
     public function test_unsupported_oauth_provider_rejected(): void

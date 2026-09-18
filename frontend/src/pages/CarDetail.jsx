@@ -160,7 +160,7 @@ export default function CarDetail() {
             {/* Seller Story / Description */}
             <div className="detail-desc-card">
               <h3>Vehicle Overview & Build Story</h3>
-              <p>{car.description || 'Verified enthusiast vehicle inspected at accredited lift bay. Complete compression check, documentation verification, and road diagnostics on record.'}</p>
+              <p>{car.description || 'Verified enthusiast vehicle with documented specifications, build history, and authenticated seller details.'}</p>
             </div>
           </div>
 
@@ -172,7 +172,7 @@ export default function CarDetail() {
               <div className="detail-meta-row">
                 <span className="detail-meta-item"><MapPin size={14} /> {location}</span>
                 <span className="detail-meta-item"><Calendar size={14} /> {car.year}</span>
-                <span className="detail-meta-item"><Gauge size={14} /> {car.mileage_km ? `${Number(car.mileage_km).toLocaleString()} km` : 'Inspected'}</span>
+                <span className="detail-meta-item"><Gauge size={14} /> {car.mileage_km ? `${Number(car.mileage_km).toLocaleString()} km` : 'Documented'}</span>
               </div>
 
               <div className="detail-price-box">
@@ -188,15 +188,15 @@ export default function CarDetail() {
               <div className="detail-trust-strip">
                 <div className="detail-trust-item">
                   <ShieldCheck size={16} color="var(--color-rust)" />
-                  <span>100-Point Inspection Checked</span>
+                  <span>Verified Listing Details</span>
                 </div>
                 <div className="detail-trust-item">
                   <Award size={16} color="var(--color-rust)" />
-                  <span>Garage Escrow Protected</span>
+                  <span>Buyer Protection Guarantee</span>
                 </div>
                 <div className="detail-trust-item">
                   <Coffee size={16} color="var(--color-rust)" />
-                  <span>Makati Lift Bay Test Drive</span>
+                  <span>Direct Seller Inquiries</span>
                 </div>
               </div>
 
@@ -204,10 +204,10 @@ export default function CarDetail() {
                 <button 
                   type="button" 
                   className="btn btn-primary"
-                  onClick={() => alert(`Thank you for your interest in the ${title}! Our Makati concierge has been notified to schedule your inspection.`)}
+                  onClick={() => alert(`Thank you for your interest in the ${title}! The seller has been notified of your inquiry.`)}
                 >
                   <MessageSquare size={16} />
-                  <span>Inquire / Schedule Inspection</span>
+                  <span>Inquire / Contact Seller</span>
                 </button>
                 <button 
                   type="button" 

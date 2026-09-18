@@ -18,9 +18,9 @@ Broadcast::channel('user.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-// Seller-specific private channel
+// Seller-specific private channel (accessible by sellers, dealers, parts sellers, and admins)
 Broadcast::channel('seller.{id}', function ($user, $id) {
-    return (int) $user->id === (int) $id && in_array($user->role->value ?? $user->role, ['seller', 'admin'], true);
+    return (int) $user->id === (int) $id && in_array($user->role->value ?? $user->role, ['seller', 'dealer', 'parts_seller', 'admin'], true);
 });
 
 // Presence channel for marketplace activity (who is currently browsing)

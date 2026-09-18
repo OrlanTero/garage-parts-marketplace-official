@@ -77,8 +77,8 @@ const FAQS = [
     a: 'Every car and verified high-value performance component undergoes a rigorous physical and diagnostic inspection at our accredited partner lift bays. We evaluate compression, chassis integrity, rust/flood history, OBD-II telemetry, and paperwork legitimacy. A complete photographic report is provided before any transaction takes place.'
   },
   {
-    q: 'What is Garage Escrow and how are my funds protected?',
-    a: 'When you purchase a vehicle or part, your payment is held securely in the Garage Escrow vault. The seller only receives payment after the item is delivered and you confirm that the condition matches the certified listing description and fitment criteria.'
+    q: 'How are marketplace transactions protected on Garage?',
+    a: 'When you purchase a vehicle or part, all orders are backed by our Buyer Protection Guarantee. Sellers are verified and required to supply accurate condition and fitment details with tracking confirmation.'
   },
   {
     q: 'Can I test drive or inspect items at the Makati Showroom?',
@@ -217,8 +217,8 @@ export default function Home() {
 
             <p className="hero-description">
               The trusted marketplace where Philippine drivers, restorers, and track builders trade 
-              <strong> 100% verified cars</strong> and <strong>genuine parts</strong>. Certified inspection guarantees, 
-              escrow security, and a passionate community.
+              <strong> 100% verified cars</strong> and <strong>genuine parts</strong>. Authentic listings, 
+              direct seller connections, and a passionate community.
             </p>
 
             {/* Quick Finder Interactive Widget (Unique high-utility tool) */}
@@ -312,11 +312,11 @@ export default function Home() {
             <div className="hero-trust-row">
               <div className="trust-pill">
                 <ShieldCheck size={16} className="trust-icon" />
-                <span>100-Point Inspection Check</span>
+                <span>Verified Listing Details</span>
               </div>
               <div className="trust-pill">
                 <CheckCircle2 size={16} className="trust-icon" />
-                <span>Escrow Buyer Protection</span>
+                <span>Buyer Protection Guarantee</span>
               </div>
               <div className="trust-pill">
                 <Coffee size={16} className="trust-icon" />
@@ -380,8 +380,8 @@ export default function Home() {
               <Award size={24} />
             </div>
             <div className="pillar-text">
-              <h4>Garage Escrow Security</h4>
-              <p>Your payment is protected safely until your parts arrive and fit exactly as described.</p>
+              <h4>Buyer Protection Security</h4>
+              <p>Your orders are backed by verified seller profiles, tracking confirmations, and clear return windows.</p>
             </div>
           </div>
 
@@ -720,8 +720,8 @@ export default function Home() {
               <div className="step-icon-box">
                 <Award size={22} />
               </div>
-              <h3>Deal Through Escrow</h3>
-              <p>Chat, reserve, and pay securely via platform escrow. Your funds are only released when items fit and match descriptions.</p>
+              <h3>Order with Buyer Protection</h3>
+              <p>Chat with sellers, confirm fitment, and pay securely with transparent buyer protection policies.</p>
             </div>
 
             <div className="step-card reveal reveal-delay-4">
@@ -932,7 +932,7 @@ export default function Home() {
             <div className="footer-trust-col">
               <h4>Guaranteed & Secure</h4>
               <p className="footer-trust-text">
-                Every transaction backed with Garage Escrow Buyer Protection and verified courier tracking.
+                Every transaction backed with Buyer Protection Guarantees and verified courier tracking.
               </p>
               <div className="payment-badges-row">
                 <span className="pay-badge">GCash</span>

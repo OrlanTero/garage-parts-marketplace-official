@@ -188,6 +188,38 @@ class BroadcastingTest extends TestCase
         $responseSeller->assertStatus(200)
             ->assertJsonStructure(['auth']);
 
+        // Authorize dealer on seller channel -> 200
+        $dealer = User::factory()->create(['role' => UserRole::Dealer->value]);
+        $dealerToken = $dealer->createToken('test-dealer-token')->plainTextToken;
+        $this->withToken($dealerToken)
+            ->postJson('/api/v1/broadcasting/auth', [
+                'socket_id' => '1234.5678',
+                'channel_name' => 'private-seller.' . $dealer->id,
+            ])
+            ->assertStatus(200)
+            ->assertJsonStructure(['auth']);
+
+        // Authorize parts seller on seller channel -> 200
+        $partsSeller = User::factory()->create(['role' => UserRole::PartsSeller->value]);
+        $partsSellerToken = $partsSeller->createToken('test-parts-token')->plainTextToken;
+        $this->withToken($partsSellerToken)
+            ->postJson('/api/v1/broadcasting/auth', [
+                'socket_id' => '1234.5678',
+                'channel_name' => 'private-seller.' . $partsSeller->id,
+            ])
+            ->assertStatus(200)
+            ->assertJsonStructure(['auth']);
+
+        // Buyer cannot access seller channel -> 403
+        $buyer = User::factory()->create(['role' => UserRole::Buyer->value]);
+        $buyerToken = $buyer->createToken('test-buyer-token')->plainTextToken;
+        $this->withToken($buyerToken)
+            ->postJson('/api/v1/broadcasting/auth', [
+                'socket_id' => '1234.5678',
+                'channel_name' => 'private-seller.' . $buyer->id,
+            ])
+            ->assertStatus(403);
+
         // 3. Authorize presence marketplace channel -> 200 with auth signature & channel_data
         $responsePresence = $this->withToken($token)
             ->postJson('/api/v1/broadcasting/auth', [

@@ -62,10 +62,41 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
   }
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U'
-  const isSeller = user?.role === 'seller' || user?.role === 'admin'
-  const isAdmin = user?.role === 'admin'
-  const roleLabel = isAdmin ? 'Admin' : isSeller ? 'Seller' : 'Buyer'
-  const roleBadgeClass = isAdmin ? 'badge-admin' : isSeller ? 'badge-seller' : 'badge-buyer'
+  const role = user?.role
+  const isAdmin = role === 'admin'
+  const isDealer = role === 'dealer'
+  const isPartsSeller = role === 'parts_seller'
+  const isSeller = role === 'seller' || isDealer || isPartsSeller || isAdmin
+
+  const roleLabel = isAdmin 
+    ? 'Admin' 
+    : isDealer 
+      ? 'Dealer' 
+      : isPartsSeller 
+        ? 'Parts Seller' 
+        : role === 'seller' 
+          ? 'Seller' 
+          : 'Buyer'
+
+  const roleBadgeClass = isAdmin 
+    ? 'badge-admin' 
+    : isDealer 
+      ? 'badge-dealer' 
+      : isPartsSeller 
+        ? 'badge-parts-seller' 
+        : role === 'seller' 
+          ? 'badge-seller' 
+          : 'badge-buyer'
+
+  const dotClass = isAdmin
+    ? 'dot-admin'
+    : isDealer
+      ? 'dot-dealer'
+      : isPartsSeller
+        ? 'dot-parts-seller'
+        : role === 'seller'
+          ? 'dot-seller'
+          : 'dot-buyer'
 
   return (
     <div className={`user-menu-container ${isTransparent ? 'user-menu--transparent' : ''}`} ref={menuRef}>
@@ -89,7 +120,7 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
           ) : (
             <div className="user-avatar">{userInitial}</div>
           )}
-          <span className={`user-status-dot ${isSeller ? 'dot-seller' : 'dot-buyer'}`} />
+          <span className={`user-status-dot ${dotClass}`} />
         </div>
 
         <div className="user-info hide-tablet-user">

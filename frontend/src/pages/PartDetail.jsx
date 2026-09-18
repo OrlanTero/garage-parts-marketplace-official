@@ -216,11 +216,11 @@ export default function PartDetail() {
                 </div>
                 <div className="detail-trust-item">
                   <Award size={16} color="var(--color-rust)" />
-                  <span>Garage Escrow Protection</span>
+                  <span>Buyer Protection Guarantee</span>
                 </div>
                 <div className="detail-trust-item">
                   <Truck size={16} color="var(--color-rust)" />
-                  <span>Insured Crated Logistics</span>
+                  <span>Tracked Courier Shipping</span>
                 </div>
               </div>
 
@@ -228,10 +228,10 @@ export default function PartDetail() {
                 <button 
                   type="button" 
                   className="btn btn-primary"
-                  onClick={() => alert(`Order placed for ${title}! Payment held in Garage Escrow vault until delivery confirmation.`)}
+                  onClick={() => alert(`Order placed for ${title}! The seller has been notified for dispatch.`)}
                 >
                   <ShoppingCart size={16} />
-                  <span>Order with Escrow</span>
+                  <span>Buy Now / Direct Checkout</span>
                 </button>
                 <button 
                   type="button" 

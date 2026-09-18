@@ -62,6 +62,60 @@ class UserSeeder extends Seeder
             );
         }
 
+        // Dealers (Commercial Dealerships)
+        $dealers = [
+            [
+                'email' => 'dealer@garagemarket.ph',
+                'name' => 'Metro Premier Auto Mall',
+                'avatar_url' => 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=300&auto=format&fit=crop',
+            ],
+            [
+                'email' => 'autobahn.dealers@garagemarket.ph',
+                'name' => 'Autobahn Prestige Dealership',
+                'avatar_url' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=300&auto=format&fit=crop',
+            ],
+        ];
+
+        foreach ($dealers as $dealerData) {
+            User::firstOrCreate(
+                ['email' => $dealerData['email']],
+                [
+                    'name' => $dealerData['name'],
+                    'password' => $defaultPassword,
+                    'role' => UserRole::Dealer,
+                    'avatar_url' => $dealerData['avatar_url'],
+                    'email_verified_at' => now(),
+                ]
+            );
+        }
+
+        // Parts Sellers (OEM & Aftermarket Merchants)
+        $partsSellers = [
+            [
+                'email' => 'partsseller@garagemarket.ph',
+                'name' => 'Apex Performance Parts Depot',
+                'avatar_url' => 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=300&auto=format&fit=crop',
+            ],
+            [
+                'email' => 'tokyo.oem@garagemarket.ph',
+                'name' => 'Tokyo OEM Components',
+                'avatar_url' => 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=300&auto=format&fit=crop',
+            ],
+        ];
+
+        foreach ($partsSellers as $partsSellerData) {
+            User::firstOrCreate(
+                ['email' => $partsSellerData['email']],
+                [
+                    'name' => $partsSellerData['name'],
+                    'password' => $defaultPassword,
+                    'role' => UserRole::PartsSeller,
+                    'avatar_url' => $partsSellerData['avatar_url'],
+                    'email_verified_at' => now(),
+                ]
+            );
+        }
+
         // Verified Buyers / Community Enthusiasts
         $buyers = [
             [

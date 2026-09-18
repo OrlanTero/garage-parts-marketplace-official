@@ -3,9 +3,21 @@ import { ChevronRight, Home } from 'lucide-react'
 
 const ROUTE_LABELS = {
   cars: 'Car Builds & Showroom',
-  parts: 'Parts & Catalog',
-  users: 'Users & Roles',
-  inspections: 'Garage Inspections',
+  parts: 'Parts & Catalog Inventory',
+  taxonomy: 'Fitment & Taxonomy Tree',
+  promotions: 'Promotions & Boost Engine',
+  orders: 'Orders & Fulfillment Lifecycle',
+  payouts: 'Seller Payouts & Ledger',
+  disputes: 'Disputes & Return Resolution',
+  verifications: 'Seller KYC & Accreditation',
+  reviews: 'Customer Reviews & Moderation',
+  garages: 'Partner Garages & Bays',
+  notifications: 'WebSocket Realtime Broadcasts',
+  support: 'Support Tickets & Help Desk',
+  analytics: 'Marketplace Analytics & Reports',
+  'audit-logs': 'Security Audit Trail',
+  'cache-manager': 'Nginx Cache & Redis Engine',
+  users: 'Users & Permissions',
   system: 'System & Edge Health',
   settings: 'Admin Settings',
 }
@@ -44,7 +56,7 @@ export function Breadcrumbs() {
       {pathnames.map((value, index) => {
         const to = `/${pathnames.slice(0, index + 1).join('/')}`
         const isLast = index === pathnames.length - 1
-        const label = ROUTE_LABELS[value] || value.charAt(0).toUpperCase() + value.slice(1)
+        const label = ROUTE_LABELS[value] || value.charAt(0).toUpperCase() + value.slice(1).replace('-', ' ')
 
         return (
           <div key={to} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

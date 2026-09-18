@@ -63,6 +63,21 @@ class User extends Authenticatable
         return $this->hasRole(UserRole::Seller);
     }
 
+    public function isDealer(): bool
+    {
+        return $this->hasRole(UserRole::Dealer);
+    }
+
+    public function isPartsSeller(): bool
+    {
+        return $this->hasRole(UserRole::PartsSeller);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(UserRole::Admin);
+    }
+
     public function cars(): HasMany
     {
         return $this->hasMany(Car::class, 'seller_id');

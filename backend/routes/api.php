@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | API Routes — v1
 | Session module: credential auth (Sanctum tokens) + OAuth (Socialite).
-| Cars module: public marketplace listing + seller inventory (role:seller,admin).
-| Parts module: public marketplace listing + seller inventory (role:seller,admin).
-| Roles: buyer | seller (+ reserved admin).
+| Cars module: public marketplace listing + seller inventory.
+| Parts module: public marketplace listing + seller inventory.
+| Roles: buyer | seller | dealer | parts_seller (+ reserved admin).
 |--------------------------------------------------------------------------
 */
 
@@ -56,6 +56,12 @@ Route::prefix('v1')->group(function () {
             ->middleware('role:buyer')->name('api.session.pingBuyer');
         Route::get('/_session/ping-seller', fn () => response()->json(['ok' => true, 'as' => 'seller']))
             ->middleware('role:seller')->name('api.session.pingSeller');
+        Route::get('/_session/ping-dealer', fn () => response()->json(['ok' => true, 'as' => 'dealer']))
+            ->middleware('role:dealer')->name('api.session.pingDealer');
+        Route::get('/_session/ping-parts-seller', fn () => response()->json(['ok' => true, 'as' => 'parts_seller']))
+            ->middleware('role:parts_seller')->name('api.session.pingPartsSeller');
+        Route::get('/_session/ping-admin', fn () => response()->json(['ok' => true, 'as' => 'admin']))
+            ->middleware('role:admin')->name('api.session.pingAdmin');
     });
 
     // --- Public marketplace (Phase 2: car buy-and-sell listings) ---
@@ -66,8 +72,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/parts/{part}', [MarketplacePartController::class, 'show'])->name('parts.show');
     });
 
-    // --- Seller inventory (auth + role:seller,admin) ---
-    Route::middleware(['auth:sanctum', 'role:seller,admin'])
+    // --- Seller inventory (auth + role:seller,dealer,parts_seller,admin) ---
+    Route::middleware(['auth:sanctum', 'role:seller,dealer,parts_seller,admin'])
         ->prefix('seller')->name('api.seller.')->group(function () {
             Route::get('/cars', [SellerCarController::class, 'index'])->name('cars.index');
             Route::post('/cars', [SellerCarController::class, 'store'])->name('cars.store');

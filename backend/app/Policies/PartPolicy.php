@@ -27,7 +27,7 @@ class PartPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole('seller', 'admin');
+        return $user->hasRole('seller', 'parts_seller', 'dealer', 'admin');
     }
 
     public function update(User $user, Part $part): bool

@@ -445,8 +445,20 @@ body {
   background: #e07a5f;
 }
 
+.dot-dealer {
+  background: #d97706;
+}
+
+.dot-parts-seller {
+  background: #2563eb;
+}
+
 .dot-buyer {
   background: #2a9d8f;
+}
+
+.dot-admin {
+  background: #4f46e5;
 }
 
 .user-info {
@@ -554,6 +566,16 @@ body {
 
 .badge-seller {
   background: var(--gradient-rust);
+  color: #ffffff;
+}
+
+.badge-dealer {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.badge-parts-seller {
+  background: #2563eb;
   color: #ffffff;
 }
 

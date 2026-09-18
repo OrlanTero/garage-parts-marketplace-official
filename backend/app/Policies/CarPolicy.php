@@ -27,7 +27,7 @@ class CarPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole('seller', 'admin');
+        return $user->hasRole('seller', 'dealer', 'admin');
     }
 
     public function update(User $user, Car $car): bool
