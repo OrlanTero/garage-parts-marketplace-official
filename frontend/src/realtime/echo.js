@@ -26,51 +26,68 @@ function notifyConnectionState(state) {
 export function getEcho() {
   if (echoInstance) return echoInstance
 
-  const key = import.meta.env.VITE_REVERB_APP_KEY || 'local-key'
-  const wsHost = import.meta.env.VITE_REVERB_HOST || '127.0.0.1'
-  const wsPort = Number(import.meta.env.VITE_REVERB_PORT || 8080)
-  const scheme = import.meta.env.VITE_REVERB_SCHEME || 'http'
-  const isHttps = scheme === 'https'
+  const pusherKey = import.meta.env.VITE_PUSHER_APP_KEY
+  const pusherCluster = import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1'
+
+  const key = pusherKey || import.meta.env.VITE_REVERB_APP_KEY || 'local-key'
+  const wsHost = import.meta.env.VITE_REVERB_HOST || (pusherKey ? undefined : '127.0.0.1')
+  const scheme = (import.meta.env.VITE_REVERB_SCHEME || (pusherKey ? 'https' : 'http')).toLowerCase()
+  const isHttps = scheme === 'https' || scheme === 'wss'
+  const defaultPort = isHttps ? 443 : 8080
+  const wsPort = Number(import.meta.env.VITE_REVERB_PORT || defaultPort)
 
   notifyConnectionState('connecting')
 
-  echoInstance = new Echo({
-    broadcaster: 'reverb',
-    key,
-    wsHost,
-    wsPort,
-    wssPort: wsPort,
-    forceTLS: isHttps,
-    enabledTransports: ['ws', 'wss'],
-    authorizer: (channel) => ({
-      authorize: (socketId, callback) => {
-        const token = tokenStorage.get()
-        const headers = {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        }
-        if (token) {
-          headers.Authorization = `Bearer ${token}`
-        }
+  const authorizer = (channel) => ({
+    authorize: (socketId, callback) => {
+      const token = tokenStorage.get()
+      const headers = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
 
-        axios
-          .post(
-            `${API_URL}/api/v1/broadcasting/auth`,
-            {
-              socket_id: socketId,
-              channel_name: channel.name,
-            },
-            { headers },
-          )
-          .then((response) => {
-            callback(null, response.data)
-          })
-          .catch((error) => {
-            callback(error)
-          })
-      },
-    }),
+      axios
+        .post(
+          `${API_URL}/api/v1/broadcasting/auth`,
+          {
+            socket_id: socketId,
+            channel_name: channel.name,
+          },
+          { headers },
+        )
+        .then((response) => {
+          callback(null, response.data)
+        })
+        .catch((error) => {
+          callback(error)
+        })
+    },
   })
+
+  if (pusherKey && !import.meta.env.VITE_REVERB_HOST) {
+    echoInstance = new Echo({
+      broadcaster: 'pusher',
+      key: pusherKey,
+      cluster: pusherCluster,
+      forceTLS: true,
+      enabledTransports: ['ws', 'wss'],
+      authorizer,
+    })
+  } else {
+    echoInstance = new Echo({
+      broadcaster: 'reverb',
+      key,
+      wsHost,
+      wsPort: isHttps ? 80 : wsPort,
+      wssPort: isHttps ? wsPort : 443,
+      forceTLS: isHttps,
+      enabledTransports: ['ws', 'wss'],
+      authorizer,
+    })
+  }
 
   const connector = echoInstance.connector?.pusher?.connection
   if (connector) {
