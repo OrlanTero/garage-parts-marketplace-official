@@ -17,17 +17,18 @@ class HealthController extends Controller
     public function __invoke(): JsonResponse
     {
         $start = microtime(true);
+        $errors = [];
 
         $dbStart = microtime(true);
-        $dbStatus = $this->checkDatabase();
+        $dbStatus = $this->checkDatabase($errors);
         $dbMs = round((microtime(true) - $dbStart) * 1000, 2);
 
         $cacheStart = microtime(true);
-        $cacheStatus = $this->checkCache();
+        $cacheStatus = $this->checkCache($errors);
         $cacheMs = round((microtime(true) - $cacheStart) * 1000, 2);
 
         $queueStart = microtime(true);
-        $queueStatus = $this->checkQueue();
+        $queueStatus = $this->checkQueue($errors);
         $queueMs = round((microtime(true) - $queueStart) * 1000, 2);
 
         $checks = [
@@ -40,7 +41,7 @@ class HealthController extends Controller
         $isHealthy = !in_array('fail', $checks, true);
         $executionMs = round((microtime(true) - $start) * 1000, 2);
 
-        return response()->json([
+        $payload = [
             'status' => $isHealthy ? 'ok' : 'degraded',
             'service' => config('app.name'),
             'version' => '0.1.0',
@@ -52,37 +53,50 @@ class HealthController extends Controller
                 'cache_ms' => $cacheMs,
                 'queue_ms' => $queueMs,
             ],
-        ], $isHealthy ? 200 : 503);
+        ];
+
+        if (!empty($errors)) {
+            $payload['errors'] = $errors;
+        }
+
+        return response()->json($payload, $isHealthy ? 200 : 503);
     }
 
-    private function checkDatabase(): string
+    private function checkDatabase(array &$errors): string
     {
         try {
             DB::connection()->getPdo();
             return 'ok';
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $errors['database'] = $e->getMessage();
             return 'fail';
         }
     }
 
-    private function checkCache(): string
+    private function checkCache(array &$errors): string
     {
         try {
             // Uses CACHE_STORE (redis when configured, otherwise file/database).
             Cache::put('health:ping', 'pong', 10);
-            return Cache::get('health:ping') === 'pong' ? 'ok' : 'fail';
-        } catch (\Throwable) {
+            $success = Cache::get('health:ping') === 'pong';
+            if (!$success) {
+                $errors['cache'] = 'Cache ping test value did not match';
+            }
+            return $success ? 'ok' : 'fail';
+        } catch (\Throwable $e) {
+            $errors['cache'] = $e->getMessage();
             return 'fail';
         }
     }
 
-    private function checkQueue(): string
+    private function checkQueue(array &$errors): string
     {
         try {
             // Resolves default queue connection without pushing a job.
             Queue::connection();
             return 'ok';
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $errors['queue'] = $e->getMessage();
             return 'fail';
         }
     }
