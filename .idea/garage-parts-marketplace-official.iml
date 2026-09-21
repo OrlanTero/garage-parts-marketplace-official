@@ -147,6 +147,7 @@
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/paragonie/constant_time_encoding" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/phpseclib/phpseclib" />
       <excludeFolder url="file://$MODULE_DIR$/backend/vendor/symfony/polyfill-php82" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/storage/app" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
