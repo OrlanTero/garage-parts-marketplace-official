@@ -743,12 +743,22 @@ export default function CreateListing({ defaultType = 'car' }) {
                     <input
                       type="text"
                       name="brand"
+                      list="car-brands-list"
                       className="form-input"
-                      placeholder="e.g. Nissan, Toyota, Honda"
+                      placeholder="e.g. Nissan, Toyota, Ford, BMW"
                       value={carData.brand}
                       onChange={handleCarChange}
                       required
                     />
+                    <datalist id="car-brands-list">
+                      {CAR_FILTER_META.brandRegions?.map((group) =>
+                        group.brands.map((brandName) => (
+                          <option key={brandName} value={brandName}>
+                            {brandName} ({group.region})
+                          </option>
+                        ))
+                      )}
+                    </datalist>
                   </div>
 
                   <div className="form-group">

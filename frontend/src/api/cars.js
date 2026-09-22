@@ -1,4 +1,5 @@
 import client from './client.js'
+import { ALL_CAR_BRANDS, CAR_BRANDS_BY_REGION, BRAND_REGIONS } from '../constants/brands.js'
 
 /**
  * Cars module — frontend data layer. Mirrors backend CarResource +
@@ -31,4 +32,7 @@ export const CAR_FILTER_META = {
   fuelTypes: ['petrol', 'diesel', 'hybrid', 'electric', 'other'],
   transmissions: ['manual', 'automatic', 'semi_automatic'],
   conditions: ['new', 'used'],
+  brands: ALL_CAR_BRANDS,
+  brandsByRegion: CAR_BRANDS_BY_REGION,
+  brandRegions: BRAND_REGIONS,
 }

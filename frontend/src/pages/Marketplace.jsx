@@ -224,17 +224,15 @@ export default function Marketplace() {
               aria-label="Filter by Brand"
             >
               <option value="">All Makes / Brands</option>
-              <option value="Toyota">Toyota</option>
-              <option value="Nissan">Nissan</option>
-              <option value="Honda">Honda</option>
-              <option value="Mazda">Mazda</option>
-              <option value="Mitsubishi">Mitsubishi</option>
-              <option value="Subaru">Subaru</option>
-              <option value="Ford">Ford</option>
-              <option value="Mercedes-Benz">Mercedes-Benz</option>
-              <option value="BMW">BMW</option>
-              <option value="Porsche">Porsche</option>
-              <option value="Datsun">Datsun</option>
+              {CAR_FILTER_META.brandRegions.map((group) => (
+                <optgroup key={group.key} label={group.region}>
+                  {group.brands.map((brandName) => (
+                    <option key={brandName} value={brandName}>
+                      {brandName}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
 
             {/* Body Style Dropdown */}

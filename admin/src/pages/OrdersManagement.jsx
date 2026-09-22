@@ -15,6 +15,7 @@ import {
   MapPin,
   DollarSign,
   ArrowRight,
+  Car,
 } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../components/Accordion.jsx'
 
@@ -23,6 +24,10 @@ const INITIAL_ORDERS = [
     id: 'ORD-8941',
     buyer: { name: 'Kenji Takahashi', email: 'kenji@tokyogarage.jp', location: 'Yokohama, Japan' },
     seller: { name: 'HKS Pro Dealer', store: 'HKS Powerhouse Tokyo', payoutStatus: 'Payment Settled' },
+    agent: { name: 'Anton Valenzuela', code: 'AGT-ANTON', commission: '$192.50 (5%)' },
+    chassisNumber: 'JZA80-0012948',
+    vin: '1N4AL3AP8JC123456',
+    vehicleModel: '1998 Toyota Supra RZ (JZA80 2JZ-GTE)',
     placedAt: '2026-09-17 11:20 AM',
     status: 'processing',
     statusLabel: 'Order Processing',
@@ -43,6 +48,10 @@ const INITIAL_ORDERS = [
     id: 'ORD-8940',
     buyer: { name: 'Marcus Vance', email: 'marcus.v@apexmotors.com', location: 'Austin, TX, USA' },
     seller: { name: 'Brembo Racing NA', store: 'Brembo Official Store', payoutStatus: 'Dispatched' },
+    agent: { name: 'Mark Ranillo', code: 'AGT-MARK', commission: '$230.00 (5%)' },
+    chassisNumber: 'WP0AB2A92LS204918',
+    vin: 'WP0AB2A92LS204918',
+    vehicleModel: '2021 Porsche 911 GT3 (992)',
     placedAt: '2026-09-16 04:45 PM',
     status: 'delivered',
     statusLabel: 'Delivered & Completed',
@@ -61,6 +70,9 @@ const INITIAL_ORDERS = [
     id: 'ORD-8939',
     buyer: { name: 'Sebastian Becker', email: 's.becker@nuerburg.de', location: 'Munich, Germany' },
     seller: { name: 'KW Automotive GmbH', store: 'KW Factory Direct', payoutStatus: 'Payment Settled' },
+    chassisNumber: 'WBA33AY07NFP82109',
+    vin: 'WBA33AY07NFP82109',
+    vehicleModel: '2022 BMW M3 Competition (G80)',
     placedAt: '2026-09-15 09:12 AM',
     status: 'shipped',
     statusLabel: 'In Transit',
@@ -79,6 +91,9 @@ const INITIAL_ORDERS = [
     id: 'ORD-8938',
     buyer: { name: 'Liam Davies', email: 'liam@silverstoneuk.co.uk', location: 'Northampton, UK' },
     seller: { name: 'Tomei Powered UK', store: 'Tomei Motorsport', payoutStatus: 'On Hold' },
+    chassisNumber: 'BNR32-019284',
+    vin: 'JN100BNR32U019284',
+    vehicleModel: '1993 Nissan Skyline GT-R (BNR32)',
     placedAt: '2026-09-14 02:30 PM',
     status: 'disputed',
     statusLabel: 'Return / Dispute Review',
@@ -271,6 +286,40 @@ export default function OrdersManagement() {
                       Courier Waybill Status: Validated
                     </div>
                   </div>
+
+                  {/* Vehicle & Chassis Fitment Box */}
+                  <div style={{ background: 'var(--admin-bg-subtle)', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid var(--admin-border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: 'var(--color-rust)', marginBottom: 6 }}>
+                      <Car size={14} /> Vehicle & Fitment Details
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)' }}>
+                      Chassis #: <strong style={{ fontFamily: 'monospace', color: 'var(--admin-text-primary)' }}>{ord.chassisNumber || ord.chassis_number || 'JZA80-0012948'}</strong>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)', marginTop: 2 }}>
+                      VIN: <strong style={{ fontFamily: 'monospace', color: 'var(--color-rust)' }}>{ord.vin || '1N4AL3AP8JC123456'}</strong>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--admin-text-muted)', marginTop: 4 }}>
+                      Vehicle: {ord.vehicleModel || ord.vehicle_make_model || 'Target Vehicle Specification'}
+                    </div>
+                  </div>
+
+                  {/* Sales Agent Attribution Box */}
+                  {ord.agent && (
+                    <div style={{ background: 'rgba(249, 115, 22, 0.05)', padding: 14, borderRadius: 'var(--radius-md)', border: '1px solid rgba(249, 115, 22, 0.25)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: '#f97316', marginBottom: 6 }}>
+                        <span>🤝</span> Referring Sales Agent
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--admin-text-primary)' }}>
+                        {ord.agent.name}
+                      </div>
+                      <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#f97316', marginTop: 2 }}>
+                        Code: {ord.agent.code}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#10b981', marginTop: 4, fontWeight: 600 }}>
+                        Commission: {ord.agent.commission}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Line Items Table */}

@@ -13,8 +13,10 @@ import {
   Sliders,
   ChevronRight,
   Sparkles,
+  Globe,
 } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../components/Accordion.jsx'
+import { BRAND_REGIONS, ALL_CAR_BRANDS } from '../constants/brands.js'
 
 const INITIAL_TAXONOMY = [
   {
@@ -86,6 +88,50 @@ const INITIAL_TAXONOMY = [
         chassisCode: 'RZ34 / Z34 / Z33',
         engines: ['VR30DDTT 3.0L TT', 'VQ37VHR', 'VQ35DE'],
         partsCount: 265,
+      },
+    ],
+  },
+  {
+    id: 'brand-ford',
+    brand: 'Ford Performance',
+    country: 'United States',
+    categoryCount: 180,
+    activeModels: [
+      {
+        name: 'Mustang GT / Dark Horse (S650 / S550)',
+        years: '2015 - Present',
+        chassisCode: 'S650 / S550',
+        engines: ['5.0L Coyote V8', '5.2L Predator Supercharged V8'],
+        partsCount: 295,
+      },
+      {
+        name: 'Ranger Raptor / F-150',
+        years: '2019 - Present',
+        chassisCode: 'P703 / P552',
+        engines: ['3.0L EcoBoost V6 Twin Turbo', '2.0L Bi-Turbo Diesel'],
+        partsCount: 210,
+      },
+    ],
+  },
+  {
+    id: 'brand-chevrolet',
+    brand: 'Chevrolet / GM',
+    country: 'United States',
+    categoryCount: 155,
+    activeModels: [
+      {
+        name: 'Corvette (C8 Stingray / Z06)',
+        years: '2020 - Present',
+        chassisCode: 'C8',
+        engines: ['6.2L LT2 V8', '5.5L LT6 Flat-Plane V8'],
+        partsCount: 185,
+      },
+      {
+        name: 'Camaro SS / ZL1 (6th Gen)',
+        years: '2016 - 2024',
+        chassisCode: 'Alpha 6th Gen',
+        engines: ['6.2L LT1 V8', '6.2L LT4 Supercharged V8'],
+        partsCount: 190,
       },
     ],
   },
@@ -415,12 +461,22 @@ export default function TaxonomyManagement() {
                 <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Manufacturer Brand</label>
                 <input
                   type="text"
+                  list="admin-brands-datalist"
                   className="admin-input"
-                  placeholder="e.g. Mazda, Subaru, Honda"
+                  placeholder="e.g. Ford, Porsche, Toyota, Nissan"
                   value={newMake.brand}
                   onChange={(e) => setNewMake({ ...newMake, brand: e.target.value })}
                   required
                 />
+                <datalist id="admin-brands-datalist">
+                  {BRAND_REGIONS.map((group) =>
+                    group.brands.map((b) => (
+                      <option key={b} value={b}>
+                        {b} ({group.region})
+                      </option>
+                    ))
+                  )}
+                </datalist>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>

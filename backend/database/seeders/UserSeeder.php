@@ -116,22 +116,28 @@ class UserSeeder extends Seeder
             );
         }
 
-        // Verified Buyers / Community Enthusiasts
+        // Verified Buyers / Community Enthusiasts / Sales Agents
         $buyers = [
             [
                 'email' => 'buyer@garagemarket.ph',
                 'name' => 'Anton Valenzuela',
                 'avatar_url' => 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&auto=format&fit=crop',
+                'agent_code' => 'AGT-ANTON',
+                'agent_tagline' => 'Certified Performance Tuner & Sales Specialist',
             ],
             [
                 'email' => 'mark.ranillo@garagemarket.ph',
                 'name' => 'Mark Ranillo',
                 'avatar_url' => 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=300&auto=format&fit=crop',
+                'agent_code' => 'AGT-MARK',
+                'agent_tagline' => 'JDM Import & Track Build Advisor',
             ],
             [
                 'email' => 'carlo.mendoza@garagemarket.ph',
                 'name' => 'Carlo Mendoza',
                 'avatar_url' => 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=300&auto=format&fit=crop',
+                'agent_code' => 'AGT-CARLO',
+                'agent_tagline' => 'OEM Parts Sourcing & Restoration Specialist',
             ],
         ];
 
@@ -143,6 +149,10 @@ class UserSeeder extends Seeder
                     'password' => $defaultPassword,
                     'role' => UserRole::Buyer,
                     'avatar_url' => $buyerData['avatar_url'],
+                    'agent_code' => $buyerData['agent_code'] ?? null,
+                    'agent_tagline' => $buyerData['agent_tagline'] ?? null,
+                    'commission_rate' => 5.00,
+                    'is_agent' => true,
                     'email_verified_at' => now(),
                 ]
             );

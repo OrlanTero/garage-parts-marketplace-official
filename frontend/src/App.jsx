@@ -23,6 +23,9 @@ import Marketplace from './pages/Marketplace.jsx'
 import CarDetail from './pages/CarDetail.jsx'
 import PartsMarketplace from './pages/PartsMarketplace.jsx'
 import PartDetail from './pages/PartDetail.jsx'
+import Checkout from './pages/Checkout.jsx'
+import SalesOrder from './pages/SalesOrder.jsx'
+import AgentPortal from './pages/AgentPortal.jsx'
 import CreateListing from './pages/CreateListing.jsx'
 import Favorites from './pages/Favorites.jsx'
 import Login from './pages/Login.jsx'
@@ -32,6 +35,7 @@ import AuthModal from './components/AuthModal.jsx'
 import UserMenu from './components/UserMenu.jsx'
 import { useAuth } from './auth/AuthContext.jsx'
 import { useFavorites } from './context/FavoritesContext.jsx'
+import { getActiveReferralCode } from './utils/referral.js'
 
 const NAV = [
   { to: '/', label: 'Home', end: true },
@@ -44,6 +48,7 @@ const NAV = [
 ]
 
 const ANNOUNCEMENTS = [
+  { icon: Sparkles, text: 'Become a Sales Agent — Earn 5% commission sharing parts & car listings to Facebook' },
   { icon: Truck, text: 'Free Nationwide Freight on Verified Parts orders over ₱8,000' },
   { icon: ShieldCheck, text: '100-Point Garage Certified Inspection Guarantee on all vehicles' },
   { icon: MapPin, text: 'Makati Showroom & Barako Café open Tue–Sun · Test drives & Lift inspections' },
@@ -90,6 +95,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [announcementIndex, setAnnouncementIndex] = useState(0)
 
+  const isBuyer = user?.role === 'buyer'
+  const navItems = NAV.filter((item) => !(isBuyer && item.to === '/sell'))
+
   // Global Keyboard Shortcut for Search (Cmd+K / Ctrl+K / "/")
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -133,6 +141,11 @@ export default function App() {
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Auto-detect and store referral attribution parameters
+  useEffect(() => {
+    getActiveReferralCode()
+  }, [location.search])
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -194,7 +207,7 @@ export default function App() {
 
           {/* Primary Navigation */}
           <nav className="nav nav--main">
-            {NAV.map((item) => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -306,7 +319,7 @@ export default function App() {
           </form>
 
           <nav className="mobile-nav-list">
-            {NAV.map((item) => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -341,13 +354,23 @@ export default function App() {
 
                 <div className="mobile-drawer-user-links">
                   <Link 
-                    to="/sell" 
+                    to="/agent" 
                     className="mobile-drawer-quicklink" 
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Sparkles size={15} />
-                    <span>Sell Your Build / Parts</span>
+                    <span>Sales Agent Dashboard</span>
                   </Link>
+                  {!isBuyer && (
+                    <Link 
+                      to="/sell" 
+                      className="mobile-drawer-quicklink" 
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Car size={15} />
+                      <span>Sell Your Build / Parts</span>
+                    </Link>
+                  )}
                   <Link 
                     to="/favorites" 
                     className="mobile-drawer-quicklink" 
@@ -422,6 +445,12 @@ export default function App() {
           <Route path="/marketplace/:id" element={<CarDetail />} />
           <Route path="/parts" element={<PartsMarketplace />} />
           <Route path="/parts/:id" element={<PartDetail />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/sales-order/:orderNumber" element={<SalesOrder />} />
+          <Route path="/orders/:orderNumber" element={<SalesOrder />} />
+          <Route path="/agent" element={<AgentPortal />} />
+          <Route path="/agents" element={<AgentPortal />} />
+          <Route path="/agent-portal" element={<AgentPortal />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/saved" element={<Favorites />} />
           <Route path="/wishlist" element={<Favorites />} />

@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { marketplaceCars } from '../api/cars.js'
 import { marketplaceParts } from '../api/parts.js'
+import { BRAND_REGIONS } from '../constants/brands.js'
 import CarCard from '../components/CarCard.jsx'
 import PartCard from '../components/PartCard.jsx'
 import CategoryCard from '../components/CategoryCard.jsx'
@@ -272,16 +273,16 @@ export default function Home() {
                     value={finderMake} 
                     onChange={(e) => setFinderMake(e.target.value)}
                   >
-                    <option value="">All Makes (Toyota, Nissan, Honda...)</option>
-                    <option value="Toyota">Toyota</option>
-                    <option value="Nissan">Nissan</option>
-                    <option value="Honda">Honda</option>
-                    <option value="Mitsubishi">Mitsubishi</option>
-                    <option value="Ford">Ford</option>
-                    <option value="Subaru">Subaru</option>
-                    <option value="Mazda">Mazda</option>
-                    <option value="Mercedes-Benz">Mercedes-Benz</option>
-                    <option value="BMW">BMW</option>
+                    <option value="">All Makes (Toyota, Nissan, Ford, BMW...)</option>
+                    {BRAND_REGIONS.map((group) => (
+                      <optgroup key={group.key} label={group.region}>
+                        {group.brands.map((brandName) => (
+                          <option key={brandName} value={brandName}>
+                            {brandName}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
 

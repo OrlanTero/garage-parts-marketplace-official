@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Api\MarketplaceCarController;
 use App\Http\Controllers\Api\MarketplacePartController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\OAuthController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\SellerCarController;
 use App\Http\Controllers\Api\SellerPartController;
 use App\Http\Controllers\Api\SystemMaintenanceController;
@@ -76,6 +78,15 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{id?}', [FavoriteController::class, 'destroy'])->name('destroy');
         });
 
+        // User Sales Orders History
+        Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
+
+        // Sales Agent Portal & Performance
+        Route::prefix('agent')->name('api.agent.')->group(function () {
+            Route::get('/stats', [AgentController::class, 'stats'])->name('stats');
+            Route::post('/profile', [AgentController::class, 'updateProfile'])->name('profile');
+        });
+
         // Legacy alias (pre-session-module clients)
         Route::get('/me', [AuthController::class, 'me'])->name('api.me');
 
@@ -99,6 +110,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/parts', [MarketplacePartController::class, 'index'])->name('parts.index');
         Route::get('/parts/{part}', [MarketplacePartController::class, 'show'])->name('parts.show');
     });
+
+    // --- Checkout & Sales Orders (Public / Customer) ---
+    Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
+    Route::get('/orders/{identifier}', [OrderController::class, 'show'])->name('api.orders.show');
+
+    // --- Public Sales Agent Verification ---
+    Route::get('/agents/verify/{code}', [AgentController::class, 'verify'])->name('api.agents.verify');
 
     // --- Seller inventory (auth + role:seller,dealer,parts_seller,admin) ---
     Route::middleware(['auth:sanctum', 'role:seller,dealer,parts_seller,admin'])

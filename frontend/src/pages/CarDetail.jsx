@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { 
   ShieldCheck, 
   MapPin, 
@@ -14,10 +14,13 @@ import {
   ArrowLeft, 
   Share2, 
   MessageSquare,
-  Sparkles
+  Sparkles,
+  FileText
 } from 'lucide-react'
 import { marketplaceCars } from '../api/cars.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import ShareModal from '../components/ShareModal.jsx'
+import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
 const DEFAULT_CAR_IMAGES = [
@@ -36,10 +39,13 @@ function formatPrice(val) {
 
 export default function CarDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { isCarSaved, toggleCarFavorite } = useFavorites()
   const [car, setCar] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const activeReferralCode = getActiveReferralCode()
 
   const isSaved = isCarSaved(id)
 
@@ -203,14 +209,44 @@ export default function CarDetail() {
                 </div>
               </div>
 
+              {/* Referring Agent Banner */}
+              {activeReferralCode && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  color: '#10b981'
+                }}>
+                  <span>🤝</span>
+                  <div>
+                    Referred by Sales Agent <strong>{activeReferralCode}</strong>. Your reservation is accredited to a verified partner.
+                  </div>
+                </div>
+              )}
+
               <div className="detail-actions-row">
                 <button 
                   type="button" 
                   className="btn btn-primary"
-                  onClick={() => alert(`Thank you for your interest in the ${title}! The seller has been notified of your inquiry.`)}
+                  onClick={() => navigate(`/checkout?car_id=${car.id}`)}
                 >
-                  <MessageSquare size={16} />
-                  <span>Inquire / Contact Seller</span>
+                  <FileText size={16} />
+                  <span>Reserve & Generate Sales Order</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShareModalOpen(true)}
+                  title="Share vehicle listing on Facebook or earn sales commission"
+                >
+                  <Share2 size={16} />
+                  <span>Share & Earn</span>
                 </button>
                 <button 
                   type="button" 
@@ -256,6 +292,21 @@ export default function CarDetail() {
           </div>
         </div>
       </div>
+
+      {/* Car Share & Agent Referral Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        item={{
+          id: car.id,
+          type: 'car',
+          title: title,
+          price: car.price,
+          image: currentImgUrl,
+          brand: car.brand,
+          path: `/marketplace/${car.id}`
+        }}
+      />
     </div>
   )
 }

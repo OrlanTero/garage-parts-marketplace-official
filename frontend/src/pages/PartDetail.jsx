@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { 
   Truck, 
   Star, 
@@ -12,10 +12,13 @@ import {
   CheckCircle2, 
   ShoppingCart,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Share2
 } from 'lucide-react'
 import { marketplaceParts } from '../api/parts.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import ShareModal from '../components/ShareModal.jsx'
+import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
 const CATEGORY_PLACEHOLDERS = {
@@ -39,10 +42,13 @@ function formatPrice(val) {
 
 export default function PartDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { isPartSaved, togglePartFavorite } = useFavorites()
   const [part, setPart] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const activeReferralCode = getActiveReferralCode()
 
   const isSaved = isPartSaved(id)
 
@@ -227,14 +233,44 @@ export default function PartDetail() {
                 </div>
               </div>
 
+              {/* Referring Agent Banner */}
+              {activeReferralCode && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  color: '#10b981'
+                }}>
+                  <span>🤝</span>
+                  <div>
+                    Referred by Sales Agent <strong>{activeReferralCode}</strong>. Your purchase supports an accredited garage partner.
+                  </div>
+                </div>
+              )}
+
               <div className="detail-actions-row">
                 <button 
                   type="button" 
                   className="btn btn-primary"
-                  onClick={() => alert(`Order placed for ${title}! The seller has been notified for dispatch.`)}
+                  onClick={() => navigate(`/checkout?part_id=${part.id}`)}
                 >
                   <ShoppingCart size={16} />
                   <span>Buy Now / Direct Checkout</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShareModalOpen(true)}
+                  title="Share product link & earn 5% sales commission"
+                >
+                  <Share2 size={16} />
+                  <span>Share & Earn</span>
                 </button>
                 <button 
                   type="button" 
@@ -280,6 +316,21 @@ export default function PartDetail() {
           </div>
         </div>
       </div>
+
+      {/* Product Share & Agent Referral Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        item={{
+          id: part.id,
+          type: 'part',
+          title: title,
+          price: part.price,
+          image: currentImgUrl,
+          brand: part.brand,
+          path: `/parts/${part.id}`
+        }}
+      />
     </div>
   )
 }

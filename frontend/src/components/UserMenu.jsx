@@ -174,6 +174,16 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
           <div className="user-dropdown-section">
             <div className="user-dropdown-section-title">Marketplace & Activity</div>
 
+            <Link to="/agent" className="user-dropdown-item" onClick={handleLinkClick}>
+              <div className="user-dropdown-item-icon icon-action">
+                <Sparkles size={16} />
+              </div>
+              <div className="user-dropdown-item-text">
+                <span className="user-dropdown-item-title">Sales Agent Dashboard</span>
+                <span className="user-dropdown-item-desc">{user?.agent_code ? `Code: ${user.agent_code}` : 'Earn 5% Commission Sharing Listings'}</span>
+              </div>
+            </Link>
+
             {isSeller ? (
               <>
                 <Link to="/sell" className="user-dropdown-item" onClick={handleLinkClick}>
@@ -228,13 +238,13 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
                   </div>
                 </Link>
 
-                <Link to="/sell" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon icon-action">
-                    <Sparkles size={16} />
+                <Link to="/marketplace" className="user-dropdown-item" onClick={handleLinkClick}>
+                  <div className="user-dropdown-item-icon">
+                    <Car size={16} />
                   </div>
                   <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Sell Your Build</span>
-                    <span className="user-dropdown-item-desc">List your vehicle for enthusiasts</span>
+                    <span className="user-dropdown-item-title">Browse Verified Cars</span>
+                    <span className="user-dropdown-item-desc">Discover 100-Point inspected builds</span>
                   </div>
                 </Link>
               </>

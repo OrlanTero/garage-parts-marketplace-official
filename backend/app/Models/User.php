@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -21,6 +22,10 @@ class User extends Authenticatable
         'provider',
         'provider_id',
         'avatar_url',
+        'agent_code',
+        'commission_rate',
+        'is_agent',
+        'agent_tagline',
         'last_login_at',
     ];
 
@@ -36,7 +41,26 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'commission_rate' => 'decimal:2',
+            'is_agent' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if (empty($user->agent_code)) {
+                $slug = Str::slug($user->name ?: 'AGENT', '');
+                $prefix = strtoupper(substr($slug, 0, 4)) ?: 'AGT';
+                $user->agent_code = 'AGT-' . $prefix . strtoupper(Str::random(4));
+            }
+            if ($user->commission_rate === null) {
+                $user->commission_rate = 5.00;
+            }
+            if ($user->is_agent === null) {
+                $user->is_agent = true;
+            }
+        });
     }
 
     public function hasRole(string|UserRole ...$roles): bool
@@ -91,5 +115,15 @@ class User extends Authenticatable
     public function favorites(): HasMany
     {
         return $this->hasMany(Favorite::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'user_id');
+    }
+
+    public function referredOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'agent_id');
     }
 }
