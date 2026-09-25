@@ -140,6 +140,19 @@ class UserSeeder extends Seeder
         // Dealers (Commercial Dealerships)
         $dealers = [
             [
+                'email' => 'gap.valenzuela@garagemarket.ph',
+                'name' => 'GAP Valenzuela Main',
+                'username' => 'gap_valenzuela_main',
+                'avatar_url' => 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=300&auto=format&fit=crop',
+                'kyc_status' => 'approved',
+                'is_kyc_verified' => true,
+                'kyc_document_type' => 'business_permit',
+                'kyc_document_number' => 'SEC-GAP2024-00001',
+                'kyc_document_url' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800',
+                'kyc_submitted_at' => now()->subDays(30),
+                'kyc_verified_at' => now()->subDays(28),
+            ],
+            [
                 'email' => 'dealer@garagemarket.ph',
                 'name' => 'Metro Premier Auto Mall',
                 'username' => 'metro_automall',

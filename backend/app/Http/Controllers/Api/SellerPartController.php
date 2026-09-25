@@ -26,10 +26,15 @@ class SellerPartController extends Controller
         $validated = $request->validate([
             'status' => ['sometimes', 'in:draft,active,sold,archived'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            // Admins auditing the catalog may scope to any seller.
+            'seller_id' => ['sometimes', 'integer', 'exists:users,id'],
         ]);
 
+        $ownerId = app(\App\Services\InventoryService::class)
+            ->ownerScope($request->user(), $validated['seller_id'] ?? null);
+
         $query = Part::query()
-            ->ofSeller((int) $request->user()->id)
+            ->ofSeller($ownerId)
             ->with('media')
             ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('created_at');
@@ -41,15 +46,27 @@ class SellerPartController extends Controller
     {
         $user = $request->user();
 
-        if ($user->isSeller()) {
+        // Parts are sold exclusively by the house garage (GAP Valenzuela
+        // Main). Third-party sellers/dealers list vehicles only; admins
+        // create parts on the house catalog.
+        if (!$user->isHouse() && !$user->isAdmin()) {
             return response()->json([
-                'message' => 'Standard Sellers are authorized to list vehicle builds only. Garage or Sales Team role is required to list auto parts.',
+                'message' => 'Car parts are sold exclusively by GAP Valenzuela Main. Your account may list vehicles only.',
+                'code' => 'house_catalog_only',
             ], 403);
         }
 
         $this->ensureKycVerified($user);
 
-        $part = $this->parts->create($user, $request->validated());
+        // Admins publish onto the house catalog, never their own account.
+        $owner = $user;
+        if ($user->isAdmin() && ($house = \App\Models\User::house())) {
+            $owner = $house;
+        }
+
+        // Non-house sellers never reach here, but force house ownership
+        // for consistency when admins publish on its behalf.
+        $part = $this->parts->create($owner, $request->validated());
 
         // Keep the `data` envelope consistent with every other part endpoint.
         return (new PartResource($part))->response()->setStatusCode(201);

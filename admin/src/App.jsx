@@ -13,6 +13,7 @@ import DealersManagement from './pages/DealersManagement.jsx'
 import CarsManagement from './pages/CarsManagement.jsx'
 import PartsManagement from './pages/PartsManagement.jsx'
 import TaxonomyManagement from './pages/TaxonomyManagement.jsx'
+import InventoryManagement from './pages/InventoryManagement.jsx'
 import ListingModeration from './pages/ListingModeration.jsx'
 import KycManagement from './pages/KycManagement.jsx'
 import SellerApplications from './pages/SellerApplications.jsx'
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="verifications" element={<KycManagement />} />
             <Route path="taxonomy" element={<TaxonomyManagement />} />
             <Route path="parts" element={<PartsManagement />} />
+            <Route path="inventory" element={<InventoryManagement />} />
             <Route path="orders" element={<OrdersManagement />} />
             <Route path="appointments" element={<AppointmentMonitoring />} />
             <Route path="chat-moderation" element={<ChatModeration />} />

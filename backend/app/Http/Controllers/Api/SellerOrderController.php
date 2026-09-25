@@ -20,6 +20,8 @@ use Illuminate\Validation\ValidationException;
  */
 class SellerOrderController extends Controller
 {
+    public function __construct(private \App\Services\InventoryService $inventory) {}
+
     /** GET /seller/orders — incoming requests for my listings. */
     public function index(Request $request)
     {
@@ -125,7 +127,19 @@ class SellerOrderController extends Controller
         }
 
         if ($order->item_type === 'part' && $order->part_id && ($part = Part::find($order->part_id))) {
-            $part->decrement('quantity', max(1, (int) $order->quantity));
+            // Ledger-first: records a consumption movement and syncs quantity.
+            $owner = $part->seller()->first() ?? $order->seller;
+            try {
+                $this->inventory->move($owner, $part, [
+                    'type' => 'consumption',
+                    'quantity' => max(1, (int) $order->quantity),
+                    'reference' => $order->order_number,
+                    'reason' => "Sale {$order->order_number} accepted",
+                ]);
+            } catch (\Throwable) {
+                // Fall back to the legacy direct decrement (e.g. ledger guard).
+                $part->decrement('quantity', max(1, (int) $order->quantity));
+            }
             $part->refresh();
             if ((int) $part->quantity <= 0) {
                 $part->forceFill(['quantity' => 0, 'status' => PartStatus::Sold->value])->save();

@@ -233,6 +233,10 @@ export default function CreateListing({ defaultType = 'car' }) {
     category: 'brakes',
     brand: 'Brembo',
     part_number: '1M2.8041A',
+    mpn: '',
+    barcode: '',
+    uom: 'pc',
+    reorder_point: '',
     compatibility: 'Honda Civic Type R (FK8/FL5), Subaru WRX STI (2015+), Toyota GR Yaris',
     condition: 'new',
     quantity: 2,
@@ -256,8 +260,6 @@ export default function CreateListing({ defaultType = 'car' }) {
     return list.slice(0, 100)
   }, [allModels, liveBrands, carData.brand])
 
-  const [newCarImgUrl, setNewCarImgUrl] = useState('')
-  const [newPartImgUrl, setNewPartImgUrl] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState(null)
   const [kycBlocked, setKycBlocked] = useState(false)
@@ -268,13 +270,11 @@ export default function CreateListing({ defaultType = 'car' }) {
   const [carUploading, setCarUploading] = useState(false)
   const [carUploadError, setCarUploadError] = useState(null)
   const [carDragOver, setCarDragOver] = useState(false)
-  const [showCarUrlInput, setShowCarUrlInput] = useState(false)
   const carFileInputRef = useRef(null)
 
   const [partUploading, setPartUploading] = useState(false)
   const [partUploadError, setPartUploadError] = useState(null)
   const [partDragOver, setPartDragOver] = useState(false)
-  const [showPartUrlInput, setShowPartUrlInput] = useState(false)
   const partFileInputRef = useRef(null)
 
   // Sync tab with URL parameter if provided
@@ -283,6 +283,15 @@ export default function CreateListing({ defaultType = 'car' }) {
     else if (urlType === 'car') setListingType('car')
   }, [urlType])
 
+  // House-only parts: steer non-house accounts back to vehicle listings.
+  // Parts catalog is house-only (GAP Valenzuela Main). Admins publish on its behalf.
+  const canSellParts = Boolean(!isAuthenticated || user?.is_house || user?.role === 'admin' || user?.role === 'super_admin')
+  useEffect(() => {
+    if (isAuthenticated && !canSellParts && listingType === 'part') {
+      setListingType('car')
+    }
+  }, [isAuthenticated, canSellParts, listingType])
+
   // --- Handlers for Car Form ---
   const handleCarChange = (e) => {
     const { name, value, type } = e.target
@@ -290,15 +299,6 @@ export default function CreateListing({ defaultType = 'car' }) {
       ...prev,
       [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value,
     }))
-  }
-
-  const handleAddCarImage = () => {
-    if (!newCarImgUrl.trim()) return
-    setCarData((prev) => ({
-      ...prev,
-      images: [...prev.images, newCarImgUrl.trim()]
-    }))
-    setNewCarImgUrl('')
   }
 
   const handleRemoveCarImage = (index) => {
@@ -384,15 +384,6 @@ export default function CreateListing({ defaultType = 'car' }) {
       ...prev,
       [name]: type === 'checkbox' ? checked : type === 'number' ? (value === '' ? '' : Number(value)) : value,
     }))
-  }
-
-  const handleAddPartImage = () => {
-    if (!newPartImgUrl.trim()) return
-    setPartData((prev) => ({
-      ...prev,
-      images: [...prev.images, newPartImgUrl.trim()]
-    }))
-    setNewPartImgUrl('')
   }
 
   const handleRemovePartImage = (index) => {
@@ -522,6 +513,10 @@ export default function CreateListing({ defaultType = 'car' }) {
           category: partData.category,
           brand: partData.brand || null,
           part_number: partData.part_number || null,
+          mpn: partData.mpn || null,
+          barcode: partData.barcode || null,
+          uom: partData.uom || 'pc',
+          reorder_point: partData.reorder_point === '' ? undefined : Number(partData.reorder_point || 0),
           compatibility: partData.compatibility || null,
           condition: partData.condition,
           quantity: Number(partData.quantity || 1),
@@ -573,8 +568,6 @@ export default function CreateListing({ defaultType = 'car' }) {
   }
 
   const isBuyerRole = user?.role === 'buyer'
-  const isStandardSeller = user?.role === 'seller'
-  const isPartsSellerOrDealer = user?.role === 'parts_seller' || user?.role === 'dealer' || user?.role === 'admin' || user?.role === 'super_admin'
 
   // --- Success Render View ---
   if (createdResult) {
@@ -663,6 +656,7 @@ export default function CreateListing({ defaultType = 'car' }) {
               </div>
             </button>
 
+            {(!isAuthenticated || canSellParts) && (
             <button
               type="button"
               className={`type-select-card ${listingType === 'part' ? 'active' : ''}`}
@@ -676,9 +670,10 @@ export default function CreateListing({ defaultType = 'car' }) {
               </div>
               <div className="type-meta">
                 <span className="type-title">Parts & Accessories</span>
-                <span className="type-desc">Sell engines, big brakes, wheels, turbos, aero & gear</span>
+                <span className="type-desc">GAP house catalog — genuine parts & gear</span>
               </div>
             </button>
+            )}
           </div>
         </div>
       </section>
@@ -717,12 +712,12 @@ export default function CreateListing({ defaultType = 'car' }) {
             </div>
           )}
 
-          {/* Standard Seller Notice for Parts */}
-          {isAuthenticated && isStandardSeller && listingType === 'part' && (
+          {/* House-Only Parts Policy */}
+          {isAuthenticated && !canSellParts && (
             <div className="role-warning-banner" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }}>
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
               <div>
-                <strong>Parts Selling Policy:</strong> Standard Seller accounts are designated exclusively for vehicle builds & cars. Listing automotive parts & accessories requires a <strong>Garage</strong>, <strong>Dealer</strong>, or <strong>Parts Seller</strong> account.
+                <strong>Parts Selling Policy:</strong> Car parts are sold exclusively by <strong>GAP Valenzuela Main</strong>. Your account may list vehicles & builds only.
               </div>
             </div>
           )}
@@ -1176,44 +1171,6 @@ export default function CreateListing({ defaultType = 'car' }) {
                   </div>
                 )}
 
-                {/* Alternate URL Input Toggle */}
-                <div style={{ marginBottom: 12 }}>
-                  <button
-                    type="button"
-                    className="media-url-toggle-btn"
-                    onClick={() => setShowCarUrlInput(!showCarUrlInput)}
-                  >
-                    <Plus size={14} />
-                    {showCarUrlInput ? 'Hide manual image URL input' : 'Or paste image URL / external link'}
-                  </button>
-
-                  {showCarUrlInput && (
-                    <div className="media-add-row" style={{ marginTop: 8 }}>
-                      <input
-                        type="url"
-                        className="form-input"
-                        placeholder="Paste image URL (https://...)"
-                        value={newCarImgUrl}
-                        onChange={(e) => setNewCarImgUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            handleAddCarImage()
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={handleAddCarImage}
-                        style={{ whiteSpace: 'nowrap' }}
-                      >
-                        <Plus size={16} /> Add URL
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 {/* Thumbnail Gallery */}
                 {carData.images && carData.images.length > 0 ? (
                   <>
@@ -1360,6 +1317,59 @@ export default function CreateListing({ defaultType = 'car' }) {
                       className="form-input"
                       placeholder="e.g. 1M2.8041A"
                       value={partData.part_number}
+                      onChange={handlePartChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-grid-4" style={{ marginBottom: 16 }}>
+                  <div className="form-group">
+                    <label>MPN</label>
+                    <input
+                      type="text"
+                      name="mpn"
+                      className="form-input"
+                      placeholder="Maker part no."
+                      value={partData.mpn || ''}
+                      onChange={handlePartChange}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Barcode</label>
+                    <input
+                      type="text"
+                      name="barcode"
+                      className="form-input"
+                      placeholder="Scan or type"
+                      value={partData.barcode || ''}
+                      onChange={handlePartChange}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Unit</label>
+                    <select
+                      name="uom"
+                      className="form-select"
+                      value={partData.uom || 'pc'}
+                      onChange={handlePartChange}
+                    >
+                      {['pc', 'set', 'pair', 'kit', 'box', 'liter', 'meter'].map((u) => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Reorder At</label>
+                    <input
+                      type="number"
+                      name="reorder_point"
+                      className="form-input"
+                      min="0"
+                      placeholder="3"
+                      value={partData.reorder_point ?? ''}
                       onChange={handlePartChange}
                     />
                   </div>
@@ -1587,44 +1597,6 @@ export default function CreateListing({ defaultType = 'car' }) {
                     <div>{partUploadError}</div>
                   </div>
                 )}
-
-                {/* Alternate URL Input Toggle */}
-                <div style={{ marginBottom: 12 }}>
-                  <button
-                    type="button"
-                    className="media-url-toggle-btn"
-                    onClick={() => setShowPartUrlInput(!showPartUrlInput)}
-                  >
-                    <Plus size={14} />
-                    {showPartUrlInput ? 'Hide manual image URL input' : 'Or paste image URL / external link'}
-                  </button>
-
-                  {showPartUrlInput && (
-                    <div className="media-add-row" style={{ marginTop: 8 }}>
-                      <input
-                        type="url"
-                        className="form-input"
-                        placeholder="Paste image URL (https://...)"
-                        value={newPartImgUrl}
-                        onChange={(e) => setNewPartImgUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            handleAddPartImage()
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={handleAddPartImage}
-                        style={{ whiteSpace: 'nowrap' }}
-                      >
-                        <Plus size={16} /> Add URL
-                      </button>
-                    </div>
-                  )}
-                </div>
 
                 {/* Thumbnail Gallery */}
                 {partData.images && partData.images.length > 0 ? (

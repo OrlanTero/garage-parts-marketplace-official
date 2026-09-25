@@ -29,6 +29,10 @@ use App\Http\Controllers\Api\SystemMaintenanceController;
 use App\Http\Controllers\Api\TaxonomyController;
 use App\Http\Controllers\Api\AdminTaxonomyController;
 use App\Http\Controllers\Api\AdminReviewController;
+use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\PartCatalogController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -226,6 +230,40 @@ Route::prefix('v1')->group(function () {
             Route::get('/offers', [OfferController::class, 'incoming'])->name('offers.incoming');
             Route::post('/offers/{offer}/accept', [OfferController::class, 'accept'])->name('offers.accept');
             Route::post('/offers/{offer}/reject', [OfferController::class, 'reject'])->name('offers.reject');
+
+            // --- Parts & Catalog Inventory (§1–§11) ---
+            // Suppliers & warehouses
+            Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+            Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+            Route::get('/suppliers/{supplier}', [SupplierController::class, 'show'])->name('suppliers.show');
+            Route::match(['put', 'patch'], '/suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
+            Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
+
+            Route::get('/warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
+            Route::post('/warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+            Route::match(['put', 'patch'], '/warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouses.update');
+            Route::delete('/warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouses.destroy');
+            Route::post('/warehouses/{warehouse}/bins', [WarehouseController::class, 'storeBin'])->name('bins.store');
+            Route::delete('/bins/{bin}', [WarehouseController::class, 'destroyBin'])->name('bins.destroy');
+
+            // Stock ledger, alerts, reports, catalog search
+            Route::get('/inventory/movements', [InventoryController::class, 'movements'])->name('inventory.movements');
+            Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock'])->name('inventory.lowStock');
+            Route::get('/inventory/summary', [InventoryController::class, 'summary'])->name('inventory.summary');
+            Route::get('/catalog/search', [InventoryController::class, 'search'])->name('catalog.search');
+            Route::post('/parts/{part}/stock-movements', [InventoryController::class, 'storeMovement'])->name('parts.movements.store');
+            Route::post('/parts/{part}/transfer', [InventoryController::class, 'transfer'])->name('parts.transfer');
+
+            // Per-part catalog extensions: suppliers, relations, serials
+            Route::get('/parts/{part}/suppliers', [PartCatalogController::class, 'suppliers'])->name('parts.suppliers.index');
+            Route::post('/parts/{part}/suppliers', [PartCatalogController::class, 'linkSupplier'])->name('parts.suppliers.link');
+            Route::delete('/parts/{part}/suppliers/{supplier}', [PartCatalogController::class, 'unlinkSupplier'])->name('parts.suppliers.unlink');
+            Route::get('/parts/{part}/relations', [PartCatalogController::class, 'relations'])->name('parts.relations.index');
+            Route::post('/parts/{part}/relations', [PartCatalogController::class, 'linkRelation'])->name('parts.relations.link');
+            Route::delete('/parts/{part}/relations/{relation}', [PartCatalogController::class, 'unlinkRelation'])->name('parts.relations.unlink');
+            Route::get('/parts/{part}/serials', [PartCatalogController::class, 'serials'])->name('parts.serials.index');
+            Route::post('/parts/{part}/serials', [PartCatalogController::class, 'storeSerials'])->name('parts.serials.store');
+            Route::match(['put', 'patch'], '/serials/{serial}', [PartCatalogController::class, 'updateSerial'])->name('serials.update');
         });
 
     // --- Admin & Staff Moderation Portal (auth + role:admin,super_admin,inspector) ---

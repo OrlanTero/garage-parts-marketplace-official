@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             OrderSeeder::class,
             ChatSeeder::class,
             ReviewSeeder::class,
+            InventorySeeder::class,
         ]);
     }
 }

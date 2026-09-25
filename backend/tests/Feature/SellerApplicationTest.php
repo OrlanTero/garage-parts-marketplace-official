@@ -278,7 +278,7 @@ class SellerApplicationTest extends TestCase
 
         $this->postJson('/api/v1/seller/parts', $this->partPayload(), $this->token($partsSeller))
             ->assertForbidden()
-            ->assertJsonPath('code', 'kyc_verification_required');
+            ->assertJsonPath('code', 'house_catalog_only');
 
         $part = Part::factory()->for($partsSeller, 'seller')->create(['status' => 'draft']);
         $this->postJson("/api/v1/seller/parts/{$part->id}/publish", [], $this->token($partsSeller))

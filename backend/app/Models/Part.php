@@ -25,10 +25,20 @@ class Part extends Model
         'category',
         'brand',
         'part_number',
+        'mpn',
+        'barcode',
+        'uom',
+        'specifications',
+        'lifecycle_status',
         'compatibility',
         'condition',
         'tag',
         'quantity',
+        'reserved_quantity',
+        'min_stock',
+        'max_stock',
+        'reorder_point',
+        'safety_stock',
         'price',
         'original_price',
         'free_shipping',
@@ -53,6 +63,12 @@ class Part extends Model
             'category' => PartCategory::class,
             'condition' => PartCondition::class,
             'quantity' => 'integer',
+            'reserved_quantity' => 'integer',
+            'min_stock' => 'integer',
+            'max_stock' => 'integer',
+            'reorder_point' => 'integer',
+            'safety_stock' => 'integer',
+            'specifications' => 'array',
             'price' => 'decimal:2',
             'original_price' => 'decimal:2',
             'free_shipping' => 'boolean',
@@ -132,6 +148,32 @@ class Part extends Model
         return $this->belongsToMany(CarModel::class, 'car_model_part')->withTimestamps();
     }
 
+    /** Available-to-promise = on hand minus reserved. */
+    public function getAvailableQuantityAttribute(): int
+    {
+        return max(0, (int) $this->quantity - (int) $this->reserved_quantity);
+    }
+
+    public function stockMovements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StockMovement::class)->orderByDesc('created_at');
+    }
+
+    public function supplierLinks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PartSupplier::class);
+    }
+
+    public function serials(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PartSerial::class);
+    }
+
+    public function relations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PartRelation::class);
+    }
+
     public function media(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Media::class, 'mediable')
@@ -180,10 +222,11 @@ class Part extends Model
         return $this->media()->pluck('url')->all();
     }
 
-    /** Public marketplace scope: active listings, newest first. */
+    /** Public marketplace scope: active listings with live catalog status. */
     public function scopeListed(Builder $query): Builder
     {
         return $query->where('status', PartStatus::Active->value)
+            ->where('lifecycle_status', 'active')
             ->whereNotNull('published_at')
             ->orderByDesc('published_at');
     }
@@ -202,7 +245,9 @@ class Part extends Model
                 $q->where(fn (Builder $inner) => $inner
                     ->where('title', 'like', $like)
                     ->orWhere('brand', 'like', $like)
-                    ->orWhere('part_number', 'like', $like));
+                    ->orWhere('part_number', 'like', $like)
+                    ->orWhere('mpn', 'like', $like)
+                    ->orWhere('barcode', 'like', $like));
             })
             ->when($filters['category'] ?? null, fn (Builder $q, $v) => $q->where('category', $v))
             ->when($filters['brand'] ?? null, fn (Builder $q, $v) => $q->where('brand', $v))

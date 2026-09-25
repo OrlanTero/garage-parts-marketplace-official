@@ -13,10 +13,12 @@ class PartSeeder extends Seeder
 {
     public function run(): void
     {
-        $apexParts = User::where('email', 'partsseller@garagemarket.ph')->first() ?? User::first();
-        $tokyoOem = User::where('email', 'tokyo.oem@garagemarket.ph')->first() ?? $apexParts;
-        $metroDealer = User::where('email', 'dealer@garagemarket.ph')->first() ?? $apexParts;
-        $autobahnDealer = User::where('email', 'autobahn.dealers@garagemarket.ph')->first() ?? $apexParts;
+        // House catalog: car parts are sold exclusively by GAP Valenzuela Main.
+        $house = User::house() ?? User::where('email', 'partsseller@garagemarket.ph')->first() ?? User::first();
+        $apexParts = $house;
+        $tokyoOem = $house;
+        $metroDealer = $house;
+        $autobahnDealer = $house;
 
         $partsData = [
             [

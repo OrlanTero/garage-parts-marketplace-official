@@ -18,9 +18,9 @@ import {
   Fuel,
   Wrench,
   DollarSign,
-  Upload,
 } from 'lucide-react'
 import { carsApi } from '../api/cars.js'
+import MediaUploadField from '../components/MediaUploadField.jsx'
 
 export default function CarsManagement() {
   const [cars, setCars] = useState([])
@@ -57,7 +57,7 @@ export default function CarsManagement() {
     city: 'Makati',
     location: 'Showroom Bay #1',
     status: 'active',
-    image_url: '',
+    images: [],
   })
 
   const fetchCars = async () => {
@@ -110,7 +110,7 @@ export default function CarsManagement() {
       city: 'Makati',
       location: 'Makati Central Showroom',
       status: 'active',
-      image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop',
+      images: [],
     })
     setActionError(null)
     setCreateModalOpen(true)
@@ -118,8 +118,7 @@ export default function CarsManagement() {
 
   const handleOpenEdit = (car) => {
     setSelectedCar(car)
-    setFormData({
-      title: car.title || `${car.brand || car.make || ''} ${car.model || ''}`,
+    setFormData({      title: car.title || `${car.brand || car.make || ''} ${car.model || ''}`,
       brand: car.brand || car.make || '',
       model: car.model || '',
       year: car.year || 2020,
@@ -137,11 +136,24 @@ export default function CarsManagement() {
       city: car.city || 'Makati',
       location: car.location || 'Showroom Bay #1',
       status: car.status || 'active',
-      image_url: car.primary_image_url || (car.media && car.media[0]?.url) || '',
+      images: (car.media || []).map((m) => m.url).filter(Boolean),
     })
     setActionError(null)
     setEditModalOpen(true)
   }
+
+  const uploadCarFiles = async (files) => {
+    if (files.length === 1) {
+      const res = await carsApi.uploadMedia(files[0])
+      const url = res?.data?.url || res?.url
+      return url ? [url] : []
+    }
+    const res = await carsApi.uploadMultiple(files)
+    return ((res?.data ?? [])).map((m) => m.url).filter(Boolean)
+  }
+
+  const mediaPayload = (images) =>
+    (images || []).map((url, i) => ({ url, is_primary: i === 0, order: i }))
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
@@ -166,7 +178,7 @@ export default function CarsManagement() {
         description: formData.description,
         city: formData.city,
         location: formData.location,
-        media: formData.image_url ? [{ url: formData.image_url, is_primary: true }] : undefined,
+        media: mediaPayload(formData.images),
       }
 
       await carsApi.create(payload)
@@ -204,6 +216,7 @@ export default function CarsManagement() {
         description: formData.description,
         city: formData.city,
         location: formData.location,
+        media: mediaPayload(formData.images),
       }
 
       await carsApi.update(selectedCar.id, payload)
@@ -831,16 +844,12 @@ export default function CarsManagement() {
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 14 }}>
-                  <label className="admin-label">Primary Image URL</label>
-                  <input
-                    type="url"
-                    className="admin-input"
-                    placeholder="https://images.unsplash.com/photo-..."
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  />
-                </div>
+                <MediaUploadField
+                  label="Build Photos"
+                  images={formData.images || []}
+                  onChange={(images) => setFormData((prev) => ({ ...prev, images }))}
+                  uploadFiles={uploadCarFiles}
+                />
 
                 <div style={{ marginBottom: 14 }}>
                   <label className="admin-label">Build Description & Modifications</label>
@@ -959,6 +968,13 @@ export default function CarsManagement() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
+
+                <MediaUploadField
+                  label="Build Photos"
+                  images={formData.images || []}
+                  onChange={(images) => setFormData((prev) => ({ ...prev, images }))}
+                  uploadFiles={uploadCarFiles}
+                />
               </div>
 
               <div className="modal-footer">

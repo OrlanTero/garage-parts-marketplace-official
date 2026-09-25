@@ -15,6 +15,13 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * House garage account — the ONLY seller of car parts.
+     * Third-party sellers/dealers list vehicles only.
+     */
+    public const HOUSE_USERNAME = 'gap_valenzuela_main';
+    public const HOUSE_EMAIL = 'gap.valenzuela@garagemarket.ph';
+
     protected $fillable = [
         'name',
         'username',
@@ -158,6 +165,19 @@ class User extends Authenticatable
     public function isKycVerified(): bool
     {
         return (bool) $this->is_kyc_verified && $this->kyc_status === 'approved';
+    }
+
+    /** House garage account (GAP Valenzuela Main) — sole parts catalog owner. */
+    public function isHouse(): bool
+    {
+        return $this->username === static::HOUSE_USERNAME || $this->email === static::HOUSE_EMAIL;
+    }
+
+    public static function house(): ?static
+    {
+        return static::where('username', static::HOUSE_USERNAME)
+            ->orWhere('email', static::HOUSE_EMAIL)
+            ->first();
     }
 
     public function kycVerifier(): BelongsTo

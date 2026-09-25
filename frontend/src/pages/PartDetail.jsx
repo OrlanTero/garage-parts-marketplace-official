@@ -120,8 +120,11 @@ export default function PartDetail() {
     ['Category', catName],
     ['Manufacturer / Brand', part.brand || 'Genuine OEM / Aftermarket'],
     ['Manufacturer Part #', part.part_number || '—'],
+    ...(part.mpn ? [['MPN', part.mpn]] : []),
+    ...(part.barcode ? [['Barcode', part.barcode]] : []),
     ['Condition', part.condition ? (part.condition === 'new' ? 'Brand New in Box' : 'Japanese Surplus Mint') : '—'],
     ['Stock Quantity', part.quantity != null ? `${part.quantity} Unit(s) Available` : 'In Stock'],
+    ...(part.lifecycle_status && part.lifecycle_status !== 'active' ? [['Catalog Status', String(part.lifecycle_status).toUpperCase()]] : []),
     ['Freight Delivery', freeShip ? 'Free Insured Crated Shipping' : 'Calculated at Checkout'],
     ['Hub Location', location],
   ]

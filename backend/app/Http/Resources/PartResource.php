@@ -21,11 +21,23 @@ class PartResource extends JsonResource
             'cat' => $enum($this->category),
             'brand' => $this->brand,
             'part_number' => $this->part_number,
+            'mpn' => $this->mpn,
+            'barcode' => $this->barcode,
+            'uom' => $this->uom ?? 'pc',
+            'specifications' => $this->specifications ?? [],
+            'lifecycle_status' => $this->lifecycle_status ?? 'active',
             'compatibility' => $this->compatibility,
             'condition' => $enum($this->condition),
             'cond' => $enum($this->condition),
             'tag' => $this->tag,
-            'quantity' => $this->quantity,
+            'quantity' => (int) ($this->quantity ?? 0),
+            'reserved_quantity' => (int) ($this->reserved_quantity ?? 0),
+            'available_quantity' => max(0, (int) ($this->quantity ?? 0) - (int) ($this->reserved_quantity ?? 0)),
+            'min_stock' => (int) ($this->min_stock ?? 0),
+            'max_stock' => $this->max_stock !== null ? (int) $this->max_stock : null,
+            'reorder_point' => (int) ($this->reorder_point ?? 0),
+            'safety_stock' => (int) ($this->safety_stock ?? 0),
+            'stock_status' => $this->stockStatus(),
             'price' => $this->price,
             'original_price' => $this->original_price,
             'origPrice' => $this->original_price,
@@ -54,5 +66,21 @@ class PartResource extends JsonResource
                 'email' => $this->seller->email,
             ]),
         ];
+    }
+
+    private function stockStatus(): string
+    {
+        $qty = (int) ($this->quantity ?? 0);
+        if ($qty <= 0) {
+            return 'out_of_stock';
+        }
+        if ($qty <= (int) ($this->reorder_point ?? 0)) {
+            return 'low';
+        }
+        if ($this->max_stock !== null && $qty > (int) $this->max_stock) {
+            return 'overstock';
+        }
+
+        return 'in_stock';
     }
 }

@@ -31,10 +31,25 @@ class PartTest extends TestCase
         ];
     }
 
-    public function test_dealer_can_create_draft_and_publish_to_marketplace(): void
+    public function test_dealer_cannot_create_parts(): void
     {
         $dealer = User::factory()->kycVerified()->create(['role' => 'dealer']);
         $headers = $this->sellerToken($dealer);
+
+        // Car parts are sold exclusively by the house garage.
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertForbidden()
+            ->assertJsonPath('code', 'house_catalog_only');
+    }
+
+    public function test_house_garage_can_create_and_publish_parts(): void
+    {
+        $house = User::factory()->kycVerified()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
+        $headers = $this->sellerToken($house);
 
         $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
             ->assertCreated()
@@ -54,6 +69,20 @@ class PartTest extends TestCase
         $this->getJson("/api/v1/marketplace/parts/{$partId}")->assertOk();
     }
 
+    public function test_admin_creates_parts_onto_house_catalog(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $house = User::factory()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
+
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $this->sellerToken($admin))
+            ->assertCreated()
+            ->assertJsonPath('data.seller.id', $house->id);
+    }
+
     public function test_standard_seller_cannot_create_parts(): void
     {
         $seller = User::factory()->create(['role' => 'seller']);
@@ -62,19 +91,15 @@ class PartTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_parts_seller_can_create_and_publish_parts(): void
+    public function test_parts_seller_cannot_create_parts(): void
     {
         $partsSeller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
         $headers = $this->sellerToken($partsSeller);
 
-        $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
-            ->assertCreated()
-            ->assertJsonPath('data.status', 'draft');
-
-        $partId = $create->json('data.id');
-        $this->postJson("/api/v1/seller/parts/{$partId}/publish", [], $headers)
-            ->assertOk()
-            ->assertJsonPath('data.status', 'active');
+        // Car parts are sold exclusively by the house garage.
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertForbidden()
+            ->assertJsonPath('code', 'house_catalog_only');
     }
 
     public function test_buyer_cannot_create_parts(): void
@@ -133,7 +158,11 @@ class PartTest extends TestCase
 
     public function test_part_supports_multiple_images_and_marketplace_serialization(): void
     {
-        $seller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
+        $seller = User::factory()->kycVerified()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
         $headers = $this->sellerToken($seller);
 
         $payload = array_merge($this->partPayload(), [
@@ -168,7 +197,11 @@ class PartTest extends TestCase
 
     public function test_part_is_accessible_via_uuid_in_marketplace_and_seller_routes(): void
     {
-        $partsSeller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
+        $partsSeller = User::factory()->kycVerified()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
         $headers = $this->sellerToken($partsSeller);
 
         $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)

@@ -23,6 +23,17 @@ class StorePartRequest extends FormRequest
             'subcategory_id' => ['sometimes', 'nullable', 'integer', 'exists:subcategories,id'],
             'compatible_model_ids' => ['sometimes', 'array'],
             'compatible_model_ids.*' => ['integer', 'exists:car_models,id'],
+            // Catalog master data (§1)
+            'mpn' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'barcode' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'uom' => ['sometimes', 'string', 'max:20'],
+            'specifications' => ['sometimes', 'nullable', 'array'],
+            'lifecycle_status' => ['sometimes', 'string', Rule::in(['active', 'inactive', 'obsolete', 'discontinued'])],
+            // Inventory control levels (§2)
+            'min_stock' => ['sometimes', 'integer', 'min:0'],
+            'max_stock' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'reorder_point' => ['sometimes', 'integer', 'min:0'],
+            'safety_stock' => ['sometimes', 'integer', 'min:0'],
             'category' => ['required', 'string', Rule::enum(PartCategory::class)],
             'brand' => ['sometimes', 'nullable', 'string', 'max:80'],
             'part_number' => ['sometimes', 'nullable', 'string', 'max:80'],

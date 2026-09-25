@@ -65,6 +65,9 @@ export default function MyListings() {
   const [notice, setNotice] = useState(null)
 
   const isSeller = isAuthenticated && user && SELLER_ROLES.includes(user.role)
+  // Parts catalog is house-only (GAP Valenzuela Main). Everyone else
+  // manages vehicles here; admins use Parts & Product Management.
+  const canSellParts = Boolean(user?.is_house || user?.role === 'admin' || user?.role === 'super_admin')
   const statuses = tab === 'cars' ? CAR_STATUSES : PART_STATUSES
   const api = tab === 'cars' ? sellerCars : sellerParts
 
@@ -221,9 +224,11 @@ export default function MyListings() {
           <button type="button" className={tab === 'cars' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => { setTab('cars'); setStatusFilter('all') }}>
             <Car size={15} /> Vehicles {(summary?.cars?.total ?? 0) > 0 && <span className="my-listings-count">{summary.cars.total}</span>}
           </button>
+          {canSellParts && (
           <button type="button" className={tab === 'parts' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => { setTab('parts'); setStatusFilter('all') }}>
             <Package size={15} /> Parts {(summary?.parts?.total ?? 0) > 0 && <span className="my-listings-count">{summary.parts.total}</span>}
           </button>
+          )}
           <button type="button" className={tab === 'requests' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => setTab('requests')}>
             <Inbox size={15} /> Requests {pendingRequests > 0 && <span className="my-listings-count">{pendingRequests}</span>}
           </button>

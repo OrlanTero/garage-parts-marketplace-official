@@ -15,4 +15,13 @@ export const partsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data)
   },
+  uploadMultiple: (files) => {
+    const formData = new FormData()
+    files.forEach((file) => {
+      formData.append('files[]', file)
+    })
+    return client.post('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data)
+  },
 }

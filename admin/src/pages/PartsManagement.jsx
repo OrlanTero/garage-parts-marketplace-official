@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Layers,
   Search,
@@ -12,8 +12,6 @@ import {
   Tag,
   AlertCircle,
   X,
-  Upload,
-  Image as ImageIcon,
   DollarSign,
   Boxes,
   MapPin,
@@ -21,7 +19,57 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { partsApi } from '../api/parts.js'
+import MediaUploadField from '../components/MediaUploadField.jsx'
 import { taxonomyApi, specOptions, specLabel } from '../api/taxonomy.js'
+
+/** Shared MPN / barcode / UOM / lifecycle / stock-level fields (create + edit). */
+function CatalogFields({ formData, setFormData }) {
+  const set = (k) => (e) => setFormData((prev) => ({ ...prev, [k]: e.target.value }))
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div>
+          <label className="admin-label">MPN</label>
+          <input type="text" className="admin-input" placeholder="Maker part no." value={formData.mpn || ''} onChange={set('mpn')} />
+        </div>
+        <div>
+          <label className="admin-label">Barcode</label>
+          <input type="text" className="admin-input" placeholder="Scan or type" value={formData.barcode || ''} onChange={set('barcode')} />
+        </div>
+        <div>
+          <label className="admin-label">Unit</label>
+          <select className="admin-input" value={formData.uom || 'pc'} onChange={set('uom')}>
+            {['pc', 'set', 'pair', 'kit', 'box', 'liter', 'meter'].map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div>
+          <label className="admin-label">Lifecycle</label>
+          <select className="admin-input" value={formData.lifecycle_status || 'active'} onChange={set('lifecycle_status')}>
+            {['active', 'inactive', 'obsolete', 'discontinued'].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="admin-label">Min Stock</label>
+          <input type="number" min="0" className="admin-input" value={formData.min_stock ?? 0} onChange={set('min_stock')} />
+        </div>
+        <div>
+          <label className="admin-label">Reorder At</label>
+          <input type="number" min="0" className="admin-input" value={formData.reorder_point ?? 0} onChange={set('reorder_point')} />
+        </div>
+        <div>
+          <label className="admin-label">Safety Stock</label>
+          <input type="number" min="0" className="admin-input" value={formData.safety_stock ?? 0} onChange={set('safety_stock')} />
+        </div>
+      </div>
+    </>
+  )
+}
 
 export default function PartsManagement() {
   const [parts, setParts] = useState([])
@@ -39,9 +87,6 @@ export default function PartsManagement() {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionSuccess, setActionSuccess] = useState(null)
   const [actionError, setActionError] = useState(null)
-  const [uploadingImage, setUploadingImage] = useState(false)
-
-  const fileInputRef = useRef(null)
 
   // Form State for Add / Edit Part
   const [formData, setFormData] = useState({
@@ -58,7 +103,15 @@ export default function PartsManagement() {
     description: '',
     city: 'Makati',
     location: 'Makati Parts Depot',
-    image_url: '',
+    images: [],
+    mpn: '',
+    barcode: '',
+    uom: 'pc',
+    lifecycle_status: 'active',
+    min_stock: 0,
+    max_stock: '',
+    reorder_point: 0,
+    safety_stock: 0,
   })
 
   const fetchParts = async () => {
@@ -109,7 +162,15 @@ export default function PartsManagement() {
       description: '',
       city: 'Makati',
       location: 'Makati Parts Depot',
-      image_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=600&auto=format&fit=crop',
+      images: [],
+      mpn: '',
+      barcode: '',
+      uom: 'pc',
+      lifecycle_status: 'active',
+      min_stock: 0,
+      max_stock: '',
+      reorder_point: 0,
+      safety_stock: 0,
     })
     setActionError(null)
     setCreateModalOpen(true)
@@ -136,33 +197,32 @@ export default function PartsManagement() {
       description: part.description || '',
       city: part.city || 'Makati',
       location: part.location || 'Showroom Depot',
-      image_url: part.primary_image_url || (part.media && part.media[0]?.url) || '',
+      images: (part.media || []).map((m) => m.url).filter(Boolean),
+      mpn: part.mpn || '',
+      barcode: part.barcode || '',
+      uom: part.uom || 'pc',
+      lifecycle_status: part.lifecycle_status || 'active',
+      min_stock: part.min_stock ?? 0,
+      max_stock: part.max_stock ?? '',
+      reorder_point: part.reorder_point ?? 0,
+      safety_stock: part.safety_stock ?? 0,
     })
     setActionError(null)
     setEditModalOpen(true)
   }
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadingImage(true)
-    setActionError(null)
-    try {
-      const res = await partsApi.uploadMedia(file)
-      if (res?.data?.url || res?.url) {
-        setFormData((prev) => ({
-          ...prev,
-          image_url: res.data?.url || res.url,
-        }))
-        setActionSuccess('Image uploaded successfully.')
-      }
-    } catch (err) {
-      setActionError(err?.response?.data?.message || 'Failed to upload image.')
-    } finally {
-      setUploadingImage(false)
+  const uploadPartFiles = async (files) => {
+    if (files.length === 1) {
+      const res = await partsApi.uploadMedia(files[0])
+      const url = res?.data?.url || res?.url
+      return url ? [url] : []
     }
+    const res = await partsApi.uploadMultiple(files)
+    return ((res?.data ?? [])).map((m) => m.url).filter(Boolean)
   }
+
+  const mediaPayload = (images) =>
+    (images || []).map((url, i) => ({ url, is_primary: i === 0, order: i }))
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
@@ -183,7 +243,15 @@ export default function PartsManagement() {
         description: formData.description,
         city: formData.city,
         location: formData.location,
-        media: formData.image_url ? [{ url: formData.image_url, is_primary: true }] : undefined,
+        media: mediaPayload(formData.images),
+        mpn: formData.mpn || undefined,
+        barcode: formData.barcode || undefined,
+        uom: formData.uom || 'pc',
+        lifecycle_status: formData.lifecycle_status || 'active',
+        min_stock: parseInt(formData.min_stock) || 0,
+        max_stock: formData.max_stock === '' ? null : parseInt(formData.max_stock),
+        reorder_point: parseInt(formData.reorder_point) || 0,
+        safety_stock: parseInt(formData.safety_stock) || 0,
       }
 
       await partsApi.create(payload)
@@ -217,6 +285,15 @@ export default function PartsManagement() {
         description: formData.description,
         city: formData.city,
         location: formData.location,
+        media: mediaPayload(formData.images),
+        mpn: formData.mpn || null,
+        barcode: formData.barcode || null,
+        uom: formData.uom || 'pc',
+        lifecycle_status: formData.lifecycle_status || 'active',
+        min_stock: parseInt(formData.min_stock) || 0,
+        max_stock: formData.max_stock === '' ? null : parseInt(formData.max_stock),
+        reorder_point: parseInt(formData.reorder_point) || 0,
+        safety_stock: parseInt(formData.safety_stock) || 0,
       }
 
       await partsApi.update(selectedPart.id, payload)
@@ -771,37 +848,15 @@ export default function PartsManagement() {
                   </div>
                 </div>
 
-                {/* Media Image Upload & URL */}
-                <div style={{ marginBottom: 14 }}>
-                  <label className="admin-label">Product Image (Upload File or Paste URL)</label>
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <input
-                      type="url"
-                      className="admin-input"
-                      placeholder="https://..."
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      style={{ flex: 1 }}
-                    />
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      style={{ display: 'none' }}
-                      accept="image/*"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingImage}
-                      className="btn btn-secondary btn-sm"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
-                    >
-                      <Upload size={14} />
-                      <span>{uploadingImage ? 'Uploading...' : 'Upload Image'}</span>
-                    </button>
-                  </div>
-                </div>
+                {/* Product photos — multi-file upload */}
+                <MediaUploadField
+                  label="Product Photos"
+                  images={formData.images || []}
+                  onChange={(images) => setFormData((prev) => ({ ...prev, images }))}
+                  uploadFiles={uploadPartFiles}
+                />
+
+                <CatalogFields formData={formData} setFormData={setFormData} />
 
                 <div style={{ marginBottom: 14 }}>
                   <label className="admin-label">Vehicle Compatibility / Fitment</label>
@@ -915,6 +970,16 @@ export default function PartsManagement() {
                     onChange={(e) => setFormData({ ...formData, compatibility: e.target.value })}
                   />
                 </div>
+
+                {/* Product photos — multi-file upload */}
+                <MediaUploadField
+                  label="Product Photos"
+                  images={formData.images || []}
+                  onChange={(images) => setFormData((prev) => ({ ...prev, images }))}
+                  uploadFiles={uploadPartFiles}
+                />
+
+                <CatalogFields formData={formData} setFormData={setFormData} />
 
                 <div>
                   <label className="admin-label">Description & Specs</label>
