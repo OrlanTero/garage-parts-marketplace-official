@@ -12,6 +12,7 @@ import {
   Package,
   Wrench,
   Car,
+  MapPin,
   Sparkles
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -21,6 +22,8 @@ import { ordersApi } from '../api/orders.js'
 import { agentsApi } from '../api/agents.js'
 import { getActiveReferralCode } from '../utils/referral.js'
 import { useMediaQuery } from '../hooks/useMediaQuery.js'
+import DeliveryMapPicker from '../components/DeliveryMapPicker.jsx'
+import { accountApi, ADDRESS_LABELS } from '../api/account.js'
 
 export default function Checkout() {
   const navigate = useNavigate()
@@ -47,6 +50,11 @@ export default function Checkout() {
     shipping_city: 'Metro Manila',
     shipping_postal_code: '1200',
 
+    // Optional delivery pinpoint (also pinnable later on the sales order)
+    delivery_latitude: '',
+    delivery_longitude: '',
+    delivery_label: '',
+
     // Mandatory Vehicle Details
     chassis_number: '',
     vin: '',
@@ -62,6 +70,69 @@ export default function Checkout() {
 
   const [agentInfo, setAgentInfo] = useState(null)
   const [verifyingAgent, setVerifyingAgent] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState([])
+  // Destination source: 'saved' (address-book card) or 'new' (manual form)
+  const [destMode, setDestMode] = useState('new')
+  const [selectedAddressId, setSelectedAddressId] = useState('')
+  // Save the entered destination into the address book for next time
+  const [saveToBook, setSaveToBook] = useState(false)
+  const [bookLabel, setBookLabel] = useState('Home')
+
+  // Saved address book — one flow for cars & parts: pick a card and the
+  // street/city/postal/phone/pin fill in together. Manual form otherwise.
+  useEffect(() => {
+    if (!user) return
+    let alive = true
+    accountApi.listAddresses()
+      .then((list) => {
+        if (!alive) return
+        const arr = Array.isArray(list) ? list : []
+        setSavedAddresses(arr)
+        const def = arr.find((a) => a.is_default) || arr[0]
+        if (!def) return
+        setDestMode('saved')
+        setSelectedAddressId(String(def.id))
+        applyAddressFields(def)
+      })
+      .catch(() => setSavedAddresses([]))
+    return () => { alive = false }
+  }, [user])
+
+  // Write one address book entry into the order form (WHO stays untouched).
+  const applyAddressFields = (addr) => {
+    if (!addr) return
+    setFormData((prev) => {
+      const next = { ...prev }
+      if (!prev.shipping_address && addr.address_line) next.shipping_address = addr.address_line
+      if ((!prev.shipping_city || prev.shipping_city === 'Metro Manila') && addr.city) next.shipping_city = addr.city
+      if ((!prev.shipping_postal_code || prev.shipping_postal_code === '1200') && addr.postal_code) next.shipping_postal_code = addr.postal_code
+      if (!prev.buyer_phone && addr.phone) next.buyer_phone = addr.phone
+      if (addr.latitude != null && addr.longitude != null) {
+        next.delivery_latitude = addr.latitude
+        next.delivery_longitude = addr.longitude
+        next.delivery_label = addr.landmark || ''
+      }
+      return next
+    })
+  }
+
+  const chooseSavedAddress = (id) => {
+    const addr = savedAddresses.find((a) => String(a.id) === String(id))
+    if (!addr) return
+    setSelectedAddressId(String(id))
+    setDestMode('saved')
+    // Card is source of truth — overwrite destination (contact name/email stay).
+    setFormData((prev) => ({
+      ...prev,
+      buyer_phone: addr.phone || prev.buyer_phone,
+      shipping_address: addr.address_line || prev.shipping_address,
+      shipping_city: addr.city || prev.shipping_city,
+      shipping_postal_code: addr.postal_code || prev.shipping_postal_code,
+      delivery_latitude: addr.latitude ?? '',
+      delivery_longitude: addr.longitude ?? '',
+      delivery_label: addr.landmark || '',
+    }))
+  }
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState({})
   const [generalError, setGeneralError] = useState('')
@@ -230,11 +301,34 @@ export default function Checkout() {
         quantity: quantity,
         payment_method: formData.payment_method,
         notes: formData.notes,
+        // Optional upfront delivery pinpoint
+        delivery_latitude: formData.delivery_latitude !== '' ? Number(formData.delivery_latitude) : undefined,
+        delivery_longitude: formData.delivery_longitude !== '' ? Number(formData.delivery_longitude) : undefined,
+        delivery_label: formData.delivery_label?.trim() || undefined,
       }
 
       const response = await ordersApi.create(payload)
       const orderNumber = response?.order_number || response?.id || 'LATEST'
-      
+
+      // Optionally persist this destination into the address book for later.
+      if (saveToBook && user) {
+        try {
+          await accountApi.createAddress({
+            label: bookLabel,
+            recipient_name: formData.buyer_name.trim(),
+            phone: formData.buyer_phone.trim() || undefined,
+            address_line: formData.shipping_address.trim(),
+            city: formData.shipping_city.trim() || undefined,
+            postal_code: formData.shipping_postal_code.trim() || undefined,
+            latitude: formData.delivery_latitude !== '' ? Number(formData.delivery_latitude) : null,
+            longitude: formData.delivery_longitude !== '' ? Number(formData.delivery_longitude) : null,
+            landmark: formData.delivery_label?.trim() || undefined,
+          })
+        } catch {
+          // Never block the order on an address-book failure.
+        }
+      }
+
       // Navigate to the official serialized sales order page
       navigate(`/sales-order/${orderNumber}`)
     } catch (err) {
@@ -327,7 +421,7 @@ export default function Checkout() {
                     <Wrench size={20} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Vehicle Identification & Fitment Details</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Vehicle Identification & Fitment Details</h2>
                     <div style={{ fontSize: 12, color: '#d8622c', fontWeight: 600, marginTop: 2 }}>
                       Mandatory for Official Sales Order & Fitment Warranty
                     </div>
@@ -472,7 +566,7 @@ export default function Checkout() {
                   <Truck size={20} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Customer & Delivery Destination</h2>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Customer & Delivery Destination</h2>
                   <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
                     Official recipient information for freight logistics and sales order dispatch
                   </div>
@@ -480,6 +574,62 @@ export default function Checkout() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 16 }}>
+
+                {/* Destination source — saved cards or manual entry */}
+                {savedAddresses.length > 0 && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 8 }}>
+                    <span>Deliver to</span>
+                    <Link to="/settings?tab=addresses" style={{ fontSize: 12, color: '#fb923c', fontWeight: 600 }}>Manage addresses</Link>
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                    {savedAddresses.map((a) => {
+                      const selected = destMode === 'saved' && String(selectedAddressId) === String(a.id)
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => chooseSavedAddress(a.id)}
+                          style={{
+                            textAlign: 'left',
+                            background: selected ? 'rgba(216, 98, 44, 0.08)' : '#0f1117',
+                            border: selected ? '1px solid #d8622c' : '1px solid #2d3748',
+                            borderRadius: 10,
+                            padding: '12px 14px',
+                            cursor: 'pointer',
+                            color: '#f8fafc',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                            <MapPin size={13} color={selected ? '#d8622c' : '#94a3b8'} />
+                            {a.is_default ? '★ ' : ''}{a.label}
+                            {a.latitude != null && <span style={{ fontSize: 11, color: '#10b981' }}>· pinned</span>}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                            {a.full_address || a.address_line}
+                          </div>
+                        </button>
+                      )
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => { setDestMode('new'); setSelectedAddressId('') }}
+                      style={{
+                        background: destMode === 'new' ? 'rgba(216, 98, 44, 0.08)' : 'transparent',
+                        border: destMode === 'new' ? '1px solid #d8622c' : '1px dashed #2d3748',
+                        borderRadius: 10,
+                        padding: '12px 14px',
+                        cursor: 'pointer',
+                        color: destMode === 'new' ? '#fb923c' : '#94a3b8',
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      + Use a new address
+                    </button>
+                  </div>
+                </div>
+                )}
 
                 {/* Full Name */}
                 <div>
@@ -617,6 +767,89 @@ export default function Checkout() {
                   )}
                 </div>
 
+                {/* Postal Code */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                    Postal / ZIP Code
+                  </label>
+                  <input
+                    type="text"
+                    name="shipping_postal_code"
+                    value={formData.shipping_postal_code}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 1200"
+                    style={{
+                      width: '100%',
+                      background: '#0f1117',
+                      border: '1px solid #2d3748',
+                      borderRadius: 8,
+                      padding: '12px 14px',
+                      color: '#f8fafc',
+                      fontSize: 14,
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+
+                {/* Precise drop-off pin (parts freight) — always visible, no extra step */}
+                {isPartOrder && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 8 }}>
+                    <MapPin size={14} />
+                    <span>Drop-off Pin</span>
+                    {formData.delivery_latitude !== '' && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>
+                        {Number(formData.delivery_latitude).toFixed(5)}, {Number(formData.delivery_longitude).toFixed(5)}
+                      </span>
+                    )}
+                  </label>
+                  <DeliveryMapPicker
+                    height={280}
+                    value={formData.delivery_latitude !== '' ? {
+                      latitude: Number(formData.delivery_latitude),
+                      longitude: Number(formData.delivery_longitude),
+                      label: formData.delivery_label,
+                    } : null}
+                    confirmLabel={formData.delivery_latitude !== '' ? 'Update Pin' : 'Set Drop-off Pin'}
+                    onConfirm={(pin) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        delivery_latitude: pin.latitude,
+                        delivery_longitude: pin.longitude,
+                        delivery_label: pin.label,
+                      }))
+                    }}
+                  />
+                </div>
+                )}
+
+                {/* Save this destination for later (logged-in buyers) */}
+                {user && (
+                <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: '#0f1117', border: '1px solid #1e293b', borderRadius: 8, padding: '12px 14px' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={saveToBook}
+                      onChange={(e) => setSaveToBook(e.target.checked)}
+                      style={{ accentColor: '#d8622c', width: 16, height: 16 }}
+                    />
+                    Save this delivery info to my Address Book
+                  </label>
+                  {saveToBook && (
+                    <select
+                      value={bookLabel}
+                      onChange={(e) => setBookLabel(e.target.value)}
+                      aria-label="Address book label"
+                      style={{ background: '#161922', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 10px', color: '#f8fafc', fontSize: 13, outline: 'none' }}
+                    >
+                      {ADDRESS_LABELS.map((l) => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                )}
+
               </div>
             </div>
 
@@ -643,7 +876,7 @@ export default function Checkout() {
                     <Sparkles size={20} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Sales Agent / Referral Partner</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Sales Agent / Referral Partner</h2>
                     <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
                       Support your referring tuning shop, advisor, or garage affiliate
                     </div>
@@ -728,44 +961,44 @@ export default function Checkout() {
             </div>
 
             {/* SECTION 4: PAYMENT — LOCKED UNTIL SELLER VERIFIES */}
-            <div style={{ 
-              background: '#161922', 
-              border: '1px dashed #2d3748', 
-              borderRadius: 12, 
-              padding: 24 
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ 
-                  background: 'rgba(148, 163, 184, 0.15)', 
-                  color: '#94a3b8', 
-                  width: 36, 
-                  height: 36, 
-                  borderRadius: 8, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center' 
-                }}>
-                  <CreditCard size={20} />
-                </div>
-                <div>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Payment Settlement Method</h2>
-                  <div style={{ fontSize: 12, color: '#eab308', marginTop: 2, fontWeight: 600 }}>
-                    Locked — unlocks after the seller verifies your request
-                  </div>
-                </div>
-              </div>
+            {/*<div style={{ */}
+            {/*  background: '#161922', */}
+            {/*  border: '1px dashed #2d3748', */}
+            {/*  borderRadius: 12, */}
+            {/*  padding: 24 */}
+            {/*}}>*/}
+            {/*  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>*/}
+            {/*    <div style={{ */}
+            {/*      background: 'rgba(148, 163, 184, 0.15)', */}
+            {/*      color: '#94a3b8', */}
+            {/*      width: 36, */}
+            {/*      height: 36, */}
+            {/*      borderRadius: 8, */}
+            {/*      display: 'flex', */}
+            {/*      alignItems: 'center', */}
+            {/*      justifyContent: 'center' */}
+            {/*    }}>*/}
+            {/*      <CreditCard size={20} />*/}
+            {/*    </div>*/}
+            {/*    <div>*/}
+            {/*      <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Payment Settlement Method</h2>*/}
+            {/*      <div style={{ fontSize: 12, color: '#eab308', marginTop: 2, fontWeight: 600 }}>*/}
+            {/*        Locked — unlocks after the seller verifies your request*/}
+            {/*      </div>*/}
+            {/*    </div>*/}
+            {/*  </div>*/}
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px' }}>
-                <AlertCircle size={16} color="#eab308" style={{ flexShrink: 0, marginTop: 2 }} />
-                <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
-                  Your sales order is submitted as a <strong style={{ color: '#e2e8f0' }}>verification request</strong>.
-                  Sellers often receive multiple requests per listing and accept one buyer.
-                  Once your request is <strong style={{ color: '#10b981' }}>verified & accepted</strong>,
-                  settlement details and payment options will appear on your official sales order page.
-                  No payment is possible before acceptance.
-                </div>
-              </div>
-            </div>
+            {/*  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px' }}>*/}
+            {/*    <AlertCircle size={16} color="#eab308" style={{ flexShrink: 0, marginTop: 2 }} />*/}
+            {/*    <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>*/}
+            {/*      Your sales order is submitted as a <strong style={{ color: '#e2e8f0' }}>verification request</strong>.*/}
+            {/*      Sellers often receive multiple requests per listing and accept one buyer.*/}
+            {/*      Once your request is <strong style={{ color: '#10b981' }}>verified & accepted</strong>,*/}
+            {/*      settlement details and payment options will appear on your official sales order page.*/}
+            {/*      No payment is possible before acceptance.*/}
+            {/*    </div>*/}
+            {/*  </div>*/}
+            {/*</div>*/}
 
             {/* SECTION 4: NOTES & FITMENT INSTRUCTIONS */}
             <div style={{ 

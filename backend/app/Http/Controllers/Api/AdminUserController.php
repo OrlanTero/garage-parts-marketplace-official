@@ -148,6 +148,32 @@ class AdminUserController extends Controller
         ]);
     }
 
+    /**
+     * Slim staff directory for inspector-assignment pickers.
+     * Returns id/name/username/avatar/role + live assignment counts.
+     */
+    public function staff(Request $request): JsonResponse
+    {
+        $role = $request->query('role');
+
+        $query = User::query()
+            ->whereIn('role', [UserRole::SuperAdmin->value, UserRole::Admin->value, UserRole::Inspector->value])
+            ->when($role && $role !== 'all', fn ($q) => $q->where('role', $role))
+            ->withCount(['assignedInspections' => fn ($q) => $q->whereIn('inspection_status', ['scheduled', 'pending'])])
+            ->orderBy('name');
+
+        $staff = $query->get()->map(fn (User $u) => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'username' => $u->username,
+            'avatar_url' => $u->avatar_url,
+            'role' => $u->role instanceof UserRole ? $u->role->value : $u->role,
+            'active_assignments' => (int) ($u->assigned_inspections_count ?? 0),
+        ]);
+
+        return response()->json(['data' => $staff]);
+    }
+
     public function show(User $user): JsonResponse
     {
         $user->load(['orders.part', 'cars', 'parts', 'favorites']);

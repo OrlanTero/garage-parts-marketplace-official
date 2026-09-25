@@ -101,6 +101,9 @@ const NAV_GROUPS = [
   },
 ]
 
+// Inspectors get a focused workspace: queue, inspections, schedule.
+const INSPECTOR_ROUTES = ['/', '/moderation', '/appointments']
+
 const ALL_NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items)
 
 const isItemActive = (item, pathname) =>
@@ -108,6 +111,7 @@ const isItemActive = (item, pathname) =>
 
 export function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) {
   const { user } = useAuth()
+  const isInspectorOnly = user?.role === 'inspector'
   const location = useLocation()
   const [navSearch, setNavSearch] = useState('')
   const [openGroups, setOpenGroups] = useState(() => {
@@ -134,10 +138,16 @@ export function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) 
 
   const filteredGroups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) =>
-      item.label.toLowerCase().includes(navSearch.toLowerCase())
+    items: group.items.filter(
+      (item) =>
+        item.label.toLowerCase().includes(navSearch.toLowerCase()) &&
+        (!isInspectorOnly || INSPECTOR_ROUTES.includes(item.to))
     ),
   })).filter((group) => group.items.length > 0)
+
+  const railItems = isInspectorOnly
+    ? ALL_NAV_ITEMS.filter((item) => INSPECTOR_ROUTES.includes(item.to))
+    : ALL_NAV_ITEMS
 
   const renderNavItem = (item) => {
     const Icon = item.icon
@@ -356,7 +366,7 @@ export function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) 
           {collapsed ? (
             /* Collapsed: flat icon rail, no group headers */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {ALL_NAV_ITEMS.map(renderNavItem)}
+              {railItems.map(renderNavItem)}
             </div>
           ) : (
             /* Expanded: accordion sections */

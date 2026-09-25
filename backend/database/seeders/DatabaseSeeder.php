@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             TaxonomySeeder::class, // re-run after listings: backfills FKs + fitment pivot
             OrderSeeder::class,
             ChatSeeder::class,
+            ReviewSeeder::class,
         ]);
     }
 }

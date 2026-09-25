@@ -149,7 +149,7 @@ export default function PartCard({
             </div>
             <div className="part-card-actions">
               <Link to={`/parts/${linkId}`} className="btn btn-secondary part-inquire-btn">
-                <span>Inquire / Bag</span>
+                <span>Inquire</span>
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -211,7 +211,7 @@ export default function PartCard({
             {origPriceDisplay && <span className="part-price-orig">{origPriceDisplay}</span>}
           </div>
           <Link to={`/parts/${linkId}`} className="btn btn-secondary part-inquire-btn">
-            <span>Inquire / Bag</span>
+            <span>Inquire</span>
           </Link>
         </div>
       </div>

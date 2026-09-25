@@ -257,7 +257,7 @@ export default function Login() {
           }}
         >
           <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>
-            Seeded Admin Account
+            Seeded Staff Accounts (admin · inspector)
           </div>
           <button
             type="button"

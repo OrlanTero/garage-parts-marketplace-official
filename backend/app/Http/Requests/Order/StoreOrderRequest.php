@@ -22,6 +22,11 @@ class StoreOrderRequest extends FormRequest
             'shipping_city' => ['nullable', 'string', 'max:120'],
             'shipping_postal_code' => ['nullable', 'string', 'max:30'],
 
+            // Optional delivery pinpoint (also settable later on the sales order).
+            'delivery_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'delivery_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'delivery_label' => ['nullable', 'string', 'max:500'],
+
             // Vehicle Fitment & Identification Details.
             // Mandatory for PART orders (buyer's vehicle must match the part).
             // Excluded for CAR orders (the purchased vehicle speaks for itself —

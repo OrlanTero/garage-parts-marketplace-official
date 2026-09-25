@@ -69,6 +69,14 @@ class OrderResource extends JsonResource
             },
             'verification_note' => $this->verification_note,
 
+            // Precise delivery pinpoint (parts freight, set after acceptance).
+            'delivery' => [
+                'latitude' => $this->delivery_latitude !== null ? (float) $this->delivery_latitude : null,
+                'longitude' => $this->delivery_longitude !== null ? (float) $this->delivery_longitude : null,
+                'label' => $this->delivery_label,
+                'has_pin' => $this->delivery_latitude !== null && $this->delivery_longitude !== null,
+            ],
+
             // Sales Agent & Referral Partner Information
             'agent' => $this->agent_code ? [
                 'id' => $this->agent_id,

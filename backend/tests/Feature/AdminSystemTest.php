@@ -61,10 +61,24 @@ class AdminSystemTest extends TestCase
 
     public function test_inspector_can_record_inspection_result_and_score(): void
     {
+        $admin = User::factory()->create(['role' => UserRole::Admin->value]);
         $inspector = User::factory()->create(['role' => UserRole::Inspector->value]);
+        $otherInspector = User::factory()->create(['role' => UserRole::Inspector->value]);
         $seller = User::factory()->create(['role' => UserRole::Seller->value]);
         $car = Car::factory()->for($seller, 'seller')->create(['status' => CarStatus::PendingInspection->value]);
 
+        // Dispatcher assigns this inspector first.
+        $this->postJson("/api/v1/admin/moderation/cars/{$car->id}/schedule-inspection", [
+            'inspection_type' => 'garage_dropoff',
+            'inspector_id' => $inspector->id,
+        ], $this->token($admin))->assertOk();
+
+        // A different inspector cannot record someone else's assignment.
+        $this->postJson("/api/v1/admin/moderation/cars/{$car->id}/record-inspection", [
+            'passed' => true,
+        ], $this->token($otherInspector))->assertForbidden();
+
+        // The assigned inspector can.
         $res = $this->postJson("/api/v1/admin/moderation/cars/{$car->id}/record-inspection", [
             'passed' => true,
             'inspection_score' => '96/100',
@@ -74,6 +88,40 @@ class AdminSystemTest extends TestCase
         $res->assertJsonPath('data.score', '96/100');
         $res->assertJsonPath('data.inspection_status', 'passed');
         $res->assertJsonPath('data.status', 'inspected');
+    }
+
+    public function test_inspector_assignment_requires_staff_and_supports_mine_filter(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::Admin->value]);
+        $inspector = User::factory()->create(['role' => UserRole::Inspector->value]);
+        $buyer = User::factory()->create(['role' => UserRole::Buyer->value]);
+        $seller = User::factory()->create(['role' => UserRole::Seller->value]);
+        $car = Car::factory()->for($seller, 'seller')->create(['status' => CarStatus::PendingInspection->value]);
+
+        // Buyers cannot be assigned as inspectors.
+        $this->postJson("/api/v1/admin/moderation/cars/{$car->id}/schedule-inspection", [
+            'inspection_type' => 'garage_dropoff',
+            'inspector_id' => $buyer->id,
+        ], $this->token($admin))->assertStatus(422);
+
+        // Staff directory lists inspectors for the assignment picker.
+        $this->getJson('/api/v1/admin/staff?role=inspector', $this->token($admin))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $inspector->id);
+
+        // Assign, then the inspector sees it under ?mine=1.
+        $this->postJson("/api/v1/admin/moderation/cars/{$car->id}/schedule-inspection", [
+            'inspection_type' => 'garage_dropoff',
+            'inspector_id' => $inspector->id,
+        ], $this->token($admin))->assertOk();
+
+        $this->getJson('/api/v1/admin/moderation/cars?mine=1', $this->token($inspector))
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/admin/appointments?mine=1', $this->token($inspector))
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
     }
 
     public function test_admin_can_approve_and_publish_verified_car_build(): void

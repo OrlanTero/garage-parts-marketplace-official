@@ -30,6 +30,7 @@ import CreateListing from './pages/CreateListing.jsx'
 import BecomeSeller from './pages/BecomeSeller.jsx'
 import MyListings from './pages/MyListings.jsx'
 import Offers from './pages/Offers.jsx'
+import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
 import Messages from './pages/Messages.jsx'
 import Login from './pages/Login.jsx'
@@ -489,6 +490,8 @@ export default function App() {
           <Route path="/messages" element={<Messages />} />
           <Route path="/inbox" element={<Messages />} />
           <Route path="/offers" element={<Offers />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/account" element={<Settings />} />
           <Route path="/sell" element={<CreateListing />} />
           <Route path="/sell/cars" element={<CreateListing defaultType="car" />} />
           <Route path="/sell/parts" element={<CreateListing defaultType="part" />} />

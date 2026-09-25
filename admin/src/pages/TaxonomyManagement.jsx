@@ -10,6 +10,7 @@ import {
   RefreshCw,
   FolderPlus,
   Building2,
+  Edit,
   X,
 } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../components/Accordion.jsx'
@@ -42,6 +43,10 @@ export default function TaxonomyManagement() {
   const [modelModalOpen, setModelModalOpen] = useState(false)
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [targetBrand, setTargetBrand] = useState(null)
+  const [editingBrand, setEditingBrand] = useState(null)
+  const [editingModel, setEditingModel] = useState(null) // { brandId, model }
+  const [editingCategory, setEditingCategory] = useState(null)
+  const [subDrafts, setSubDrafts] = useState({})
 
   // New Brand Form
   const [newBrandForm, setNewBrandForm] = useState({
@@ -101,29 +106,64 @@ export default function TaxonomyManagement() {
     setSaving(true)
     setActionError(null)
     try {
-      const created = await taxonomyApi.createBrand({
-        name: newBrandForm.brand.trim(),
-        country: newBrandForm.country,
-        region: COUNTRY_REGION[newBrandForm.country] || 'other',
-      })
-      setTaxonomy([normalizeBrand(created), ...taxonomy])
-      setActionSuccess(`Brand "${created.name}" registered in taxonomy.`)
+      if (editingBrand) {
+        const updated = await taxonomyApi.updateBrand(editingBrand.id, {
+          name: newBrandForm.brand.trim(),
+          country: newBrandForm.country,
+          region: COUNTRY_REGION[newBrandForm.country] || 'other',
+        })
+        const norm = normalizeBrand(updated)
+        setTaxonomy(taxonomy.map((b) => (
+          b.id === editingBrand.id
+            ? { ...norm, activeModels: b.activeModels, carsCount: norm.carsCount ?? b.carsCount }
+            : b
+        )))
+        setActionSuccess(`Brand "${updated.name}" updated. Changes are live on the storefront.`)
+      } else {
+        const created = await taxonomyApi.createBrand({
+          name: newBrandForm.brand.trim(),
+          country: newBrandForm.country,
+          region: COUNTRY_REGION[newBrandForm.country] || 'other',
+        })
+        setTaxonomy([normalizeBrand(created), ...taxonomy])
+        setActionSuccess(`Brand "${created.name}" registered in taxonomy.`)
+      }
       setBrandModalOpen(false)
+      setEditingBrand(null)
       setNewBrandForm({ brand: '', country: 'Japan' })
     } catch (err) {
-      setActionError(err?.response?.data?.message || 'Failed to register brand.')
+      setActionError(err?.response?.data?.message || 'Failed to save brand.')
     } finally {
       setSaving(false)
     }
   }
 
+  const handleOpenEditBrand = (brandObj) => {
+    setEditingBrand(brandObj)
+    setNewBrandForm({ brand: brandObj.brand, country: brandObj.country !== '—' ? brandObj.country : 'Japan' })
+    setBrandModalOpen(true)
+  }
+
   const handleOpenAddModel = (brandObj) => {
     setTargetBrand(brandObj)
+    setEditingModel(null)
     setNewModelForm({
       name: '',
       years: '2020 - Present',
       chassisCode: '',
       engines: '',
+    })
+    setModelModalOpen(true)
+  }
+
+  const handleOpenEditModel = (brandObj, model) => {
+    setTargetBrand(brandObj)
+    setEditingModel({ brandId: brandObj.id, model })
+    setNewModelForm({
+      name: model.name || '',
+      years: model.years || '2020 - Present',
+      chassisCode: model.chassis_code || model.chassisCode || '',
+      engines: (model.engines || []).join(', '),
     })
     setModelModalOpen(true)
   }
@@ -134,18 +174,52 @@ export default function TaxonomyManagement() {
     setSaving(true)
     setActionError(null)
     try {
-      await taxonomyApi.createModel(targetBrand.id, {
-        name: newModelForm.name.trim(),
-        chassis_code: newModelForm.chassisCode.trim(),
-        years: newModelForm.years || '2020 - Present',
-        engine_text: newModelForm.engines,
-      })
-      const brands = await taxonomyApi.getBrands()
-      setTaxonomy(brands.map(normalizeBrand))
-      setActionSuccess(`Model "${newModelForm.name}" added to brand ${targetBrand.brand}.`)
+      if (editingModel) {
+        const updated = await taxonomyApi.updateModel(editingModel.model.id, {
+          name: newModelForm.name.trim(),
+          chassis_code: newModelForm.chassisCode.trim(),
+          years_label: newModelForm.years || '2020 - Present',
+          engines: newModelForm.engines
+            ? newModelForm.engines.split(',').map((s) => s.trim()).filter(Boolean)
+            : [],
+        })
+        setTaxonomy(
+          taxonomy.map((b) => {
+            if (b.id !== editingModel.brandId) return b
+            return {
+              ...b,
+              activeModels: b.activeModels.map((m) =>
+                m.id === editingModel.model.id
+                  ? {
+                      ...m,
+                      name: updated.name,
+                      chassis_code: updated.chassis_code,
+                      years: updated.years_label || updated.years,
+                      engines: updated.engines || [],
+                      partsCount: m.partsCount,
+                    }
+                  : m
+              ),
+            }
+          })
+        )
+        void norm
+        setActionSuccess(`Model "${updated.name}" updated. Storefront dropdowns refresh automatically.`)
+      } else {
+        await taxonomyApi.createModel(targetBrand.id, {
+          name: newModelForm.name.trim(),
+          chassis_code: newModelForm.chassisCode.trim(),
+          years: newModelForm.years || '2020 - Present',
+          engine_text: newModelForm.engines,
+        })
+        const brands = await taxonomyApi.getBrands()
+        setTaxonomy(brands.map(normalizeBrand))
+        setActionSuccess(`Model "${newModelForm.name}" added to brand ${targetBrand.brand}.`)
+      }
       setModelModalOpen(false)
+      setEditingModel(null)
     } catch (err) {
-      setActionError(err?.response?.data?.message || 'Failed to add model.')
+      setActionError(err?.response?.data?.message || 'Failed to save model.')
     } finally {
       setSaving(false)
     }
@@ -157,19 +231,69 @@ export default function TaxonomyManagement() {
     setSaving(true)
     setActionError(null)
     try {
-      const created = await taxonomyApi.createCategory({
-        name: newCategoryForm.name.trim(),
-        code: newCategoryForm.code.trim() || undefined,
-        subcategory_text: newCategoryForm.subcategories,
-      })
-      setCategories([normalizeCategory(created), ...categories])
-      setActionSuccess(`Category "${created.name}" created.`)
+      if (editingCategory) {
+        const updated = await taxonomyApi.updateCategory(editingCategory.id, {
+          name: newCategoryForm.name.trim(),
+          code: newCategoryForm.code.trim() || undefined,
+        })
+        setCategories(categories.map((c) =>
+          c.id === editingCategory.id ? normalizeCategory(updated) : c
+        ))
+        setActionSuccess(`Category "${updated.name}" updated. Storefront filters refresh automatically.`)
+      } else {
+        const created = await taxonomyApi.createCategory({
+          name: newCategoryForm.name.trim(),
+          code: newCategoryForm.code.trim() || undefined,
+          subcategory_text: newCategoryForm.subcategories,
+        })
+        setCategories([normalizeCategory(created), ...categories])
+        setActionSuccess(`Category "${created.name}" created.`)
+      }
       setCategoryModalOpen(false)
+      setEditingCategory(null)
       setNewCategoryForm({ name: '', code: '', subcategories: '' })
     } catch (err) {
-      setActionError(err?.response?.data?.message || 'Failed to create category.')
+      setActionError(err?.response?.data?.message || 'Failed to save category.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleOpenEditCategory = (cat) => {
+    setEditingCategory(cat)
+    setNewCategoryForm({ name: cat.name, code: cat.code || '', subcategories: '' })
+    setCategoryModalOpen(true)
+  }
+
+  const handleAddSubcategory = async (cat) => {
+    const name = (subDrafts[cat.id] || '').trim()
+    if (!name) return
+    setActionError(null)
+    try {
+      await taxonomyApi.createSubcategory(cat.id, { name })
+      const cats = await taxonomyApi.getCategories()
+      setCategories(cats.map(normalizeCategory))
+      setSubDrafts({ ...subDrafts, [cat.id]: '' })
+      setActionSuccess(`Subcategory "${name}" added to ${cat.name}.`)
+    } catch (err) {
+      setActionError(err?.response?.data?.message || 'Failed to add subcategory.')
+    }
+  }
+
+  const handleDeleteSubcategory = async (cat, sub) => {
+    const subName = sub.name || sub
+    if (!sub.id || !window.confirm(`Remove subcategory "${subName}"?`)) return
+    setActionError(null)
+    try {
+      await taxonomyApi.deleteSubcategory(sub.id)
+      setCategories(categories.map((c) =>
+        c.id === cat.id
+          ? { ...c, subcategories: c.subcategories.filter((s) => (s.id ?? s.name ?? s) !== (sub.id ?? subName)) }
+          : c
+      ))
+      setActionSuccess('Subcategory removed.')
+    } catch (err) {
+      setActionError(err?.response?.data?.message || 'Failed to remove subcategory.')
     }
   }
 
@@ -252,7 +376,7 @@ export default function TaxonomyManagement() {
           </button>
           <button
             type="button"
-            onClick={() => setBrandModalOpen(true)}
+            onClick={() => { setEditingBrand(null); setNewBrandForm({ brand: '', country: 'Japan' }); setBrandModalOpen(true) }}
             className="btn btn-secondary btn-sm"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
@@ -261,7 +385,7 @@ export default function TaxonomyManagement() {
           </button>
           <button
             type="button"
-            onClick={() => setCategoryModalOpen(true)}
+            onClick={() => { setEditingCategory(null); setNewCategoryForm({ name: '', code: '', subcategories: '' }); setCategoryModalOpen(true) }}
             className="btn btn-secondary btn-sm"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
@@ -363,13 +487,24 @@ export default function TaxonomyManagement() {
               <Accordion defaultOpen={filteredTaxonomy.slice(0, 2).map((b) => String(b.id))}>
                 {filteredTaxonomy.map((brand) => (
                   <AccordionItem key={brand.id} id={String(brand.id)}>
-                    <AccordionHeader
-                      id={String(brand.id)}
-                      title={brand.brand}
-                      subtitle={`Origin: ${brand.country} · ${brand.activeModels.length} Active Model Platforms`}
-                      badge={{ label: `${brand.carsCount} Listed Cars`, variant: 'neutral' }}
-                      icon={Car}
-                    />
+                <AccordionHeader
+                  id={String(brand.id)}
+                  title={brand.brand}
+                  subtitle={`Origin: ${brand.country} · ${brand.activeModels.length} Active Model Platforms`}
+                  badge={{ label: `${brand.carsCount} Listed Cars`, variant: 'neutral' }}
+                  icon={Car}
+                  actions={
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditBrand(brand)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      title="Edit brand"
+                    >
+                      <Edit size={13} />
+                    </button>
+                  }
+                />
                     <AccordionBody id={String(brand.id)}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -419,19 +554,27 @@ export default function TaxonomyManagement() {
                                   </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  <span className="badge badge-success" style={{ fontSize: 11 }}>
-                                    {model.partsCount} Compatible Parts
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteModel(brand.id, model.id)}
-                                    className="btn btn-danger btn-sm"
-                                    title="Delete Model Spec"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <span className="badge badge-success" style={{ fontSize: 11 }}>
+                                {model.partsCount} Compatible Parts
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditModel(brand, model)}
+                                className="btn btn-secondary btn-sm"
+                                title="Edit Model Spec"
+                              >
+                                <Edit size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteModel(brand.id, model.id)}
+                                className="btn btn-danger btn-sm"
+                                title="Delete Model Spec"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                               </div>
                             ))}
                           </div>
@@ -458,10 +601,19 @@ export default function TaxonomyManagement() {
                   />
                   <AccordionBody id={String(cat.id)}>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--admin-text-secondary)' }}>
-                          Subcategory Classifications:
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--admin-text-secondary)' }}>
+                        Subcategory Classifications:
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditCategory(cat)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <Edit size={13} /> Edit
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteCategory(cat.id)}
@@ -470,10 +622,13 @@ export default function TaxonomyManagement() {
                           <Trash2 size={13} /> Delete Category
                         </button>
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                        {cat.subcategories.map((sub, idx) => (
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                      {cat.subcategories.map((sub, idx) => {
+                        const subName = sub.name || sub
+                        return (
                           <div
-                            key={idx}
+                            key={sub.id ?? idx}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -488,10 +643,39 @@ export default function TaxonomyManagement() {
                             }}
                           >
                             <CheckCircle2 size={14} style={{ color: '#047857' }} />
-                            <span>{sub}</span>
+                            <span>{subName}</span>
+                            {sub.id && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSubcategory(cat, sub)}
+                                title={`Remove ${subName}`}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--admin-text-muted)', cursor: 'pointer', display: 'inline-flex', padding: 2 }}
+                              >
+                                <X size={13} />
+                              </button>
+                            )}
                           </div>
-                        ))}
-                      </div>
+                        )
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        className="admin-input"
+                        placeholder="New subcategory name…"
+                        value={subDrafts[cat.id] || ''}
+                        onChange={(e) => setSubDrafts({ ...subDrafts, [cat.id]: e.target.value })}
+                        style={{ maxWidth: 320 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddSubcategory(cat)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <Plus size={13} /> Add Sub
+                      </button>
+                    </div>
                     </div>
                   </AccordionBody>
                 </AccordionItem>
@@ -506,8 +690,8 @@ export default function TaxonomyManagement() {
         <div className="modal-backdrop" onClick={() => setBrandModalOpen(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal-header">
-              <h3 className="modal-title">Register New Vehicle Brand</h3>
-              <button type="button" onClick={() => setBrandModalOpen(false)} className="modal-close">
+              <h3 className="modal-title">{editingBrand ? `Edit Brand — ${editingBrand.brand}` : 'Register New Vehicle Brand'}</h3>
+              <button type="button" onClick={() => { setBrandModalOpen(false); setEditingBrand(null) }} className="modal-close">
                 <X size={18} />
               </button>
             </div>
@@ -542,11 +726,11 @@ export default function TaxonomyManagement() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" onClick={() => setBrandModalOpen(false)} className="btn btn-secondary">
+                <button type="button" onClick={() => { setBrandModalOpen(false); setEditingBrand(null) }} className="btn btn-secondary">
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Saving...' : 'Save Brand'}
+                  {saving ? 'Saving...' : editingBrand ? 'Save Changes' : 'Save Brand'}
                 </button>
               </div>
             </form>
@@ -559,8 +743,8 @@ export default function TaxonomyManagement() {
         <div className="modal-backdrop" onClick={() => setModelModalOpen(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div className="modal-header">
-              <h3 className="modal-title">Add Model to {targetBrand.brand}</h3>
-              <button type="button" onClick={() => setModelModalOpen(false)} className="modal-close">
+              <h3 className="modal-title">{editingModel ? `Edit Model — ${editingModel.model.name}` : <>Add Model to {targetBrand.brand}</>}</h3>
+              <button type="button" onClick={() => { setModelModalOpen(false); setEditingModel(null) }} className="modal-close">
                 <X size={18} />
               </button>
             </div>
@@ -614,11 +798,11 @@ export default function TaxonomyManagement() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" onClick={() => setModelModalOpen(false)} className="btn btn-secondary">
+                <button type="button" onClick={() => { setModelModalOpen(false); setEditingModel(null) }} className="btn btn-secondary">
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Saving...' : 'Add Model Platform'}
+                  {saving ? 'Saving...' : editingModel ? 'Save Changes' : 'Add Model Platform'}
                 </button>
               </div>
             </form>
@@ -626,13 +810,13 @@ export default function TaxonomyManagement() {
         </div>
       )}
 
-      {/* Add Category Modal */}
+      {/* Add / Edit Category Modal */}
       {categoryModalOpen && (
-        <div className="modal-backdrop" onClick={() => setCategoryModalOpen(false)}>
+        <div className="modal-backdrop" onClick={() => { setCategoryModalOpen(false); setEditingCategory(null) }}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div className="modal-header">
-              <h3 className="modal-title">Create Parts Catalog Category</h3>
-              <button type="button" onClick={() => setCategoryModalOpen(false)} className="modal-close">
+              <h3 className="modal-title">{editingCategory ? `Edit Category — ${editingCategory.name}` : 'Create Parts Catalog Category'}</h3>
+              <button type="button" onClick={() => { setCategoryModalOpen(false); setEditingCategory(null) }} className="modal-close">
                 <X size={18} />
               </button>
             </div>
@@ -662,6 +846,7 @@ export default function TaxonomyManagement() {
                   />
                 </div>
 
+                {!editingCategory && (
                 <div>
                   <label className="admin-label">Subcategories (comma separated)</label>
                   <textarea
@@ -672,13 +857,14 @@ export default function TaxonomyManagement() {
                     onChange={(e) => setNewCategoryForm({ ...newCategoryForm, subcategories: e.target.value })}
                   />
                 </div>
+                )}
               </div>
               <div className="modal-footer">
-                <button type="button" onClick={() => setCategoryModalOpen(false)} className="btn btn-secondary">
+                <button type="button" onClick={() => { setCategoryModalOpen(false); setEditingCategory(null) }} className="btn btn-secondary">
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Saving...' : 'Save Category'}
+                  {saving ? 'Saving...' : editingCategory ? 'Save Changes' : 'Save Category'}
                 </button>
               </div>
             </form>

@@ -19,6 +19,7 @@ class User extends Authenticatable
         'name',
         'username',
         'email',
+        'phone',
         'password',
         'role',
         'provider',
@@ -167,6 +168,12 @@ class User extends Authenticatable
     public function sellerApplications(): HasMany
     {
         return $this->hasMany(SellerApplication::class);
+    }
+
+    /** Cars assigned to this staff member for inspection. */
+    public function assignedInspections(): HasMany
+    {
+        return $this->hasMany(Car::class, 'inspector_id');
     }
 
     public function cars(): HasMany

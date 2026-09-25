@@ -134,6 +134,9 @@ class OrderController extends Controller
             'shipping_address' => $data['shipping_address'],
             'shipping_city' => $data['shipping_city'] ?? null,
             'shipping_postal_code' => $data['shipping_postal_code'] ?? null,
+            'delivery_latitude' => $data['delivery_latitude'] ?? null,
+            'delivery_longitude' => $data['delivery_longitude'] ?? null,
+            'delivery_label' => $data['delivery_label'] ?? null,
 
             // Vehicle Fitment & Identification Details (parts: buyer's vehicle; cars: purchased vehicle's own VIN)
             'chassis_number' => $chassisNumber,
@@ -201,6 +204,42 @@ class OrderController extends Controller
         ]);
 
         $order->forceFill(['payment_method' => $data['payment_method']])->save();
+
+        return (new OrderResource($order->refresh()))->response();
+    }
+
+    /**
+     * Buyer pins (or updates) the precise delivery location for parts
+     * freight. Allowed while the order is open — blocked once cancelled
+     * or delivered. Intended for use after seller acceptance.
+     */
+    public function updateDeliveryLocation(Request $request, string $identifier): JsonResponse
+    {
+        $order = Order::where('order_number', $identifier)
+            ->orWhere('id', is_numeric($identifier) ? (int) $identifier : 0)
+            ->firstOrFail();
+
+        $user = $request->user();
+        $owns = $user && ((int) $order->user_id === (int) $user->id || $order->buyer_email === $user->email);
+        if (!$owns && !($user && $user->isAdmin())) {
+            abort(403, 'You can only update your own orders.');
+        }
+
+        if (in_array($order->status, ['cancelled', 'delivered'], true)) {
+            abort(422, 'Delivery location can no longer be changed for this order.');
+        }
+
+        $data = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'label' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $order->forceFill([
+            'delivery_latitude' => $data['latitude'],
+            'delivery_longitude' => $data['longitude'],
+            'delivery_label' => $data['label'] ?? null,
+        ])->save();
 
         return (new OrderResource($order->refresh()))->response();
     }

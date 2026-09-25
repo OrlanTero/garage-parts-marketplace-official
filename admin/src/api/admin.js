@@ -19,6 +19,9 @@ export const adminApi = {
   getUsers: (params = {}) => client.get('/admin/users', { params }).then((r) => r.data),
   updateUserRole: (userId, role) => client.patch(`/admin/users/${userId}/role`, { role }).then((r) => r.data),
 
+  // Staff directory for inspector assignment (slim id/name/role payload)
+  getStaff: (params = {}) => client.get('/admin/staff', { params }).then((r) => r.data?.data ?? r.data),
+
   // KYC Verification & Seller Accreditation
   getKycVerifications: (params = {}) => client.get('/admin/kyc-verifications', { params }).then((r) => r.data),
   approveKyc: (userId) => client.post(`/admin/kyc-verifications/${userId}/approve`).then((r) => r.data),

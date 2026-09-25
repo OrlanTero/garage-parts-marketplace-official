@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { ordersApi } from '../api/orders.js'
 import { useMediaQuery } from '../hooks/useMediaQuery.js'
+import DeliveryMapPicker from '../components/DeliveryMapPicker.jsx'
 
 export default function SalesOrder() {
   const { orderNumber } = useParams()
@@ -60,6 +61,9 @@ export default function SalesOrder() {
 
   const [payMethod, setPayMethod] = useState('bank_transfer')
   const [paySaving, setPaySaving] = useState(false)
+  const [pinEditing, setPinEditing] = useState(false)
+  const [pinSaving, setPinSaving] = useState(false)
+  const [pinError, setPinError] = useState('')
 
   useEffect(() => {
     const current = order?.financials?.payment_method || order?.payment_method
@@ -130,6 +134,25 @@ export default function SalesOrder() {
   // orders only. Car orders certify the purchased vehicle's own VIN instead.
   const isCarOrder = (order.item?.type || order.item_type) === 'car'
   const hasChassis = chassisNum !== 'N/A'
+
+  // Precise delivery pinpoint (parts freight, pinned after acceptance).
+  const delivery = order.delivery || {}
+  const hasPin = Boolean(delivery.has_pin)
+  const canEditPin = isAccepted && order.status !== 'delivered' && order.status !== 'cancelled'
+
+  const handlePinSave = async (pin) => {
+    try {
+      setPinSaving(true)
+      setPinError('')
+      const updated = await ordersApi.updateDeliveryLocation(orderNum, pin)
+      setOrder(updated)
+      setPinEditing(false)
+    } catch (err) {
+      setPinError(err?.response?.data?.message || 'Failed to save delivery pin.')
+    } finally {
+      setPinSaving(false)
+    }
+  }
 
   // Seller verification gate — payment unlocks only after acceptance.
   const verification = order.verification_status || 'pending'
@@ -439,6 +462,63 @@ export default function SalesOrder() {
           </div>
 
         </div>
+
+        {/* SECTION: DELIVERY LOCATION PIN (parts freight, after acceptance) */}
+        {!isCarOrder && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MapPin size={14} /> Delivery Location Pin
+            {hasPin && (
+              <span style={{ background: '#10b981', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4 }}>
+                Pinned
+              </span>
+            )}
+          </div>
+
+          <div style={{ background: '#161922', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
+            {!isAccepted && !hasPin ? (
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+                Pinpointing unlocks once the seller verifies & accepts this request — the courier delivers the part exactly where you pin it.
+              </div>
+            ) : hasPin && !pinEditing ? (
+              <div>
+                <DeliveryMapPicker
+                  readonly
+                  height={240}
+                  value={{ latitude: delivery.latitude, longitude: delivery.longitude, label: delivery.label }}
+                />
+                {canEditPin && (
+                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={() => { setPinError(''); setPinEditing(true) }}>
+                    Update Pin
+                  </button>
+                )}
+              </div>
+            ) : canEditPin ? (
+              <div>
+                <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 12px 0', lineHeight: 1.6 }}>
+                  Drag the pin to your exact drop-off point so the freight courier delivers precisely. Address resolves automatically.
+                </p>
+                <DeliveryMapPicker
+                  height={320}
+                  value={hasPin ? { latitude: delivery.latitude, longitude: delivery.longitude, label: delivery.label } : null}
+                  confirmLabel={pinSaving ? 'Saving Pin…' : hasPin ? 'Update Delivery Pin' : 'Confirm Delivery Pin'}
+                  onConfirm={handlePinSave}
+                />
+                {pinError && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 8 }}>{pinError}</div>}
+                {hasPin && (
+                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 8 }} onClick={() => setPinEditing(false)}>
+                    Cancel
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+                Pinpointing unlocks once the seller verifies & accepts this request.
+              </div>
+            )}
+          </div>
+        </div>
+        )}
 
         {/* SECTION: ITEMIZED ORDER TABLE */}
         <div style={{ marginBottom: 28 }}>

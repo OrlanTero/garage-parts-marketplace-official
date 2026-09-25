@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AdminSellerApplicationController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\OAuthController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SellerApplicationController;
 use App\Http\Controllers\Api\SellerCarController;
 use App\Http\Controllers\Api\SellerDashboardController;
@@ -26,6 +28,7 @@ use App\Http\Controllers\Api\SellerPartController;
 use App\Http\Controllers\Api\SystemMaintenanceController;
 use App\Http\Controllers\Api\TaxonomyController;
 use App\Http\Controllers\Api\AdminTaxonomyController;
+use App\Http\Controllers\Api\AdminReviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -67,8 +70,17 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         // Canonical
         Route::get('/auth/me', [AuthController::class, 'me'])->name('api.auth.me');
+        Route::patch('/auth/profile', [AuthController::class, 'updateProfile'])->name('api.auth.profile');
+        Route::post('/auth/password', [AuthController::class, 'changePassword'])->name('api.auth.password');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll'])->name('api.auth.logoutAll');
+
+        // Address Book (delivery addresses with map pins)
+        Route::get('/addresses', [AddressController::class, 'index'])->name('api.addresses.index');
+        Route::post('/addresses', [AddressController::class, 'store'])->name('api.addresses.store');
+        Route::match(['put', 'patch'], '/addresses/{address}', [AddressController::class, 'update'])->name('api.addresses.update');
+        Route::delete('/addresses/{address}', [AddressController::class, 'destroy'])->name('api.addresses.destroy');
+        Route::post('/addresses/{address}/default', [AddressController::class, 'makeDefault'])->name('api.addresses.default');
 
         // Chat & 1:1 Direct Messaging
         Route::prefix('chat')->name('api.chat.')->group(function () {
@@ -106,11 +118,18 @@ Route::prefix('v1')->group(function () {
         // User Sales Orders History
         Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
         Route::patch('/orders/{identifier}/payment-method', [OrderController::class, 'updatePaymentMethod'])->name('api.orders.paymentMethod');
+        Route::patch('/orders/{identifier}/delivery-location', [OrderController::class, 'updateDeliveryLocation'])->name('api.orders.deliveryLocation');
 
         // Buyer Price Offers (amount + comment on listings)
         Route::get('/offers', [OfferController::class, 'mine'])->name('api.offers.mine');
         Route::post('/offers', [OfferController::class, 'store'])->name('api.offers.store');
         Route::post('/offers/{offer}/withdraw', [OfferController::class, 'withdraw'])->name('api.offers.withdraw');
+
+        // Listing Reviews (stars + comment, one per buyer per listing)
+        Route::get('/reviews/mine', [ReviewController::class, 'mine'])->name('api.reviews.mine');
+        Route::post('/reviews', [ReviewController::class, 'store'])->name('api.reviews.store');
+        Route::match(['put', 'patch'], '/reviews/{review}', [ReviewController::class, 'update'])->name('api.reviews.update');
+        Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('api.reviews.destroy');
 
         // KYC Seller Verification & Status
         Route::prefix('kyc')->name('api.kyc.')->group(function () {
@@ -172,6 +191,10 @@ Route::prefix('v1')->group(function () {
     // --- Public Sales Agent Verification ---
     Route::get('/agents/verify/{code}', [AgentController::class, 'verify'])->name('api.agents.verify');
 
+    // --- Public listing reviews (username + avatar identity only) ---
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('api.reviews.index');
+    Route::get('/reviews/summary', [ReviewController::class, 'summary'])->name('api.reviews.summary');
+
     // --- Seller inventory (auth + role:seller,dealer,parts_seller,admin) ---
     Route::middleware(['auth:sanctum', 'role:seller,dealer,parts_seller,admin'])
         ->prefix('seller')->name('api.seller.')->group(function () {
@@ -222,8 +245,13 @@ Route::prefix('v1')->group(function () {
             Route::get('/chat/conversations', [AdminChatModerationController::class, 'index'])->name('chat.conversations.index');
             Route::get('/chat/conversations/{conversation}', [AdminChatModerationController::class, 'show'])->name('chat.conversations.show');
 
+            // --- Admin-only: RBAC, KYC, applications, orders, reviews, taxonomy.
+            // Inspectors keep moderation + appointments; everything below
+            // requires admin/super_admin even though the outer group is wider.
+            Route::middleware(['role:admin,super_admin'])->group(function () {
             // Users, Buyers, Sellers, Dealers & RBAC Permissions
             Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+            Route::get('/staff', [AdminUserController::class, 'staff'])->name('staff.index');
             Route::patch('/users/{user}/role', [AdminUserController::class, 'updateRole'])->name('users.updateRole');
 
             // KYC Seller Verification Review & Badging
@@ -240,6 +268,10 @@ Route::prefix('v1')->group(function () {
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
             Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
 
+            // Listing Review Moderation (hide spam / restore)
+            Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
+            Route::post('/reviews/{review}/visibility', [AdminReviewController::class, 'setVisibility'])->name('reviews.visibility');
+
             // Brand / Model / Category Taxonomy CRUD (Admin TaxonomyManagement page)
             Route::post('/taxonomy/brands', [AdminTaxonomyController::class, 'storeBrand'])->name('taxonomy.brands.store');
             Route::match(['put', 'patch'], '/taxonomy/brands/{brand}', [AdminTaxonomyController::class, 'updateBrand'])->name('taxonomy.brands.update');
@@ -253,5 +285,6 @@ Route::prefix('v1')->group(function () {
             Route::delete('/taxonomy/categories/{category}', [AdminTaxonomyController::class, 'destroyCategory'])->name('taxonomy.categories.destroy');
             Route::post('/taxonomy/categories/{category}/subcategories', [AdminTaxonomyController::class, 'storeSubcategory'])->name('taxonomy.subcategories.store');
             Route::delete('/taxonomy/subcategories/{subcategory}', [AdminTaxonomyController::class, 'destroySubcategory'])->name('taxonomy.subcategories.destroy');
+            }); // end admin-only subgroup
         });
 });

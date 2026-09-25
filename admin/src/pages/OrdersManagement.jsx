@@ -316,6 +316,23 @@ export default function OrdersManagement() {
                         <div style={{ fontSize: 11, color: 'var(--admin-text-muted)', marginTop: 6 }}>
                           Courier Waybill: {ord.status === 'shipped' || ord.status === 'delivered' ? 'In Transit / Validated' : 'Awaiting Carrier Scan'}
                         </div>
+                        {ord.delivery?.has_pin && (
+                          <div style={{ fontSize: 12, marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--admin-border)' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--admin-text-secondary)', marginBottom: 2 }}>📍 Delivery Pin</div>
+                            <div style={{ color: 'var(--admin-text-secondary)' }}>{ord.delivery.label || 'Pinned location'}</div>
+                            <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--admin-text-muted)' }}>
+                              {Number(ord.delivery.latitude).toFixed(6)}, {Number(ord.delivery.longitude).toFixed(6)}
+                            </div>
+                            <a
+                              href={`https://www.openstreetmap.org/?mlat=${ord.delivery.latitude}&mlon=${ord.delivery.longitude}#map=16/${ord.delivery.latitude}/${ord.delivery.longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-rust)' }}
+                            >
+                              Open in OpenStreetMap →
+                            </a>
+                          </div>
+                        )}
                       </div>
 
                       {/* Vehicle & Chassis Fitment Box */}

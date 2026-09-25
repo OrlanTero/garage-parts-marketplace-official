@@ -63,17 +63,17 @@ export default function OfferModal({ open, onClose, listing, onSubmitted }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
-        <div className="modal-header">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="gpm-modal__overlay" onClick={handleClose}>
+      <div className="gpm-modal__content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+        <div className="gpm-modal__header">
+          <h3 className="gpm-modal__title">
             <Tag size={18} /> Make an Offer
           </h3>
-          <button type="button" className="modal-close-btn" onClick={handleClose} aria-label="Close">
+          <button type="button" className="gpm-modal__close" onClick={handleClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
-        <div className="modal-body">
+        <div className="gpm-modal__body">
           <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 4 }}>{listing.title}</div>
           <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>
             Asking: {formatPrice(listingPrice)}

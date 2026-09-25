@@ -9,6 +9,7 @@ use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -57,5 +58,38 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return response()->json(new UserResource($request->user()));
+    }
+
+    /** PATCH /auth/profile — update own display profile. */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'username' => ['sometimes', 'string', 'max:50', 'alpha_dash', Rule::unique('users', 'username')->ignore($user->id)],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'avatar_url' => ['sometimes', 'nullable', 'url', 'max:500'],
+            'agent_tagline' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ]);
+
+        $user->update($data);
+
+        return response()->json(new UserResource($user->refresh()));
+    }
+
+    /** POST /auth/password — change own password. */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'current_password' => ['required', 'string', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'max:100', 'confirmed'],
+        ]);
+
+        $user->forceFill(['password' => $data['password']])->save();
+
+        return response()->json(['message' => 'Password updated.']);
     }
 }

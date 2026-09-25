@@ -8,6 +8,7 @@ import { FavoritesProvider } from './context/FavoritesContext.jsx'
 import { ChatProvider } from './context/ChatContext.jsx'
 import './styles.css'
 import './theme/theme.css'
+import './components/Modal.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

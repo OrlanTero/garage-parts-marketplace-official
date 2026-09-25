@@ -23,6 +23,7 @@ import { useFavorites } from '../context/FavoritesContext.jsx'
 import { useChat } from '../context/ChatContext.jsx'
 import ShareModal from '../components/ShareModal.jsx'
 import OfferModal from '../components/OfferModal.jsx'
+import ReviewSection from '../components/ReviewSection.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
@@ -273,7 +274,7 @@ export default function CarDetail() {
                     title="Inquire directly with the verified seller"
                   >
                     <MessageSquare size={16} />
-                    <span>Chat with Seller</span>
+                    <span>Chat</span>
                   </button>
                 )}
                 <button
@@ -319,6 +320,9 @@ export default function CarDetail() {
                 ))}
               </div>
             </div>
+
+            {/* Buyer Reviews — username + avatar identity only */}
+            <ReviewSection itemType="car" itemId={car.id} listingTitle={title} />
 
             {/* Seller Contact Card (Username Only & KYC Badge for Privacy) */}
             {car.seller && (

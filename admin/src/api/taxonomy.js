@@ -27,11 +27,18 @@ export const taxonomyApi = {
   // --- Model writes (admin) ---
   createModel: (brandId, payload) =>
     client.post(`/admin/taxonomy/brands/${brandId}/models`, payload).then(unwrapOne),
+  updateModel: (id, payload) =>
+    client.patch(`/admin/taxonomy/models/${id}`, payload).then(unwrapOne),
   deleteModel: (id) => client.delete(`/admin/taxonomy/models/${id}`).then((r) => r.data),
 
   // --- Category writes (admin) ---
   createCategory: (payload) => client.post('/admin/taxonomy/categories', payload).then(unwrapOne),
+  updateCategory: (id, payload) =>
+    client.patch(`/admin/taxonomy/categories/${id}`, payload).then(unwrapOne),
   deleteCategory: (id) => client.delete(`/admin/taxonomy/categories/${id}`).then((r) => r.data),
+  createSubcategory: (categoryId, payload) =>
+    client.post(`/admin/taxonomy/categories/${categoryId}/subcategories`, payload).then((r) => r.data?.data ?? r.data),
+  deleteSubcategory: (id) => client.delete(`/admin/taxonomy/subcategories/${id}`).then((r) => r.data),
 }
 
 /** Normalize one brand row regardless of which endpoint produced it. */
@@ -55,7 +62,7 @@ export const normalizeCategory = (c) => ({
   ...c,
   parts: c.parts_count ?? c.parts ?? 0,
   subcategories: (Array.isArray(c.subcategories) ? c.subcategories : c.subcategories?.data ?? []).map((s) =>
-    typeof s === 'string' ? s : s.name
+    typeof s === 'string' ? { id: null, name: s, slug: '' } : { id: s.id ?? null, name: s.name, slug: s.slug ?? '' }
   ),
 })
 

@@ -45,6 +45,11 @@ class CarResource extends JsonResource
             'inspection_date' => $this->inspection_date,
             'inspection_location' => $this->inspection_location,
             'inspector_id' => $this->inspector_id,
+            'inspector' => $this->whenLoaded('inspector', fn () => $this->inspector ? [
+                'id' => $this->inspector->id,
+                'name' => $this->inspector->name,
+                'username' => $this->inspector->username,
+            ] : null),
             'inspector_notes' => $this->inspector_notes,
             'is_approved' => (bool) ($this->is_approved ?? false),
             'approved_by' => $this->approved_by,

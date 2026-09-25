@@ -11,6 +11,8 @@ export const ordersApi = {
   list: (params = {}) => client.get('/orders', { params }).then((r) => r.data),
   updatePaymentMethod: (idOrNumber, payment_method) =>
     client.patch(`/orders/${idOrNumber}/payment-method`, { payment_method }).then((r) => r.data?.data ?? r.data),
+  updateDeliveryLocation: (idOrNumber, { latitude, longitude, label }) =>
+    client.patch(`/orders/${idOrNumber}/delivery-location`, { latitude, longitude, label }).then((r) => r.data?.data ?? r.data),
 }
 
 export const VERIFICATION_LABELS = {

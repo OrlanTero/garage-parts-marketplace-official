@@ -18,12 +18,16 @@ import {
   FileText,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { useAuth } from '../auth/AuthContext.jsx'
 
 export default function ListingModeration() {
+  const { user } = useAuth()
   const [cars, setCars] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('pending_inspection')
+  const [assignmentFilter, setAssignmentFilter] = useState('all') // all | mine | unassigned
+  const [staffList, setStaffList] = useState([])
   const [selectedCar, setSelectedCar] = useState(null)
   const [modalMode, setModalMode] = useState(null) // 'schedule' | 'record' | 'reject' | 'preview'
   const [actionLoading, setActionLoading] = useState(false)
@@ -35,6 +39,7 @@ export default function ListingModeration() {
     inspection_type: 'garage_dropoff',
     inspection_date: '',
     inspection_location: 'Makati Certified Inspection Bay 1',
+    inspector_id: '',
     notes: '',
   })
 
@@ -53,6 +58,8 @@ export default function ListingModeration() {
       const params = {}
       if (search.trim()) params.q = search.trim()
       if (statusFilter !== 'all') params.status = statusFilter
+      if (assignmentFilter === 'mine') params.mine = 1
+      if (assignmentFilter === 'unassigned') params.unassigned = 1
       const res = await adminApi.getModerationCars(params)
       setCars(res.data || [])
     } catch {
@@ -62,9 +69,22 @@ export default function ListingModeration() {
     }
   }
 
+  const fetchStaff = async () => {
+    try {
+      const list = await adminApi.getStaff()
+      setStaffList(Array.isArray(list) ? list : [])
+    } catch {
+      setStaffList([])
+    }
+  }
+
   useEffect(() => {
     fetchCars()
-  }, [statusFilter])
+  }, [statusFilter, assignmentFilter])
+
+  useEffect(() => {
+    fetchStaff()
+  }, [])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -77,6 +97,7 @@ export default function ListingModeration() {
       inspection_type: car.inspection_type || 'garage_dropoff',
       inspection_date: car.inspection_date ? car.inspection_date.substring(0, 16) : new Date(Date.now() + 86400000 * 2).toISOString().substring(0, 16),
       inspection_location: car.inspection_location || 'Makati Certified Inspection Bay 1',
+      inspector_id: car.inspector_id ? String(car.inspector_id) : '',
       notes: car.inspector_notes || '',
     })
     setActionError(null)
@@ -108,12 +129,15 @@ export default function ListingModeration() {
     setActionLoading(true)
     setActionError(null)
     try {
-      await adminApi.scheduleInspection(selectedCar.id, scheduleData)
+      await adminApi.scheduleInspection(selectedCar.id, {
+        ...scheduleData,
+        inspector_id: scheduleData.inspector_id ? Number(scheduleData.inspector_id) : undefined,
+      })
       setActionSuccess('Inspection successfully scheduled.')
       setModalMode(null)
       fetchCars()
     } catch (err) {
-      setActionError(err?.response?.data?.message || 'Failed to schedule inspection.')
+      setActionError(err?.response?.data?.message || err?.response?.data?.errors?.inspector_id?.[0] || 'Failed to schedule inspection.')
     } finally {
       setActionLoading(false)
     }
@@ -231,6 +255,30 @@ export default function ListingModeration() {
         </div>
       </div>
 
+      {/* Assignment filter — inspectors find their own queue here */}
+      <div className="admin-card" style={{ padding: '12px 20px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--admin-text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <UserCheck size={15} /> Assignee:
+        </span>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[
+            { id: 'all', label: 'All Inspectors' },
+            { id: 'mine', label: user ? `Assigned to me (@${user.username || user.name})` : 'Assigned to me' },
+            { id: 'unassigned', label: 'Unassigned' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setAssignmentFilter(tab.id)}
+              className={`btn btn-sm ${assignmentFilter === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: 13 }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Listings Table */}
       <div className="admin-card" style={{ overflow: 'hidden' }}>
         {loading ? (
@@ -308,6 +356,18 @@ export default function ListingModeration() {
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--admin-text-muted)', marginTop: 4 }}>
                         {car.inspection_date ? new Date(car.inspection_date).toLocaleDateString() : 'No date set'}
+                      </div>
+                      <div style={{ marginTop: 6 }}>
+                        {car.inspector ? (
+                          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                            <UserCheck size={11} /> {car.inspector.name || car.inspector.username}
+                            {car.inspector_id === user?.id ? ' (you)' : ''}
+                          </span>
+                        ) : (
+                          <span className="badge badge-neutral" style={{ fontSize: 11 }}>
+                            Unassigned
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td>
@@ -435,6 +495,41 @@ export default function ListingModeration() {
                   required
                 />
               </div>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label className="admin-label" style={{ marginBottom: 0 }}>Assign Inspector *</label>
+                  {user && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setScheduleData({ ...scheduleData, inspector_id: String(user.id) })}
+                    >
+                      Assign to me
+                    </button>
+                  )}
+                </div>
+                {staffList.length > 0 ? (
+                  <select
+                    className="admin-input"
+                    value={scheduleData.inspector_id}
+                    onChange={(e) => setScheduleData({ ...scheduleData, inspector_id: e.target.value })}
+                    style={{ width: '100%' }}
+                    required
+                  >
+                    <option value="">Select inspector…</option>
+                    {staffList.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} (@{s.username}) · {s.role}
+                        {typeof s.active_assignments === 'number' ? ` · ${s.active_assignments} active` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
+                    Staff directory unavailable — the scheduling admin will be recorded as inspector.
+                  </div>
+                )}
+              </div>
               <div style={{ marginBottom: 18 }}>
                 <label className="admin-label">Inspector Instructions & Focus Notes</label>
                 <textarea
@@ -465,6 +560,15 @@ export default function ListingModeration() {
             <p style={{ fontSize: 13, color: 'var(--admin-text-secondary)', marginBottom: 16 }}>
               Document condition score and structural checklist for <strong>{selectedCar.title}</strong>.
             </p>
+            {selectedCar.inspector_id && selectedCar.inspector_id !== user?.id ? (
+              <div style={{ fontSize: 12, color: '#b45309', background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.4)', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                Assigned to <strong>{selectedCar.inspector?.name || `#${selectedCar.inspector_id}`}</strong> — recording as an admin override.
+              </div>
+            ) : selectedCar.inspector_id === user?.id ? (
+              <div style={{ fontSize: 12, color: '#047857', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                This inspection is assigned to you.
+              </div>
+            ) : null}
             {actionError && <div style={{ color: 'var(--color-danger)', fontSize: 13, marginBottom: 12 }}>{actionError}</div>}
             <form onSubmit={submitRecord}>
               <div style={{ marginBottom: 14 }}>

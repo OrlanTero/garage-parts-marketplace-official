@@ -19,6 +19,7 @@ import {
   UserCheck,
   Store,
   Tag,
+  SlidersHorizontal,
   LayoutDashboard
 } from 'lucide-react'
 import { useFavorites } from '../context/FavoritesContext.jsx'
@@ -183,6 +184,16 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
           <div className="user-dropdown-section">
             <div className="user-dropdown-section-title">Marketplace & Activity</div>
 
+            <Link to="/settings" className="user-dropdown-item" onClick={handleLinkClick}>
+              <div className="user-dropdown-item-icon">
+                <SlidersHorizontal size={16} />
+              </div>
+              <div className="user-dropdown-item-text">
+                <span className="user-dropdown-item-title">Account Settings</span>
+                <span className="user-dropdown-item-desc">Profile, address book, KYC & security</span>
+              </div>
+            </Link>
+
             <button
               type="button"
               className="user-dropdown-item"
@@ -296,28 +307,6 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
                   </div>
                 </Link>
 
-                <Link to="/messages" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <MessageSquare size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">
-                      Messages & Inquiries {unreadCount > 0 && <span className="action-badge-inline">{unreadCount} new</span>}
-                    </span>
-                    <span className="user-dropdown-item-desc">Direct 1:1 buyer & seller chats</span>
-                  </div>
-                </Link>
-
-                <Link to="/favorites" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <Heart size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Saved Vehicles & Wishlist</span>
-                    <span className="user-dropdown-item-desc">{favoritesCount} {favoritesCount === 1 ? 'item' : 'items'} saved in garage</span>
-                  </div>
-                </Link>
-
                 <Link to="/offers" className="user-dropdown-item" onClick={handleLinkClick}>
                   <div className="user-dropdown-item-icon">
                     <Tag size={16} />
@@ -325,16 +314,6 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
                   <div className="user-dropdown-item-text">
                     <span className="user-dropdown-item-title">My Price Offers</span>
                     <span className="user-dropdown-item-desc">Track offers you submitted</span>
-                  </div>
-                </Link>
-
-                <Link to="/parts" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <ShoppingBag size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Parts Inquiries & Cart</span>
-                    <span className="user-dropdown-item-desc">4 verified parts in inquiry</span>
                   </div>
                 </Link>
 

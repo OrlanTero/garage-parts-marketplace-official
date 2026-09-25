@@ -13,7 +13,7 @@ import { Wrench, Disc, Flame, Armchair, Compass, Sliders, Cog, Zap, Car, Droplet
 
 const unwrap = (v) => (Array.isArray(v) ? v : v?.data ?? [])
 
-const CACHE_KEY = 'gpm_taxonomy_meta_v1'
+const CACHE_KEY = 'gpm_taxonomy_meta_v2'
 
 function readCache() {
   try {

@@ -19,6 +19,8 @@ class AdminAppointmentController extends Controller
             ->with(['seller:id,name,email,role', 'inspector:id,name', 'media'])
             ->when($type && $type !== 'all', fn ($q) => $q->where('inspection_type', $type))
             ->when($status && $status !== 'all', fn ($q) => $q->where('inspection_status', $status))
+            ->when($request->boolean('mine'), fn ($q) => $q->where('inspector_id', $request->user()->id))
+            ->when($request->boolean('unassigned'), fn ($q) => $q->whereNull('inspector_id'))
             ->orderByDesc('inspection_date');
 
         $appointments = $query->paginate((int) ($request->query('per_page', 25)));

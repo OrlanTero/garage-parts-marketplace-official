@@ -19,9 +19,25 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
  * Defaults to enabled so existing Reverb setups keep working.
  */
 export function isRealtimeEnabled() {
+  try {
+    const override = localStorage.getItem('gpm_realtime_enabled')
+    if (override === 'false') return false
+    if (override === 'true') return true
+  } catch {
+    // storage unavailable — fall through to build-time flag
+  }
   const raw = import.meta.env.VITE_REALTIME_ENABLED
   if (raw === undefined || raw === null || raw === '') return true
   return String(raw).toLowerCase() !== 'false' && String(raw) !== '0'
+}
+
+/** Runtime override for the Settings → Preferences toggle (reload to apply). */
+export function setRealtimeEnabled(value) {
+  try {
+    localStorage.setItem('gpm_realtime_enabled', value ? 'true' : 'false')
+  } catch {
+    // ignore
+  }
 }
 
 function notifyConnectionState(state) {

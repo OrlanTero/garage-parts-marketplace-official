@@ -21,6 +21,7 @@ import { useFavorites } from '../context/FavoritesContext.jsx'
 import { useChat } from '../context/ChatContext.jsx'
 import ShareModal from '../components/ShareModal.jsx'
 import OfferModal from '../components/OfferModal.jsx'
+import ReviewSection from '../components/ReviewSection.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
@@ -273,18 +274,9 @@ export default function PartDetail() {
                   onClick={() => navigate(`/checkout?part_id=${part.uuid || part.id}`)}
                 >
                   <ShoppingCart size={16} />
-                  <span>Buy Now / Direct Checkout</span>
+                  <span>Buy Now</span>
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={part.quantity != null && Number(part.quantity) <= 0}
-                  onClick={() => { setOfferNotice(''); setOfferModalOpen(true) }}
-                  title="Propose your own price with a comment"
-                >
-                  <Tag size={16} />
-                  <span>Make an Offer</span>
-                </button>
+
                 {part.seller && (
                   <button 
                     type="button" 
@@ -293,23 +285,36 @@ export default function PartDetail() {
                     title="Inquire directly with the verified parts seller"
                   >
                     <MessageSquare size={16} />
-                    <span>Chat with Seller</span>
+                    <span>Chat</span>
                   </button>
                 )}
-                <button 
-                  type="button" 
-                  className="btn btn-secondary"
-                  onClick={() => setShareModalOpen(true)}
-                  title="Share product link & earn 5% sales commission"
+                <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={part.quantity != null && Number(part.quantity) <= 0}
+                    onClick={() => { setOfferNotice(''); setOfferModalOpen(true) }}
+                    title="Propose your own price with a comment"
+                >
+                  <Tag size={16} />
+                  <span>Make an Offer</span>
+                </button>
+
+              </div>
+
+              <div className="detail-actions-row">
+                <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShareModalOpen(true)}
+                    title="Share product link & earn 5% sales commission"
                 >
                   <Share2 size={16} />
-                  <span>Share & Earn</span>
                 </button>
-                <button 
-                  type="button" 
-                  className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
-                  onClick={() => togglePartFavorite(part)}
-                  title={isSaved ? 'Remove from Saved' : 'Save Part'}
+                <button
+                    type="button"
+                    className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
+                    onClick={() => togglePartFavorite(part)}
+                    title={isSaved ? 'Remove from Saved' : 'Save Part'}
                 >
                   <Heart size={16} fill={isSaved ? '#d8622c' : 'none'} color={isSaved ? '#d8622c' : 'currentColor'} />
                 </button>
@@ -328,6 +333,9 @@ export default function PartDetail() {
                 ))}
               </div>
             </div>
+
+            {/* Buyer Reviews — username + avatar identity only */}
+            <ReviewSection itemType="part" itemId={part.id} listingTitle={title} />
 
             {/* Seller Contact Card */}
             {part.seller && (

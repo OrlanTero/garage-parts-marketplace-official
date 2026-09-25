@@ -146,4 +146,52 @@ class SellerOrderVerificationTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('data.financials.payment_method', 'ewallet');
     }
+
+    public function test_buyer_can_pin_delivery_location(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'pin@garage.test']);
+        $car = $this->makeCar($seller);
+
+        $order = $this->makeRequest($car, $buyer, 'pin@garage.test');
+
+        $this->withToken($buyer->createToken('t')->plainTextToken);
+
+        $this->patchJson("/api/v1/orders/{$order->order_number}/delivery-location", [
+            'latitude' => 14.5547,
+            'longitude' => 121.0244,
+            'label' => 'Makati Showroom, Chino Roces Ave',
+        ])
+            ->assertStatus(200)
+            ->assertJsonPath('data.delivery.has_pin', true)
+            ->assertJsonPath('data.delivery.label', 'Makati Showroom, Chino Roces Ave');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'delivery_latitude' => 14.5547,
+            'delivery_longitude' => 121.0244,
+        ]);
+    }
+
+    public function test_delivery_pin_rejects_bad_coordinates_and_strangers(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'pin2@garage.test']);
+        $stranger = User::factory()->create(['role' => 'buyer']);
+        $car = $this->makeCar($seller);
+
+        $order = $this->makeRequest($car, $buyer, 'pin2@garage.test');
+
+        $this->withToken($buyer->createToken('t')->plainTextToken);
+        $this->patchJson("/api/v1/orders/{$order->order_number}/delivery-location", [
+            'latitude' => 91,
+            'longitude' => 121,
+        ])->assertStatus(422);
+
+        $this->withToken($stranger->createToken('t')->plainTextToken);
+        $this->patchJson("/api/v1/orders/{$order->order_number}/delivery-location", [
+            'latitude' => 14.5,
+            'longitude' => 121.0,
+        ])->assertStatus(403);
+    }
 }

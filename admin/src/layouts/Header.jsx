@@ -149,47 +149,47 @@ export function Header({ setMobileOpen }) {
       {/* Right: Status Pill & Profile */}
       <div className="admin-header-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }} ref={dropdownRef}>
         {/* System Health Status Indicator */}
-        <div
-          className="admin-health-pill"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            borderRadius: 'var(--radius-pill)',
-            backgroundColor:
-              healthStatus === 'online'
-                ? 'var(--admin-success-bg)'
-                : healthStatus === 'checking'
-                ? 'var(--admin-bg-subtle)'
-                : 'var(--admin-danger-bg)',
-            border: `1px solid ${
-              healthStatus === 'online'
-                ? '#A7F3D0'
-                : healthStatus === 'checking'
-                ? 'var(--admin-border)'
-                : '#FECACA'
-            }`,
-            fontSize: 12,
-            fontWeight: 600,
-            color:
-              healthStatus === 'online'
-                ? '#047857'
-                : healthStatus === 'checking'
-                ? 'var(--admin-text-muted)'
-                : '#B91C1C',
-          }}
-          title="Backend API Cluster Health"
-        >
-          {healthStatus === 'online' ? (
-            <CheckCircle2 size={14} />
-          ) : healthStatus === 'checking' ? (
-            <RefreshCw size={14} className="animate-spin" />
-          ) : (
-            <AlertCircle size={14} />
-          )}
-          <span className="admin-health-pill-text">{healthStatus === 'online' ? 'API Online' : healthStatus === 'checking' ? 'Checking...' : 'API Degraded'}</span>
-        </div>
+        {/*<div*/}
+        {/*  className="admin-health-pill"*/}
+        {/*  style={{*/}
+        {/*    display: 'inline-flex',*/}
+        {/*    alignItems: 'center',*/}
+        {/*    gap: 6,*/}
+        {/*    padding: '6px 12px',*/}
+        {/*    borderRadius: 'var(--radius-pill)',*/}
+        {/*    backgroundColor:*/}
+        {/*      healthStatus === 'online'*/}
+        {/*        ? 'var(--admin-success-bg)'*/}
+        {/*        : healthStatus === 'checking'*/}
+        {/*        ? 'var(--admin-bg-subtle)'*/}
+        {/*        : 'var(--admin-danger-bg)',*/}
+        {/*    border: `1px solid ${*/}
+        {/*      healthStatus === 'online'*/}
+        {/*        ? '#A7F3D0'*/}
+        {/*        : healthStatus === 'checking'*/}
+        {/*        ? 'var(--admin-border)'*/}
+        {/*        : '#FECACA'*/}
+        {/*    }`,*/}
+        {/*    fontSize: 12,*/}
+        {/*    fontWeight: 600,*/}
+        {/*    color:*/}
+        {/*      healthStatus === 'online'*/}
+        {/*        ? '#047857'*/}
+        {/*        : healthStatus === 'checking'*/}
+        {/*        ? 'var(--admin-text-muted)'*/}
+        {/*        : '#B91C1C',*/}
+        {/*  }}*/}
+        {/*  title="Backend API Cluster Health"*/}
+        {/*>*/}
+        {/*  {healthStatus === 'online' ? (*/}
+        {/*    <CheckCircle2 size={14} />*/}
+        {/*  ) : healthStatus === 'checking' ? (*/}
+        {/*    <RefreshCw size={14} className="animate-spin" />*/}
+        {/*  ) : (*/}
+        {/*    <AlertCircle size={14} />*/}
+        {/*  )}*/}
+        {/*  <span className="admin-health-pill-text">{healthStatus === 'online' ? 'API Online' : healthStatus === 'checking' ? 'Checking...' : 'API Degraded'}</span>*/}
+        {/*</div>*/}
 
         {/* User Dropdown */}
         <div style={{ position: 'relative' }}>

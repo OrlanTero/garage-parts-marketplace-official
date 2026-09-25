@@ -114,6 +114,9 @@ class TaxonomyController extends Controller
             'data' => [
                 'brands' => BrandResource::collection(
                     Brand::where('is_active', true)
+                        ->with(['carModels' => fn ($q) => $q->where('is_active', true)
+                            ->withCount('compatibleParts')
+                            ->orderBy('sort_order')->orderBy('name')])
                         ->withCount(['carModels', 'cars'])
                         ->orderBy('sort_order')->orderBy('name')->get()
                 ),

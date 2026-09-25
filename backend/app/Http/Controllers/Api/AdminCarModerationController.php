@@ -23,6 +23,8 @@ class AdminCarModerationController extends Controller
             ->with(['seller:id,name,email,role', 'inspector:id,name', 'approver:id,name', 'media'])
             ->when($status && $status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($inspectionStatus && $inspectionStatus !== 'all', fn ($q) => $q->where('inspection_status', $inspectionStatus))
+            ->when($request->boolean('mine'), fn ($q) => $q->where('inspector_id', $request->user()->id))
+            ->when($request->boolean('unassigned'), fn ($q) => $q->whereNull('inspector_id'))
             ->when($search, function ($q, $s) {
                 $q->where(fn ($sub) => $sub->where('title', 'like', "%{$s}%")
                     ->orWhere('brand', 'like', "%{$s}%")
@@ -41,7 +43,19 @@ class AdminCarModerationController extends Controller
             'inspection_type' => ['required', 'string', 'in:garage_dropoff,onsite_visit'],
             'inspection_date' => ['nullable', 'date'],
             'inspection_location' => ['nullable', 'string', 'max:255'],
-            'inspector_id' => ['nullable', 'exists:users,id'],
+            'inspector_id' => [
+                'nullable',
+                'integer',
+                'exists:users,id',
+                // Assignees must be staff — never buyers/sellers/dealers.
+                function ($attribute, $value, $fail) {
+                    $assignee = \App\Models\User::find($value);
+                    $role = $assignee?->role instanceof \App\Enums\UserRole ? $assignee->role->value : $assignee?->role;
+                    if (!$assignee || !in_array($role, ['admin', 'super_admin', 'inspector'], true)) {
+                        $fail('The selected inspector must be a staff member (admin or inspector).');
+                    }
+                },
+            ],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -52,6 +66,13 @@ class AdminCarModerationController extends Controller
 
     public function recordInspection(Request $request, Car $car): JsonResponse
     {
+        // Only the assigned inspector (or an admin override) may record results.
+        $user = $request->user();
+        $isAssigned = $car->inspector_id && (int) $car->inspector_id === (int) $user->id;
+        if (!$isAssigned && !$user->isAdmin()) {
+            abort(403, 'Only the assigned inspector (or an administrator) can record this inspection.');
+        }
+
         $validated = $request->validate([
             'passed' => ['required', 'boolean'],
             'inspection_score' => ['nullable', 'string', 'max:20'],
