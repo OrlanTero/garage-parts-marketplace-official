@@ -72,6 +72,7 @@ export function Header({ setMobileOpen }) {
 
   return (
     <header
+      className="admin-header"
       style={{
         height: 'var(--header-height)',
         backgroundColor: 'var(--admin-bg-header)',
@@ -87,7 +88,7 @@ export function Header({ setMobileOpen }) {
       }}
     >
       {/* Left: Mobile Trigger & Quick Search */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 500 }}>
+      <div className="admin-header-left" style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 500 }}>
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -106,6 +107,7 @@ export function Header({ setMobileOpen }) {
         </button>
 
         <div
+          className="admin-header-search"
           style={{
             position: 'relative',
             width: '100%',
@@ -145,9 +147,10 @@ export function Header({ setMobileOpen }) {
       </div>
 
       {/* Right: Status Pill & Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} ref={dropdownRef}>
+      <div className="admin-header-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }} ref={dropdownRef}>
         {/* System Health Status Indicator */}
         <div
+          className="admin-health-pill"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -185,7 +188,7 @@ export function Header({ setMobileOpen }) {
           ) : (
             <AlertCircle size={14} />
           )}
-          <span>{healthStatus === 'online' ? 'API Online' : healthStatus === 'checking' ? 'Checking...' : 'API Degraded'}</span>
+          <span className="admin-health-pill-text">{healthStatus === 'online' ? 'API Online' : healthStatus === 'checking' ? 'Checking...' : 'API Degraded'}</span>
         </div>
 
         {/* User Dropdown */}
@@ -221,7 +224,7 @@ export function Header({ setMobileOpen }) {
             >
               {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
             </div>
-            <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
+            <div className="admin-header-user-text" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--admin-text-primary)', lineHeight: 1.2 }}>
                 {user?.name || 'Admin'}
               </span>

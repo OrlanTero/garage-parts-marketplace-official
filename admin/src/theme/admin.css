@@ -489,4 +489,255 @@ input, select, textarea {
   .admin-content {
     padding: 20px 16px;
   }
+
+  /* Hamburger trigger (inline display:none on desktop) */
+  .mobile-toggle-btn {
+    display: block !important;
+  }
+
+  /* Sidebar becomes an off-canvas drawer; in-flow otherwise */
+  .admin-app > aside:not(.mobile-open) {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    z-index: 60;
+  }
+
+  .admin-app > aside.mobile-open {
+    transform: none !important;
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Header condenses: icon-only health pill, no username block */
+  .admin-header {
+    padding: 0 16px !important;
+  }
+
+  .admin-header-left {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .admin-header-search {
+    min-width: 0;
+  }
+
+  .admin-header-right {
+    gap: 10px !important;
+  }
+
+  .admin-health-pill-text,
+  .admin-header-user-text {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  /*
+   * Retrofit: pages build modal/drawer info grids with inline
+   * `gridTemplateColumns: '1fr 1fr'`. Collapse them to one column
+   * on phones (desktop rendering untouched).
+   */
+  .modal-body div[style*='1fr 1fr'],
+  .admin-drawer div[style*='1fr 1fr'] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-backdrop,
+  .auth-modal-overlay,
+  .admin-drawer-backdrop {
+    padding: 12px;
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-title {
+    font-size: 1.05rem;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-moderation-split {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-login-card {
+    padding: 28px 20px !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* ==========================================================================
+   Modals, Drawers & Popups
+   ========================================================================== */
+.modal-backdrop, .auth-modal-overlay, .admin-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 15, 29, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  animation: modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-container, .modal-content, .auth-modal-container {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  animation: modalSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--admin-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.modal-close:hover {
+  background: var(--admin-bg-subtle);
+  color: var(--admin-text-primary);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 18px 24px;
+  border-top: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+/* Slide-in Drawers */
+.admin-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-left: 1px solid var(--admin-border);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 1001;
+  animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.admin-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+}
+
+.admin-drawer-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.admin-drawer-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.admin-drawer-footer {
+  padding: 18px 24px;
+  border-top: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
 }

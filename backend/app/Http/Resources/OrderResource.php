@@ -59,6 +59,16 @@ class OrderResource extends JsonResource
             'agent_name' => $this->agent_name,
             'commission_amount' => (float) ($this->commission_amount ?? 0.00),
 
+            // Seller verification lifecycle (multi-request queue per listing).
+            // Payment & fulfillment unlock only after acceptance.
+            'verification_status' => $this->verification_status ?? 'pending',
+            'verification_label' => match ($this->verification_status ?? 'pending') {
+                'accepted' => 'Verified & Accepted',
+                'rejected' => 'Declined by Seller',
+                default => 'Awaiting Seller Verification',
+            },
+            'verification_note' => $this->verification_note,
+
             // Sales Agent & Referral Partner Information
             'agent' => $this->agent_code ? [
                 'id' => $this->agent_id,
@@ -106,6 +116,8 @@ class OrderResource extends JsonResource
             ],
 
             'shipping_address' => $this->shipping_address,
+            'tracking_number' => $this->tracking_number,
+            'carrier' => $this->carrier,
             'notes' => $this->notes,
             'placed_at' => $this->created_at?->format('Y-m-d h:i A'),
             'created_at' => $this->created_at?->toIso8601String(),

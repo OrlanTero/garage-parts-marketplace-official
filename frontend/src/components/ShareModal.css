@@ -387,4 +387,25 @@
   .share-social-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .share-agent-input-row {
+    flex-direction: column;
+  }
+
+  .share-btn-use-mine {
+    padding: 0.6rem 0.85rem;
+  }
+
+  .share-link-box {
+    flex-direction: column;
+  }
+
+  .share-link-input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .share-btn-copy {
+    width: 100%;
+  }
 }

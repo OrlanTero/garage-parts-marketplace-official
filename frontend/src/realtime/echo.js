@@ -12,6 +12,18 @@ let currentConnectionState = 'disconnected' // 'connecting' | 'connected' | 'dis
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+/**
+ * Kill-switch for local dev without a Reverb/Pusher server.
+ * Set VITE_REALTIME_ENABLED=false in .env to stop all WebSocket attempts
+ * (chat keeps working via API polling/focus-refresh fallbacks).
+ * Defaults to enabled so existing Reverb setups keep working.
+ */
+export function isRealtimeEnabled() {
+  const raw = import.meta.env.VITE_REALTIME_ENABLED
+  if (raw === undefined || raw === null || raw === '') return true
+  return String(raw).toLowerCase() !== 'false' && String(raw) !== '0'
+}
+
 function notifyConnectionState(state) {
   currentConnectionState = state
   connectionListeners.forEach((listener) => {
@@ -24,6 +36,7 @@ function notifyConnectionState(state) {
 }
 
 export function getEcho() {
+  if (!isRealtimeEnabled()) return null
   if (echoInstance) return echoInstance
 
   const pusherKey = import.meta.env.VITE_PUSHER_APP_KEY
@@ -74,6 +87,7 @@ export function getEcho() {
       cluster: pusherCluster,
       forceTLS: true,
       enabledTransports: ['ws', 'wss'],
+      disableStats: true,
       authorizer,
     })
   } else {
@@ -84,7 +98,8 @@ export function getEcho() {
       wsPort: isHttps ? 80 : wsPort,
       wssPort: isHttps ? wsPort : 443,
       forceTLS: isHttps,
-      enabledTransports: ['ws', 'wss'],
+      enabledTransports: isHttps ? ['wss'] : ['ws'],
+      disableStats: true,
       authorizer,
     })
   }

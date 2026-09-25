@@ -45,6 +45,10 @@ class Order extends Model
         'payment_method',
         'payment_status',
         'status',
+        'verification_status',
+        'verification_note',
+        'tracking_number',
+        'carrier',
         'notes',
     ];
 

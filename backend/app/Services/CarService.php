@@ -23,7 +23,18 @@ class CarService
         $images = $data['images'] ?? $data['media'] ?? null;
         unset($data['images'], $data['media']);
 
-        $car = Car::create([...$data, 'seller_id' => $seller->id]);
+        // Default approval status: Admins and authorized Dealers are pre-approved
+        $isPreApproved = $seller->isAdmin() || $seller->isDealer();
+        $initialStatus = $data['status'] ?? CarStatus::Draft->value;
+        $isApproved = $data['is_approved'] ?? $isPreApproved;
+
+        $car = Car::create([
+            ...$data,
+            'seller_id' => $seller->id,
+            'is_approved' => $isApproved,
+            'status' => $initialStatus,
+            'published_at' => ($initialStatus === CarStatus::Active->value && $isApproved) ? now() : null,
+        ]);
 
         if (is_array($images)) {
             $this->syncMedia($car, $images);
@@ -86,9 +97,10 @@ class CarService
     /** @throws ValidationException on illegal transition */
     public function publish(Car $car): Car
     {
-        if ($car->status !== CarStatus::Draft && $car->status !== CarStatus::Archived) {
+        $allowedStatuses = [CarStatus::Draft, CarStatus::Archived, CarStatus::Rejected, CarStatus::PendingInspection];
+        if (!in_array($car->status, $allowedStatuses)) {
             throw ValidationException::withMessages([
-                'status' => ['Only draft or archived cars can be published.'],
+                'status' => ['Only draft, archived, rejected, or pending cars can be published/submitted.'],
             ]);
         }
 
@@ -96,11 +108,81 @@ class CarService
 
         $car->forceFill([
             'status' => CarStatus::Active->value,
+            'is_approved' => true,
             'published_at' => $car->published_at ?? now(),
             'sold_at' => null,
         ])->save();
 
         $car = $car->refresh();
+
+        event(new CarStatusChanged($car, $prev));
+
+        return $car;
+    }
+
+    public function scheduleInspection(Car $car, array $data, ?User $admin = null): Car
+    {
+        $car->forceFill([
+            'inspection_type' => $data['inspection_type'] ?? 'garage_dropoff',
+            'inspection_status' => 'scheduled',
+            'inspection_date' => $data['inspection_date'] ?? now()->addDays(2),
+            'inspection_location' => $data['inspection_location'] ?? 'Main Garage Inspection Bay',
+            'inspector_id' => $data['inspector_id'] ?? $admin?->id,
+            'inspector_notes' => $data['notes'] ?? $car->inspector_notes,
+            'status' => CarStatus::PendingInspection->value,
+        ])->save();
+
+        return $car->loadMissing(['seller:id,name', 'inspector:id,name', 'media'])->refresh();
+    }
+
+    public function recordInspection(Car $car, array $data, ?User $inspector = null): Car
+    {
+        $passed = filter_var($data['passed'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+        $car->forceFill([
+            'inspection_score' => $data['inspection_score'] ?? ($passed ? '95/100' : '55/100'),
+            'inspector_notes' => $data['notes'] ?? $data['inspector_notes'] ?? null,
+            'inspection_status' => $passed ? 'passed' : 'failed',
+            'inspector_id' => $inspector?->id ?? $car->inspector_id,
+            'status' => $passed ? CarStatus::Inspected->value : CarStatus::Rejected->value,
+            'rejection_reason' => $passed ? null : ($data['rejection_reason'] ?? 'Failed vehicle roadworthiness and inspection checklist.'),
+        ])->save();
+
+        return $car->loadMissing(['seller:id,name', 'inspector:id,name', 'media'])->refresh();
+    }
+
+    public function approveListing(Car $car, User $admin): Car
+    {
+        $prev = $car->status->value ?? (string) $car->status;
+
+        $car->forceFill([
+            'status' => CarStatus::Active->value,
+            'is_approved' => true,
+            'approved_by' => $admin->id,
+            'approved_at' => now(),
+            'published_at' => $car->published_at ?? now(),
+            'rejection_reason' => null,
+            'inspection_status' => $car->inspection_status === 'failed' ? 'passed' : ($car->inspection_status ?? 'passed'),
+        ])->save();
+
+        $car = $car->loadMissing(['seller:id,name', 'approver:id,name', 'media'])->refresh();
+
+        event(new CarStatusChanged($car, $prev));
+
+        return $car;
+    }
+
+    public function rejectListing(Car $car, string $reason, User $admin): Car
+    {
+        $prev = $car->status->value ?? (string) $car->status;
+
+        $car->forceFill([
+            'status' => CarStatus::Rejected->value,
+            'is_approved' => false,
+            'rejection_reason' => $reason,
+        ])->save();
+
+        $car = $car->loadMissing(['seller:id,name', 'media'])->refresh();
 
         event(new CarStatusChanged($car, $prev));
 
@@ -152,7 +234,7 @@ class CarService
     {
         return Car::query()
             ->listed()
-            ->with(['seller:id,name', 'media'])
+            ->with(['seller:id,name,username,avatar_url,is_kyc_verified,kyc_status,role', 'media'])
             ->filter($filters)
             ->paginate(min(max($perPage, 1), 50));
     }

@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Broadcast;
 | Scalable authorization rules for private and presence channels.
 */
 
+// Conversation private channel (accessible only by the two participants)
+Broadcast::channel('conversation.{id}', function ($user, $id) {
+    $conversation = \App\Models\Conversation::find($id);
+    if (!$conversation) {
+        return false;
+    }
+    return $conversation->hasParticipant((int) $user->id);
+});
+
 // Authenticated user private channel (supports both standard formats)
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;

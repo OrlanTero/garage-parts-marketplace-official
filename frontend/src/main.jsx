@@ -5,6 +5,7 @@ import App from './App.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import { RealtimeProvider } from './realtime/RealtimeContext.jsx'
 import { FavoritesProvider } from './context/FavoritesContext.jsx'
+import { ChatProvider } from './context/ChatContext.jsx'
 import './styles.css'
 import './theme/theme.css'
 
@@ -14,7 +15,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <RealtimeProvider>
           <FavoritesProvider>
-            <App />
+            <ChatProvider>
+              <App />
+            </ChatProvider>
           </FavoritesProvider>
         </RealtimeProvider>
       </AuthProvider>

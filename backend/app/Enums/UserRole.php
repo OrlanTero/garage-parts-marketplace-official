@@ -12,7 +12,9 @@ enum UserRole: string
     case Seller = 'seller';
     case Dealer = 'dealer';
     case PartsSeller = 'parts_seller';
+    case SuperAdmin = 'super_admin';
     case Admin = 'admin';
+    case Inspector = 'inspector';
 
     /** Roles a new user is allowed to self-select. */
     public static function selfSelectable(): array

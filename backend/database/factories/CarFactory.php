@@ -32,6 +32,7 @@ class CarFactory extends Factory
     {
         return $this->state(fn () => [
             'status' => 'active',
+            'is_approved' => true,
             'published_at' => now(),
         ]);
     }

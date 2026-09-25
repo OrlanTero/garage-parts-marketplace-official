@@ -830,3 +830,40 @@
   padding: 0;
   cursor: pointer;
 }
+
+/* --- Mobile: single-column stacking, tighter cards --- */
+@media (max-width: 1024px) {
+  .listing-preview-sticky {
+    position: static;
+  }
+}
+
+@media (max-width: 520px) {
+  .listing-type-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .type-select-card {
+    padding: 12px 14px;
+  }
+
+  .form-section-card {
+    padding: 18px 16px;
+  }
+
+  .dropzone-badge-row {
+    flex-wrap: wrap;
+  }
+
+  .media-add-row {
+    flex-wrap: wrap;
+  }
+
+  .media-add-row > * {
+    min-width: 0;
+  }
+
+  .media-upload-dropzone {
+    padding: 24px 14px;
+  }
+}

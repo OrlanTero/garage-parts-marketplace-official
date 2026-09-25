@@ -14,13 +14,22 @@ import {
   HelpCircle,
   Sparkles,
   ExternalLink,
-  CheckCircle2
+  CheckCircle2,
+  MessageSquare,
+  UserCheck,
+  Store,
+  Tag,
+  LayoutDashboard
 } from 'lucide-react'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import { useChat } from '../context/ChatContext.jsx'
+import KycVerificationModal from './KycVerificationModal.jsx'
 
 export default function UserMenu({ user, logout, isTransparent = false }) {
   const { favoritesCount, carsCount, partsCount } = useFavorites()
+  const { unreadCount } = useChat()
   const [isOpen, setIsOpen] = useState(false)
+  const [kycModalOpen, setKycModalOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const menuRef = useRef(null)
   const navigate = useNavigate()
@@ -174,6 +183,43 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
           <div className="user-dropdown-section">
             <div className="user-dropdown-section-title">Marketplace & Activity</div>
 
+            <button
+              type="button"
+              className="user-dropdown-item"
+              style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer' }}
+              onClick={() => {
+                setIsOpen(false)
+                setKycModalOpen(true)
+              }}
+            >
+              <div className="user-dropdown-item-icon" style={{ color: user?.is_kyc_verified ? '#10b981' : '#ea580c' }}>
+                <UserCheck size={16} />
+              </div>
+              <div className="user-dropdown-item-text">
+                <span className="user-dropdown-item-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <span>Seller KYC & Verification</span>
+                  {user?.is_kyc_verified ? (
+                    <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 700 }}>
+                      ✓ Verified
+                    </span>
+                  ) : user?.kyc_status === 'pending' ? (
+                    <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(234, 88, 12, 0.15)', color: '#ea580c', fontWeight: 700 }}>
+                      Pending
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(255, 255, 255, 0.08)', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                      Unverified
+                    </span>
+                  )}
+                </span>
+                <span className="user-dropdown-item-desc">
+                  {user?.is_kyc_verified
+                    ? 'Verified Seller Trust Badge active'
+                    : 'Submit government ID to unlock seller badge'}
+                </span>
+              </div>
+            </button>
+
             <Link to="/agent" className="user-dropdown-item" onClick={handleLinkClick}>
               <div className="user-dropdown-item-icon icon-action">
                 <Sparkles size={16} />
@@ -193,6 +239,28 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
                   <div className="user-dropdown-item-text">
                     <span className="user-dropdown-item-title">Sell Your Build / Parts</span>
                     <span className="user-dropdown-item-desc">Post new verified listing</span>
+                  </div>
+                </Link>
+
+                <Link to="/messages" className="user-dropdown-item" onClick={handleLinkClick}>
+                  <div className="user-dropdown-item-icon">
+                    <MessageSquare size={16} />
+                  </div>
+                  <div className="user-dropdown-item-text">
+                    <span className="user-dropdown-item-title">
+                      Buyer Messages {unreadCount > 0 && <span className="action-badge-inline">{unreadCount} new</span>}
+                    </span>
+                    <span className="user-dropdown-item-desc">Inquiries from prospective buyers</span>
+                  </div>
+                </Link>
+
+                <Link to="/offers" className="user-dropdown-item" onClick={handleLinkClick}>
+                  <div className="user-dropdown-item-icon">
+                    <Tag size={16} />
+                  </div>
+                  <div className="user-dropdown-item-text">
+                    <span className="user-dropdown-item-title">Price Offers Received</span>
+                    <span className="user-dropdown-item-desc">Buyer offers on your listings</span>
                   </div>
                 </Link>
 
@@ -218,6 +286,28 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </>
             ) : (
               <>
+                <Link to="/become-seller" className="user-dropdown-item" onClick={handleLinkClick}>
+                  <div className="user-dropdown-item-icon icon-action">
+                    <Store size={16} />
+                  </div>
+                  <div className="user-dropdown-item-text">
+                    <span className="user-dropdown-item-title">Become a Seller</span>
+                    <span className="user-dropdown-item-desc">Upgrade to sell cars & parts</span>
+                  </div>
+                </Link>
+
+                <Link to="/messages" className="user-dropdown-item" onClick={handleLinkClick}>
+                  <div className="user-dropdown-item-icon">
+                    <MessageSquare size={16} />
+                  </div>
+                  <div className="user-dropdown-item-text">
+                    <span className="user-dropdown-item-title">
+                      Messages & Inquiries {unreadCount > 0 && <span className="action-badge-inline">{unreadCount} new</span>}
+                    </span>
+                    <span className="user-dropdown-item-desc">Direct 1:1 buyer & seller chats</span>
+                  </div>
+                </Link>
+
                 <Link to="/favorites" className="user-dropdown-item" onClick={handleLinkClick}>
                   <div className="user-dropdown-item-icon">
                     <Heart size={16} />
@@ -225,6 +315,16 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
                   <div className="user-dropdown-item-text">
                     <span className="user-dropdown-item-title">Saved Vehicles & Wishlist</span>
                     <span className="user-dropdown-item-desc">{favoritesCount} {favoritesCount === 1 ? 'item' : 'items'} saved in garage</span>
+                  </div>
+                </Link>
+
+                <Link to="/offers" className="user-dropdown-item" onClick={handleLinkClick}>
+                  <div className="user-dropdown-item-icon">
+                    <Tag size={16} />
+                  </div>
+                  <div className="user-dropdown-item-text">
+                    <span className="user-dropdown-item-title">My Price Offers</span>
+                    <span className="user-dropdown-item-desc">Track offers you submitted</span>
                   </div>
                 </Link>
 
@@ -304,6 +404,8 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
           </div>
         </div>
       )}
+      {/* KYC Verification & Seller Accreditation Modal */}
+      <KycVerificationModal isOpen={kycModalOpen} onClose={() => setKycModalOpen(false)} />
     </div>
   )
 }

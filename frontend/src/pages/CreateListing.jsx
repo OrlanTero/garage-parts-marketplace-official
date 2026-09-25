@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Car,
@@ -29,10 +29,12 @@ import {
   FileImage,
   Star
 } from 'lucide-react'
-import { sellerCars, CAR_FILTER_META } from '../api/cars.js'
-import { sellerParts, PART_FILTER_META } from '../api/parts.js'
+import { sellerCars } from '../api/cars.js'
+import { sellerParts } from '../api/parts.js'
+import { useTaxonomy, groupBrandsByRegion, specOptions, specLabel } from '../api/taxonomy.js'
 import { mediaApi } from '../api/media.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import KycVerificationModal from '../components/KycVerificationModal.jsx'
 import './CreateListing.css'
 
 // Preset photo assets for quick demonstration and testing
@@ -189,6 +191,15 @@ export default function CreateListing({ defaultType = 'car' }) {
   const { isAuthenticated, user, openLoginModal } = useAuth()
   const navigate = useNavigate()
 
+  // Live taxonomy — brand datalist & category select served by the backend.
+  const { brands: liveBrands, categories: liveCategories, models: allModels, specs } = useTaxonomy()
+  const brandGroups = useMemo(() => groupBrandsByRegion(liveBrands), [liveBrands])
+  const bodyStyles = useMemo(() => specOptions(specs, 'body_styles'), [specs])
+  const transmissions = useMemo(() => specOptions(specs, 'transmissions'), [specs])
+  const fuelTypes = useMemo(() => specOptions(specs, 'fuel_types'), [specs])
+  const carConditions = useMemo(() => specOptions(specs, 'car_conditions'), [specs])
+  const partConditions = useMemo(() => specOptions(specs, 'part_conditions'), [specs])
+
   // --- Car Form State ---
   const [carData, setCarData] = useState({
     title: '1998 Nissan Silvia S15 Spec-R Turbo',
@@ -198,6 +209,7 @@ export default function CreateListing({ defaultType = 'car' }) {
     price: 1350000,
     original_price: 1450000,
     mileage_km: 74000,
+    quantity: 1,
     body_style: 'coupe',
     fuel_type: 'petrol',
     transmission: 'manual',
@@ -237,10 +249,19 @@ export default function CreateListing({ defaultType = 'car' }) {
     ],
   })
 
+  // Model suggestions narrow to the typed Make when it matches a catalog brand.
+  const modelSuggestions = useMemo(() => {
+    const match = liveBrands.find((b) => b.name.toLowerCase() === (carData.brand || '').trim().toLowerCase())
+    const list = match ? allModels.filter((m) => m.brand_id === match.id) : allModels
+    return list.slice(0, 100)
+  }, [allModels, liveBrands, carData.brand])
+
   const [newCarImgUrl, setNewCarImgUrl] = useState('')
   const [newPartImgUrl, setNewPartImgUrl] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState(null)
+  const [kycBlocked, setKycBlocked] = useState(false)
+  const [kycModalOpen, setKycModalOpen] = useState(false)
   const [createdResult, setCreatedResult] = useState(null) // { type: 'car'|'part', data: {...}, published: boolean }
 
   // Upload States for High-Resolution Media
@@ -449,6 +470,7 @@ export default function CreateListing({ defaultType = 'car' }) {
   // --- Submit Handler ---
   const handleSubmit = async (publishNow = true) => {
     setErrorMsg(null)
+    setKycBlocked(false)
 
     if (!isAuthenticated) {
       openLoginModal()
@@ -467,6 +489,7 @@ export default function CreateListing({ defaultType = 'car' }) {
           price: Number(carData.price),
           original_price: carData.original_price ? Number(carData.original_price) : null,
           mileage_km: Number(carData.mileage_km || 0),
+          quantity: Math.max(1, Number(carData.quantity || 1)),
           body_style: carData.body_style,
           fuel_type: carData.fuel_type,
           transmission: carData.transmission,
@@ -527,7 +550,10 @@ export default function CreateListing({ defaultType = 'car' }) {
       }
     } catch (err) {
       const responseData = err?.response?.data
-      if (responseData?.errors) {
+      if (responseData?.code === 'kyc_verification_required') {
+        setKycBlocked(true)
+        setErrorMsg(responseData.message)
+      } else if (responseData?.errors) {
         const firstErrorKey = Object.keys(responseData.errors)[0]
         setErrorMsg(responseData.errors[firstErrorKey][0] || 'Validation error occurred.')
       } else if (responseData?.message) {
@@ -547,6 +573,8 @@ export default function CreateListing({ defaultType = 'car' }) {
   }
 
   const isBuyerRole = user?.role === 'buyer'
+  const isStandardSeller = user?.role === 'seller'
+  const isPartsSellerOrDealer = user?.role === 'parts_seller' || user?.role === 'dealer' || user?.role === 'admin' || user?.role === 'super_admin'
 
   // --- Success Render View ---
   if (createdResult) {
@@ -664,7 +692,47 @@ export default function CreateListing({ defaultType = 'car' }) {
             <div className="role-warning-banner">
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
               <div>
-                <strong>Account Notice:</strong> You are currently logged in as a <strong>Buyer</strong>. To publish inventory, your account can be elevated to a <strong>Seller</strong>, <strong>Dealer</strong>, or <strong>Parts Seller</strong> account.
+                <strong>Account Notice:</strong> You are currently logged in as a <strong>Buyer</strong>. To publish inventory, <Link to="/become-seller" style={{ fontWeight: 700 }}>apply for a Seller upgrade</Link> — your account can be elevated to a <strong>Seller</strong>, <strong>Dealer</strong>, or <strong>Parts Seller</strong> account.
+              </div>
+            </div>
+          )}
+
+          {/* KYC Verification Gate Notice */}
+          {kycBlocked && (
+            <div className="role-warning-banner" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }}>
+              <ShieldCheck size={20} style={{ flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+                <div>
+                  <strong>Seller Verification Required:</strong> Complete Seller KYC &amp; Verification to unlock listing creation and publishing.
+                </div>
+                <button
+                  type="button"
+                  className="btn-publish"
+                  style={{ padding: '8px 16px', fontSize: 13 }}
+                  onClick={() => setKycModalOpen(true)}
+                >
+                  Complete KYC Verification
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Standard Seller Notice for Parts */}
+          {isAuthenticated && isStandardSeller && listingType === 'part' && (
+            <div className="role-warning-banner" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }}>
+              <AlertCircle size={20} style={{ flexShrink: 0 }} />
+              <div>
+                <strong>Parts Selling Policy:</strong> Standard Seller accounts are designated exclusively for vehicle builds & cars. Listing automotive parts & accessories requires a <strong>Garage</strong>, <strong>Dealer</strong>, or <strong>Parts Seller</strong> account.
+              </div>
+            </div>
+          )}
+
+          {/* Vehicle Inspection Lifecycle Notice */}
+          {listingType === 'car' && (
+            <div className="role-warning-banner" style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.25)', color: '#065f46' }}>
+              <CheckCircle2 size={20} style={{ flexShrink: 0, color: '#10b981' }} />
+              <div>
+                <strong>Mandatory Inspection Verification:</strong> Submitted car builds are reviewed and scheduled for inspection (<strong>Garage Drop-off</strong> or <strong>Mobile On-site Visit</strong>). Once verified by an inspector and approved by admin, your vehicle will be published live to the marketplace.
               </div>
             </div>
           )}
@@ -751,10 +819,10 @@ export default function CreateListing({ defaultType = 'car' }) {
                       required
                     />
                     <datalist id="car-brands-list">
-                      {CAR_FILTER_META.brandRegions?.map((group) =>
-                        group.brands.map((brandName) => (
-                          <option key={brandName} value={brandName}>
-                            {brandName} ({group.region})
+                      {brandGroups?.map((group) =>
+                        group.brands.map((brand) => (
+                          <option key={brand.id} value={brand.name}>
+                            {brand.name} ({group.region})
                           </option>
                         ))
                       )}
@@ -768,12 +836,20 @@ export default function CreateListing({ defaultType = 'car' }) {
                     <input
                       type="text"
                       name="model"
+                      list="car-models-list"
                       className="form-input"
                       placeholder="e.g. Silvia S15, Civic Type R"
                       value={carData.model}
                       onChange={handleCarChange}
                       required
                     />
+                    <datalist id="car-models-list">
+                      {modelSuggestions.map((m) => (
+                        <option key={m.id} value={m.name}>
+                          {m.brand_name}{m.chassis_code ? ` · ${m.chassis_code}` : ''}
+                        </option>
+                      ))}
+                    </datalist>
                   </div>
 
                   <div className="form-group">
@@ -802,9 +878,9 @@ export default function CreateListing({ defaultType = 'car' }) {
                       value={carData.body_style}
                       onChange={handleCarChange}
                     >
-                      {CAR_FILTER_META.bodyStyles.map((style) => (
+                      {bodyStyles.map((style) => (
                         <option key={style} value={style}>
-                          {style.charAt(0).toUpperCase() + style.slice(1)}
+                          {specLabel(style)}
                         </option>
                       ))}
                     </select>
@@ -818,9 +894,11 @@ export default function CreateListing({ defaultType = 'car' }) {
                       value={carData.transmission}
                       onChange={handleCarChange}
                     >
-                      <option value="manual">Manual</option>
-                      <option value="automatic">Automatic</option>
-                      <option value="semi_automatic">Semi-Automatic / DCT</option>
+                      {transmissions.map((t) => (
+                        <option key={t} value={t}>
+                          {specLabel(t)}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -832,11 +910,11 @@ export default function CreateListing({ defaultType = 'car' }) {
                       value={carData.fuel_type}
                       onChange={handleCarChange}
                     >
-                      <option value="petrol">Petrol / Gasoline</option>
-                      <option value="diesel">Diesel</option>
-                      <option value="hybrid">Hybrid</option>
-                      <option value="electric">Electric (EV)</option>
-                      <option value="other">Other</option>
+                      {fuelTypes.map((f) => (
+                        <option key={f} value={f}>
+                          {specLabel(f)}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -848,8 +926,11 @@ export default function CreateListing({ defaultType = 'car' }) {
                       value={carData.condition}
                       onChange={handleCarChange}
                     >
-                      <option value="used">Used / Pre-Owned</option>
-                      <option value="new">Brand New</option>
+                      {carConditions.map((c) => (
+                        <option key={c} value={c}>
+                          {specLabel(c)}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -913,6 +994,23 @@ export default function CreateListing({ defaultType = 'car' }) {
                       onChange={handleCarChange}
                       required
                     />
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      Stock Quantity <span className="label-required">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="quantity"
+                      className="form-input"
+                      min="1"
+                      placeholder="1"
+                      value={carData.quantity ?? 1}
+                      onChange={handleCarChange}
+                      required
+                    />
+                    <span className="form-hint">How many units of this build do you have on stock</span>
                   </div>
                 </div>
 
@@ -1234,9 +1332,9 @@ export default function CreateListing({ defaultType = 'car' }) {
                       onChange={handlePartChange}
                       required
                     >
-                      {PART_FILTER_META.categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                      {liveCategories.map((cat) => (
+                        <option key={cat.id} value={cat.slug}>
+                          {cat.name}
                         </option>
                       ))}
                     </select>
@@ -1276,9 +1374,11 @@ export default function CreateListing({ defaultType = 'car' }) {
                       value={partData.condition}
                       onChange={handlePartChange}
                     >
-                      <option value="new">Brand New</option>
-                      <option value="used">Surplus / Used</option>
-                      <option value="refurbished">Refurbished / Restored</option>
+                      {partConditions.map((c) => (
+                        <option key={c} value={c}>
+                          {specLabel(c)}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1697,6 +1797,9 @@ export default function CreateListing({ defaultType = 'car' }) {
           </div>
         </aside>
       </div>
+
+      {/* KYC Verification & Seller Accreditation Modal */}
+      <KycVerificationModal isOpen={kycModalOpen} onClose={() => setKycModalOpen(false)} />
     </div>
   )
 }

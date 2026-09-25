@@ -18,7 +18,8 @@ export default function ShareModal({ isOpen, onClose, item }) {
   if (!isOpen || !item) return null
 
   const effectiveAgentCode = customAgentCode.trim() || user?.agent_code || ''
-  const itemPath = item.path || (item.type === 'car' ? `/cars/${item.id}` : `/parts/${item.id}`)
+  const itemIdentifier = item.uuid || item.id
+  const itemPath = item.path || (item.type === 'car' ? `/marketplace/${itemIdentifier}` : `/parts/${itemIdentifier}`)
   const shareUrl = buildShareableUrl(itemPath, effectiveAgentCode)
   const itemTitle = item.title || item.name || 'Automotive Performance Component'
   const itemPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price || 0)

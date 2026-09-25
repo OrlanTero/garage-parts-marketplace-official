@@ -29,7 +29,7 @@ export function AdminLayout() {
 
         <footer
           style={{
-            padding: '16px 32px',
+            padding: '16px',
             borderTop: '1px solid var(--admin-border)',
             backgroundColor: '#FFFFFF',
             fontSize: 12,
@@ -37,6 +37,8 @@ export function AdminLayout() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
             marginTop: 'auto',
           }}
         >

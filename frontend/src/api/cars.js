@@ -1,10 +1,12 @@
 import client from './client.js'
-import { ALL_CAR_BRANDS, CAR_BRANDS_BY_REGION, BRAND_REGIONS } from '../constants/brands.js'
 
 /**
  * Cars module — frontend data layer. Mirrors backend CarResource +
  * Laravel paginator shape ({ data, links, meta }). No JSX here;
  * pages/hooks consume these functions.
+ *
+ * NOTE: brand options are NOT defined here anymore — use `useTaxonomy()`
+ * from './taxonomy.js' for the live backend Brand catalog.
  */
 
 // --- Public marketplace (no auth) ---
@@ -32,7 +34,4 @@ export const CAR_FILTER_META = {
   fuelTypes: ['petrol', 'diesel', 'hybrid', 'electric', 'other'],
   transmissions: ['manual', 'automatic', 'semi_automatic'],
   conditions: ['new', 'used'],
-  brands: ALL_CAR_BRANDS,
-  brandsByRegion: CAR_BRANDS_BY_REGION,
-  brandRegions: BRAND_REGIONS,
 }

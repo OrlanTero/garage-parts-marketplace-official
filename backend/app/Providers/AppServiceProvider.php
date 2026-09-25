@@ -7,6 +7,7 @@ use App\Models\Part;
 use App\Policies\CarPolicy;
 use App\Policies\PartPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Gate;

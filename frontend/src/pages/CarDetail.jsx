@@ -15,11 +15,14 @@ import {
   Share2, 
   MessageSquare,
   Sparkles,
-  FileText
+  FileText,
+  Tag
 } from 'lucide-react'
 import { marketplaceCars } from '../api/cars.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import { useChat } from '../context/ChatContext.jsx'
 import ShareModal from '../components/ShareModal.jsx'
+import OfferModal from '../components/OfferModal.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
@@ -41,13 +44,16 @@ export default function CarDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isCarSaved, toggleCarFavorite } = useFavorites()
+  const { openDrawerWithListing } = useChat()
   const [car, setCar] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [offerModalOpen, setOfferModalOpen] = useState(false)
+  const [offerNotice, setOfferNotice] = useState('')
   const activeReferralCode = getActiveReferralCode()
 
-  const isSaved = isCarSaved(id)
+  const isSaved = isCarSaved(car?.id || id)
 
   useEffect(() => {
     marketplaceCars
@@ -110,11 +116,14 @@ export default function CarDetail() {
     ['Fuel Type', car.fuel_type ? car.fuel_type.replace('_', ' ').toUpperCase() : '—'],
     ['Transmission', car.transmission ? car.transmission.replace('_', ' ').toUpperCase() : '—'],
     ['Condition', car.condition ? (car.condition === 'new' ? 'Brand New' : 'Certified Used') : '—'],
+    ['Stock Available', car.quantity != null ? `${car.quantity} unit${Number(car.quantity) === 1 ? '' : 's'}` : '—'],
     ['Exterior Color', car.color || '—'],
     ['Chassis / VIN', car.vin || 'Verified on File'],
     ['Inspection Score', score],
     ['Showroom / City', location],
   ]
+  const stockCount = car.quantity == null ? 1 : Number(car.quantity)
+  const isSoldOut = stockCount <= 0
 
   return (
     <div className="detail-page">
@@ -192,6 +201,15 @@ export default function CarDetail() {
                     <span className="detail-price-save">Special Deal</span>
                   </>
                 )}
+                <span
+                  className="detail-meta-item"
+                  style={{
+                    marginLeft: 12, fontSize: 13, fontWeight: 700,
+                    color: isSoldOut ? '#ef4444' : '#10b981',
+                  }}
+                >
+                  {isSoldOut ? 'Sold Out' : stockCount === 1 ? 'Only 1 unit left' : `${stockCount} units in stock`}
+                </span>
               </div>
 
               <div className="detail-trust-strip">
@@ -230,29 +248,59 @@ export default function CarDetail() {
                 </div>
               )}
 
+              {offerNotice && (
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#10b981' }}>
+                  {offerNotice}
+                </div>
+              )}
+
               <div className="detail-actions-row">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary"
-                  onClick={() => navigate(`/checkout?car_id=${car.id}`)}
+                  disabled={isSoldOut}
+                  onClick={() => navigate(`/checkout?car_id=${car.uuid || car.id}`)}
+                  title={isSoldOut ? 'This build is sold out' : 'Reserve this vehicle'}
                 >
                   <FileText size={16} />
-                  <span>Reserve & Generate Sales Order</span>
+                  <span>{isSoldOut ? 'Sold Out' : 'Reserve'}</span>
                 </button>
-                <button 
-                  type="button" 
+                {car.seller && (
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary"
+                    onClick={() => openDrawerWithListing({ seller: car.seller, listing: car, listingType: 'car' })}
+                    title="Inquire directly with the verified seller"
+                  >
+                    <MessageSquare size={16} />
+                    <span>Chat with Seller</span>
+                  </button>
+                )}
+                <button
+                  type="button"
                   className="btn btn-secondary"
-                  onClick={() => setShareModalOpen(true)}
-                  title="Share vehicle listing on Facebook or earn sales commission"
+                  disabled={isSoldOut}
+                  onClick={() => { setOfferNotice(''); setOfferModalOpen(true) }}
+                  title={isSoldOut ? 'This build is sold out' : 'Propose your own price with a comment'}
+                >
+                  <Tag size={16} />
+                  <span>Make an Offer</span>
+                </button>
+              </div>
+              <div className="detail-actions-row">
+                <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShareModalOpen(true)}
+                    title="Share vehicle listing on Facebook or earn sales commission"
                 >
                   <Share2 size={16} />
-                  <span>Share & Earn</span>
                 </button>
-                <button 
-                  type="button" 
-                  className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
-                  onClick={() => toggleCarFavorite(car)}
-                  title={isSaved ? 'Remove from Saved' : 'Save Vehicle'}
+                <button
+                    type="button"
+                    className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
+                    onClick={() => toggleCarFavorite(car)}
+                    title={isSaved ? 'Remove from Saved' : 'Save Vehicle'}
                 >
                   <Heart size={16} fill={isSaved ? '#d8622c' : 'none'} color={isSaved ? '#d8622c' : 'currentColor'} />
                 </button>
@@ -272,26 +320,61 @@ export default function CarDetail() {
               </div>
             </div>
 
-            {/* Seller Contact Card */}
+            {/* Seller Contact Card (Username Only & KYC Badge for Privacy) */}
             {car.seller && (
               <div className="detail-seller-card">
                 <div className="detail-seller-info">
                   <div className="detail-seller-avatar">
-                    {car.seller.name ? car.seller.name.charAt(0).toUpperCase() : 'S'}
+                    {car.seller.avatar_url ? (
+                      <img src={car.seller.avatar_url} alt={car.seller.username || 'Seller'} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <span>{car.seller.username ? car.seller.username.charAt(0).toUpperCase() : 'S'}</span>
+                    )}
                   </div>
                   <div>
-                    <div className="detail-seller-name">{car.seller.name}</div>
-                    <div className="detail-seller-sub">Verified Marketplace Seller · {location}</div>
+                    <div className="detail-seller-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>@{car.seller.username || 'seller'}</span>
+                      {car.seller.is_kyc_verified && (
+                        <ShieldCheck size={16} style={{ color: '#10b981' }} title="KYC Verified Seller" />
+                      )}
+                    </div>
+                    <div className="detail-seller-sub">Marketplace Builder · {location}</div>
                   </div>
                 </div>
-                <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>
-                  ✓ Verified
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 12px', fontSize: 13 }}
+                    onClick={() => openDrawerWithListing({ seller: car.seller, listing: car, listingType: 'car' })}
+                  >
+                    <MessageSquare size={14} />
+                    <span>Chat</span>
+                  </button>
+                  {car.seller.is_kyc_verified ? (
+                    <span className="badge" style={{ background: '#dcfce7', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <ShieldCheck size={13} />
+                      <span>KYC Verified</span>
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--color-text-muted)' }}>
+                      Registered Builder
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Buyer Price Offer Modal */}
+      <OfferModal
+        open={offerModalOpen}
+        onClose={() => setOfferModalOpen(false)}
+        listing={car ? { id: car.id, title: title, price: car.price, type: 'car' } : null}
+        onSubmitted={() => setOfferNotice('Offer sent — the seller will review it under your Offers.')}
+      />
 
       {/* Car Share & Agent Referral Modal */}
       <ShareModal
@@ -299,12 +382,13 @@ export default function CarDetail() {
         onClose={() => setShareModalOpen(false)}
         item={{
           id: car.id,
+          uuid: car.uuid,
           type: 'car',
           title: title,
           price: car.price,
           image: currentImgUrl,
           brand: car.brand,
-          path: `/marketplace/${car.id}`
+          path: `/marketplace/${car.uuid || car.id}`
         }}
       />
     </div>

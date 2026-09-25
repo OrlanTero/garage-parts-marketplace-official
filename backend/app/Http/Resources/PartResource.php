@@ -15,6 +15,7 @@ class PartResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'uuid' => $this->uuid,
             'title' => $this->title,
             'category' => $enum($this->category),
             'cat' => $enum($this->category),

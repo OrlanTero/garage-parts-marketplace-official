@@ -35,7 +35,7 @@ class CarTest extends TestCase
 
     public function test_seller_can_create_draft_and_publish_to_marketplace(): void
     {
-        $seller = User::factory()->create(['role' => 'seller']);
+        $seller = User::factory()->kycVerified()->create(['role' => 'seller']);
         $headers = $this->sellerToken($seller);
 
         $create = $this->postJson('/api/v1/seller/cars', $this->carPayload(), $headers)
@@ -58,7 +58,7 @@ class CarTest extends TestCase
 
     public function test_dealer_can_create_and_publish_cars(): void
     {
-        $dealer = User::factory()->create(['role' => 'dealer']);
+        $dealer = User::factory()->kycVerified()->create(['role' => 'dealer']);
         $headers = $this->sellerToken($dealer);
 
         $create = $this->postJson('/api/v1/seller/cars', $this->carPayload(), $headers)
@@ -124,7 +124,7 @@ class CarTest extends TestCase
 
     public function test_car_supports_multiple_images_and_marketplace_serialization(): void
     {
-        $seller = User::factory()->create(['role' => 'seller']);
+        $seller = User::factory()->kycVerified()->create(['role' => 'seller']);
         $headers = $this->sellerToken($seller);
 
         $payload = array_merge($this->carPayload(), [
@@ -153,5 +153,29 @@ class CarTest extends TestCase
             ->assertJsonCount(2, 'data.images')
             ->assertJsonCount(2, 'data.image_urls')
             ->assertJsonPath('data.primary_image_url', 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7');
+    }
+
+    public function test_car_is_accessible_via_uuid_in_marketplace_and_seller_routes(): void
+    {
+        $seller = User::factory()->kycVerified()->create(['role' => 'seller']);
+        $headers = $this->sellerToken($seller);
+
+        $create = $this->postJson('/api/v1/seller/cars', $this->carPayload(), $headers)
+            ->assertCreated();
+
+        $uuid = $create->json('data.uuid');
+        $this->assertNotEmpty($uuid);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $uuid);
+
+        // Publish using UUID
+        $this->postJson("/api/v1/seller/cars/{$uuid}/publish", [], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
+
+        // Fetch via UUID on public marketplace
+        $this->getJson("/api/v1/marketplace/cars/{$uuid}")
+            ->assertOk()
+            ->assertJsonPath('data.uuid', $uuid)
+            ->assertJsonPath('data.title', '2019 Toyota Vios 1.3 E CVT');
     }
 }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { getEcho, subscribeConnectionState, disconnectEcho, reconnectEcho } from './echo.js'
+import { getEcho, subscribeConnectionState, disconnectEcho, reconnectEcho, isRealtimeEnabled } from './echo.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 
 const RealtimeContext = createContext(null)
@@ -9,6 +9,11 @@ export function RealtimeProvider({ children }) {
   const [connectionState, setConnectionState] = useState('disconnected')
 
   useEffect(() => {
+    if (!isRealtimeEnabled()) {
+      setConnectionState('disabled')
+      return undefined
+    }
+
     // Subscribe to connection state changes
     const unsubscribe = subscribeConnectionState((state) => {
       setConnectionState(state)
@@ -24,7 +29,7 @@ export function RealtimeProvider({ children }) {
 
   // When auth token changes (login / logout), reconnect echo if needed so private channels re-authorize smoothly
   useEffect(() => {
-    if (token) {
+    if (token && isRealtimeEnabled()) {
       // Refresh or reconnect to ensure authorizer has fresh token
       getEcho()
     }

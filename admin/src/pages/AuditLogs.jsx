@@ -128,7 +128,7 @@ export default function AuditLogs() {
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--admin-text-secondary)' }}>
                   State Mutation Delta (Before vs After JSON Diff):
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--admin-text-muted)', marginBottom: 4, textTransform: 'uppercase' }}>
                       Previous State (Before)

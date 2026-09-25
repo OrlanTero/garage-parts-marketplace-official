@@ -22,9 +22,12 @@ class StoreOrderRequest extends FormRequest
             'shipping_city' => ['nullable', 'string', 'max:120'],
             'shipping_postal_code' => ['nullable', 'string', 'max:30'],
 
-            // Vehicle Fitment & Identification Details (Mandatory)
-            'chassis_number' => ['required', 'string', 'min:3', 'max:100'],
-            'vin' => ['required', 'string', 'min:3', 'max:100'],
+            // Vehicle Fitment & Identification Details.
+            // Mandatory for PART orders (buyer's vehicle must match the part).
+            // Excluded for CAR orders (the purchased vehicle speaks for itself —
+            // its own VIN is recorded automatically from the listing).
+            'chassis_number' => ['exclude_if:item_type,car', 'required', 'string', 'min:3', 'max:100'],
+            'vin' => ['exclude_if:item_type,car', 'required', 'string', 'min:3', 'max:100'],
             'vehicle_make_model' => ['nullable', 'string', 'max:255'],
 
             // Sales Agent & Referral Tracking

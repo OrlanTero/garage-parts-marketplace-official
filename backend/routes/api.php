@@ -1,17 +1,31 @@
 <?php
 
+use App\Http\Controllers\Api\AdminAppointmentController;
+use App\Http\Controllers\Api\AdminCarModerationController;
+use App\Http\Controllers\Api\AdminChatModerationController;
+use App\Http\Controllers\Api\AdminKycController;
+use App\Http\Controllers\Api\AdminSellerApplicationController;
+use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\KycController;
 use App\Http\Controllers\Api\MarketplaceCarController;
 use App\Http\Controllers\Api\MarketplacePartController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\OAuthController;
+use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\SellerApplicationController;
 use App\Http\Controllers\Api\SellerCarController;
+use App\Http\Controllers\Api\SellerDashboardController;
+use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerPartController;
 use App\Http\Controllers\Api\SystemMaintenanceController;
+use App\Http\Controllers\Api\TaxonomyController;
+use App\Http\Controllers\Api\AdminTaxonomyController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -56,6 +70,17 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll'])->name('api.auth.logoutAll');
 
+        // Chat & 1:1 Direct Messaging
+        Route::prefix('chat')->name('api.chat.')->group(function () {
+            Route::get('/unread-count', [ChatController::class, 'unreadCount'])->name('unreadCount');
+            Route::get('/conversations', [ChatController::class, 'index'])->name('conversations.index');
+            Route::post('/conversations', [ChatController::class, 'store'])->name('conversations.store');
+            Route::get('/conversations/{conversation}', [ChatController::class, 'show'])->name('conversations.show');
+            Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('conversations.messages');
+            Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('conversations.sendMessage');
+            Route::post('/conversations/{conversation}/read', [ChatController::class, 'markRead'])->name('conversations.markRead');
+        });
+
         // WebSocket / Reverb Channel Authorization
         Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
             return Broadcast::auth($request);
@@ -80,6 +105,25 @@ Route::prefix('v1')->group(function () {
 
         // User Sales Orders History
         Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
+        Route::patch('/orders/{identifier}/payment-method', [OrderController::class, 'updatePaymentMethod'])->name('api.orders.paymentMethod');
+
+        // Buyer Price Offers (amount + comment on listings)
+        Route::get('/offers', [OfferController::class, 'mine'])->name('api.offers.mine');
+        Route::post('/offers', [OfferController::class, 'store'])->name('api.offers.store');
+        Route::post('/offers/{offer}/withdraw', [OfferController::class, 'withdraw'])->name('api.offers.withdraw');
+
+        // KYC Seller Verification & Status
+        Route::prefix('kyc')->name('api.kyc.')->group(function () {
+            Route::get('/status', [KycController::class, 'status'])->name('status');
+            Route::post('/submit', [KycController::class, 'submit'])->name('submit');
+        });
+
+        // Buyer-to-Seller Upgrade Applications
+        Route::prefix('seller-applications')->name('api.seller-applications.')->group(function () {
+            Route::get('/', [SellerApplicationController::class, 'index'])->name('index');
+            Route::post('/', [SellerApplicationController::class, 'store'])->name('store');
+            Route::post('/{application}/withdraw', [SellerApplicationController::class, 'withdraw'])->name('withdraw');
+        });
 
         // Sales Agent Portal & Performance
         Route::prefix('agent')->name('api.agent.')->group(function () {
@@ -111,6 +155,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/parts/{part}', [MarketplacePartController::class, 'show'])->name('parts.show');
     });
 
+    // --- Public taxonomy (Brand / Model / Category — replaces hardcoded frontend) ---
+    Route::prefix('taxonomy')->name('api.taxonomy.')->group(function () {
+        Route::get('/brands', [TaxonomyController::class, 'brands'])->name('brands');
+        Route::get('/brands/{brand}', [TaxonomyController::class, 'brand'])->name('brand');
+        Route::get('/models', [TaxonomyController::class, 'models'])->name('models');
+        Route::get('/categories', [TaxonomyController::class, 'categories'])->name('categories');
+        Route::get('/part-brands', [TaxonomyController::class, 'partBrands'])->name('partBrands');
+        Route::get('/meta', [TaxonomyController::class, 'meta'])->name('meta');
+    });
+
     // --- Checkout & Sales Orders (Public / Customer) ---
     Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
     Route::get('/orders/{identifier}', [OrderController::class, 'show'])->name('api.orders.show');
@@ -121,6 +175,7 @@ Route::prefix('v1')->group(function () {
     // --- Seller inventory (auth + role:seller,dealer,parts_seller,admin) ---
     Route::middleware(['auth:sanctum', 'role:seller,dealer,parts_seller,admin'])
         ->prefix('seller')->name('api.seller.')->group(function () {
+            Route::get('/summary', [SellerDashboardController::class, 'summary'])->name('summary');
             Route::get('/cars', [SellerCarController::class, 'index'])->name('cars.index');
             Route::post('/cars', [SellerCarController::class, 'store'])->name('cars.store');
             Route::get('/cars/{car}', [SellerCarController::class, 'show'])->name('cars.show');
@@ -138,5 +193,65 @@ Route::prefix('v1')->group(function () {
             Route::post('/parts/{part}/publish', [SellerPartController::class, 'publish'])->name('parts.publish');
             Route::post('/parts/{part}/unpublish', [SellerPartController::class, 'unpublish'])->name('parts.unpublish');
             Route::post('/parts/{part}/sold', [SellerPartController::class, 'markSold'])->name('parts.sold');
+
+            // Incoming sales-order requests (verify one, auto-reject the rest)
+            Route::get('/orders', [SellerOrderController::class, 'index'])->name('orders.index');
+            Route::post('/orders/{order}/accept', [SellerOrderController::class, 'accept'])->name('orders.accept');
+            Route::post('/orders/{order}/reject', [SellerOrderController::class, 'reject'])->name('orders.reject');
+
+            // Incoming buyer offers (accept one, auto-reject the rest)
+            Route::get('/offers', [OfferController::class, 'incoming'])->name('offers.incoming');
+            Route::post('/offers/{offer}/accept', [OfferController::class, 'accept'])->name('offers.accept');
+            Route::post('/offers/{offer}/reject', [OfferController::class, 'reject'])->name('offers.reject');
+        });
+
+    // --- Admin & Staff Moderation Portal (auth + role:admin,super_admin,inspector) ---
+    Route::middleware(['auth:sanctum', 'role:admin,super_admin,inspector'])
+        ->prefix('admin')->name('api.admin.')->group(function () {
+            // Car Moderation & Vehicle Inspection Lifecycle
+            Route::get('/moderation/cars', [AdminCarModerationController::class, 'index'])->name('moderation.cars.index');
+            Route::post('/moderation/cars/{car}/schedule-inspection', [AdminCarModerationController::class, 'scheduleInspection'])->name('moderation.cars.schedule');
+            Route::post('/moderation/cars/{car}/record-inspection', [AdminCarModerationController::class, 'recordInspection'])->name('moderation.cars.record');
+            Route::post('/moderation/cars/{car}/approve', [AdminCarModerationController::class, 'approve'])->name('moderation.cars.approve');
+            Route::post('/moderation/cars/{car}/reject', [AdminCarModerationController::class, 'reject'])->name('moderation.cars.reject');
+
+            // Appointment Monitoring (Garage vs On-site)
+            Route::get('/appointments', [AdminAppointmentController::class, 'index'])->name('appointments.index');
+
+            // Basic Chat Moderation & PII Alert Logging
+            Route::get('/chat/conversations', [AdminChatModerationController::class, 'index'])->name('chat.conversations.index');
+            Route::get('/chat/conversations/{conversation}', [AdminChatModerationController::class, 'show'])->name('chat.conversations.show');
+
+            // Users, Buyers, Sellers, Dealers & RBAC Permissions
+            Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+            Route::patch('/users/{user}/role', [AdminUserController::class, 'updateRole'])->name('users.updateRole');
+
+            // KYC Seller Verification Review & Badging
+            Route::get('/kyc-verifications', [AdminKycController::class, 'index'])->name('kyc.index');
+            Route::post('/kyc-verifications/{user}/approve', [AdminKycController::class, 'approve'])->name('kyc.approve');
+            Route::post('/kyc-verifications/{user}/reject', [AdminKycController::class, 'reject'])->name('kyc.reject');
+
+            // Buyer-to-Seller Upgrade Application Review
+            Route::get('/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('seller-applications.index');
+            Route::post('/seller-applications/{application}/approve', [AdminSellerApplicationController::class, 'approve'])->name('seller-applications.approve');
+            Route::post('/seller-applications/{application}/reject', [AdminSellerApplicationController::class, 'reject'])->name('seller-applications.reject');
+
+            // Sales Orders Management
+            Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+            Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+
+            // Brand / Model / Category Taxonomy CRUD (Admin TaxonomyManagement page)
+            Route::post('/taxonomy/brands', [AdminTaxonomyController::class, 'storeBrand'])->name('taxonomy.brands.store');
+            Route::match(['put', 'patch'], '/taxonomy/brands/{brand}', [AdminTaxonomyController::class, 'updateBrand'])->name('taxonomy.brands.update');
+            Route::delete('/taxonomy/brands/{brand}', [AdminTaxonomyController::class, 'destroyBrand'])->name('taxonomy.brands.destroy');
+            Route::post('/taxonomy/brands/{brand}/models', [AdminTaxonomyController::class, 'storeModel'])->name('taxonomy.models.store');
+            Route::match(['put', 'patch'], '/taxonomy/models/{model}', [AdminTaxonomyController::class, 'updateModel'])->name('taxonomy.models.update');
+            Route::delete('/taxonomy/models/{model}', [AdminTaxonomyController::class, 'destroyModel'])->name('taxonomy.models.destroy');
+            Route::post('/taxonomy/models/{model}/fitment', [AdminTaxonomyController::class, 'syncFitment'])->name('taxonomy.models.fitment');
+            Route::post('/taxonomy/categories', [AdminTaxonomyController::class, 'storeCategory'])->name('taxonomy.categories.store');
+            Route::match(['put', 'patch'], '/taxonomy/categories/{category}', [AdminTaxonomyController::class, 'updateCategory'])->name('taxonomy.categories.update');
+            Route::delete('/taxonomy/categories/{category}', [AdminTaxonomyController::class, 'destroyCategory'])->name('taxonomy.categories.destroy');
+            Route::post('/taxonomy/categories/{category}/subcategories', [AdminTaxonomyController::class, 'storeSubcategory'])->name('taxonomy.subcategories.store');
+            Route::delete('/taxonomy/subcategories/{subcategory}', [AdminTaxonomyController::class, 'destroySubcategory'])->name('taxonomy.subcategories.destroy');
         });
 });

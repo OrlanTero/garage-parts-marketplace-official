@@ -29,6 +29,7 @@ class MarketplaceCarController extends Controller
             'min_year' => ['sometimes', 'integer', 'min:1900'],
             'max_year' => ['sometimes', 'integer', 'min:1900'],
             'max_mileage' => ['sometimes', 'integer', 'min:0'],
+            'in_stock' => ['sometimes', 'boolean'],
             'sort' => ['sometimes', 'in:newest,price_asc,price_desc,mileage_asc,year_desc'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ]);
@@ -42,6 +43,6 @@ class MarketplaceCarController extends Controller
     {
         $this->authorize('view', $car);
 
-        return new CarResource($car->loadMissing(['seller:id,name', 'media']));
+        return new CarResource($car->loadMissing(['seller:id,name,username,avatar_url,is_kyc_verified,kyc_status,role', 'media']));
     }
 }

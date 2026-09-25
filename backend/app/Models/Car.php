@@ -18,7 +18,10 @@ class Car extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'uuid',
         'seller_id',
+        'brand_id',
+        'model_id',
         'title',
         'brand',
         'model',
@@ -30,6 +33,7 @@ class Car extends Model
         'fuel_type',
         'transmission',
         'condition',
+        'quantity',
         'tag',
         'color',
         'vin',
@@ -39,6 +43,16 @@ class Car extends Model
         'status',
         'rating',
         'inspection_score',
+        'inspection_type',
+        'inspection_status',
+        'inspection_date',
+        'inspection_location',
+        'inspector_id',
+        'inspector_notes',
+        'is_approved',
+        'approved_by',
+        'approved_at',
+        'rejection_reason',
         'published_at',
         'sold_at',
     ];
@@ -52,6 +66,7 @@ class Car extends Model
     {
         return [
             'year' => 'integer',
+            'quantity' => 'integer',
             'price' => 'decimal:2',
             'original_price' => 'decimal:2',
             'mileage_km' => 'integer',
@@ -61,14 +76,79 @@ class Car extends Model
             'transmission' => Transmission::class,
             'condition' => CarCondition::class,
             'status' => CarStatus::class,
+            'is_approved' => 'boolean',
+            'inspection_date' => 'datetime',
+            'approved_at' => 'datetime',
             'published_at' => 'datetime',
             'sold_at' => 'datetime',
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+            // Auto-sync legacy strings from taxonomy FKs so old filters keep working.
+            if (!empty($model->brand_id) && empty($model->brand)) {
+                $model->brand = Brand::whereKey($model->brand_id)->value('name') ?? $model->brand;
+            }
+            if (!empty($model->model_id) && empty($model->model)) {
+                $model->model = CarModel::whereKey($model->model_id)->value('name') ?? $model->model;
+            }
+        });
+
+        static::updating(function ($model) {
+            if ($model->isDirty('brand_id') && !empty($model->brand_id)) {
+                $name = Brand::whereKey($model->brand_id)->value('name');
+                if ($name) {
+                    $model->brand = $name;
+                }
+            }
+            if ($model->isDirty('model_id') && !empty($model->model_id)) {
+                $name = CarModel::whereKey($model->model_id)->value('name');
+                if ($name) {
+                    $model->model = $name;
+                }
+            }
+        });
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if ($field) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        return $this->where('uuid', $value)
+            ->orWhere('id', is_numeric($value) ? (int) $value : 0)
+            ->first();
+    }
+
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function brandRef(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function carModel(): BelongsTo
+    {
+        return $this->belongsTo(CarModel::class, 'model_id');
+    }
+
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'inspector_id');
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function media(): \Illuminate\Database\Eloquent\Relations\MorphMany
@@ -119,12 +199,22 @@ class Car extends Model
         return $this->media()->pluck('url')->all();
     }
 
-    /** Public marketplace scope: active listings, newest first. */
+    /** Public marketplace scope: approved active listings, newest first. */
     public function scopeListed(Builder $query): Builder
     {
         return $query->where('status', CarStatus::Active->value)
+            ->where('is_approved', true)
             ->whereNotNull('published_at')
             ->orderByDesc('published_at');
+    }
+
+    public function scopePendingModeration(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            CarStatus::PendingInspection->value,
+            CarStatus::Inspected->value,
+            CarStatus::Draft->value,
+        ])->orWhere('is_approved', false);
     }
 
     public function scopeOfSeller(Builder $query, int $sellerId): Builder
@@ -154,7 +244,8 @@ class Car extends Model
             ->when($filters['max_price'] ?? null, fn (Builder $q, $v) => $q->where('price', '<=', $v))
             ->when($filters['min_year'] ?? null, fn (Builder $q, $v) => $q->where('year', '>=', $v))
             ->when($filters['max_year'] ?? null, fn (Builder $q, $v) => $q->where('year', '<=', $v))
-            ->when($filters['max_mileage'] ?? null, fn (Builder $q, $v) => $q->where('mileage_km', '<=', $v));
+            ->when($filters['max_mileage'] ?? null, fn (Builder $q, $v) => $q->where('mileage_km', '<=', $v))
+            ->when($filters['in_stock'] ?? null, fn (Builder $q) => $q->where('quantity', '>', 0));
 
         // Sorting (whitelisted — never raw user input into orderBy).
         match ($filters['sort'] ?? 'newest') {

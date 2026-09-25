@@ -25,6 +25,11 @@ class UpdatePartRequest extends FormRequest
         return [
             // NOTE: status is NOT mass-assignable — use publish/unpublish/sold endpoints.
             'title' => ['sometimes', 'string', 'max:255'],
+            'brand_id' => ['sometimes', 'nullable', 'integer', 'exists:brands,id'],
+            'category_id' => ['sometimes', 'nullable', 'integer', 'exists:categories,id'],
+            'subcategory_id' => ['sometimes', 'nullable', 'integer', 'exists:subcategories,id'],
+            'compatible_model_ids' => ['sometimes', 'array'],
+            'compatible_model_ids.*' => ['integer', 'exists:car_models,id'],
             'category' => ['sometimes', 'string', Rule::enum(PartCategory::class)],
             'brand' => ['sometimes', 'nullable', 'string', 'max:80'],
             'part_number' => ['sometimes', 'nullable', 'string', 'max:80'],

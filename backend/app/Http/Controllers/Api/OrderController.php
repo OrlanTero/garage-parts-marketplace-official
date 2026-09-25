@@ -24,7 +24,7 @@ class OrderController extends Controller
 
         $query = Order::query()->latest();
 
-        if ($user && $user->role !== 'admin') {
+        if ($user && !$user->isAdmin()) {
             $query->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
                   ->orWhere('buyer_email', $user->email);
@@ -34,6 +34,22 @@ class OrderController extends Controller
         $orders = $query->paginate($request->integer('per_page', 20));
 
         return OrderResource::collection($orders);
+    }
+
+    /**
+     * Update order status and shipping tracking (Admin / Staff).
+     */
+    public function updateStatus(Request $request, Order $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:processing,shipped,delivered,cancelled,disputed'],
+            'tracking_number' => ['nullable', 'string', 'max:100'],
+            'carrier' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $order->update($validated);
+
+        return (new OrderResource($order))->response();
     }
 
     /**
@@ -93,6 +109,20 @@ class OrderController extends Controller
 
         $orderNumber = 'SO-' . date('Y') . '-' . strtoupper(Str::random(6));
 
+        // Fitment identity: part orders carry the BUYER's chassis/VIN for
+        // compatibility checks; car orders carry the PURCHASED car's own VIN
+        // straight from its listing (buyer enters nothing).
+        $chassisNumber = isset($data['chassis_number']) ? strtoupper(trim($data['chassis_number'])) : null;
+        $vin = isset($data['vin']) ? strtoupper(trim($data['vin'])) : null;
+        $vehicleMakeModel = $data['vehicle_make_model'] ?? null;
+
+        if ($itemType === 'car' && $car) {
+            $vin = $car->vin ? strtoupper(trim($car->vin)) : null;
+            $chassisNumber = null;
+            $vehicleMakeModel = $vehicleMakeModel
+                ?? trim(implode(' ', array_filter([$car->year, $car->brand, $car->model]))) ?: null;
+        }
+
         $order = Order::create([
             'order_number' => $orderNumber,
             'user_id' => $request->user()?->id,
@@ -105,10 +135,10 @@ class OrderController extends Controller
             'shipping_city' => $data['shipping_city'] ?? null,
             'shipping_postal_code' => $data['shipping_postal_code'] ?? null,
 
-            // Vehicle Fitment & Identification Details (Mandatory Sales Order Details)
-            'chassis_number' => strtoupper(trim($data['chassis_number'])),
-            'vin' => strtoupper(trim($data['vin'])),
-            'vehicle_make_model' => $data['vehicle_make_model'] ?? null,
+            // Vehicle Fitment & Identification Details (parts: buyer's vehicle; cars: purchased vehicle's own VIN)
+            'chassis_number' => $chassisNumber,
+            'vin' => $vin,
+            'vehicle_make_model' => $vehicleMakeModel,
 
             // Item Details
             'item_type' => $itemType,
@@ -135,12 +165,44 @@ class OrderController extends Controller
             'payment_method' => $data['payment_method'] ?? 'bank_transfer',
             'payment_status' => 'pending',
             'status' => 'processing',
+            'verification_status' => 'pending',
             'notes' => $data['notes'] ?? null,
         ]);
 
         return (new OrderResource($order))
             ->response()
             ->setStatusCode(201);
+    }
+
+    /**
+     * Buyer updates their settlement method while the order is still
+     * open (pending verification or accepted). Payment instructions
+     * unlock only after seller acceptance.
+     */
+    public function updatePaymentMethod(Request $request, string $identifier): JsonResponse
+    {
+        $order = Order::where('order_number', $identifier)
+            ->orWhere('id', is_numeric($identifier) ? (int) $identifier : 0)
+            ->firstOrFail();
+
+        $user = $request->user();
+        $owns = $user && ((int) $order->user_id === (int) $user->id || $order->buyer_email === $user->email);
+        if (!$owns && !($user && $user->isAdmin())) {
+            abort(403, 'You can only update your own orders.');
+        }
+
+        if (in_array($order->verification_status, ['rejected'], true)
+            || in_array($order->status, ['cancelled', 'delivered'], true)) {
+            abort(422, 'Payment method can no longer be changed for this order.');
+        }
+
+        $data = $request->validate([
+            'payment_method' => ['required', 'string', 'in:bank_transfer,ewallet,credit_card'],
+        ]);
+
+        $order->forceFill(['payment_method' => $data['payment_method']])->save();
+
+        return (new OrderResource($order->refresh()))->response();
     }
 
     /**

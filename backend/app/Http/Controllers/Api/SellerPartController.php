@@ -7,7 +7,9 @@ use App\Http\Requests\Part\StorePartRequest;
 use App\Http\Requests\Part\UpdatePartRequest;
 use App\Http\Resources\PartResource;
 use App\Models\Part;
+use App\Models\User;
 use App\Services\PartService;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -37,7 +39,17 @@ class SellerPartController extends Controller
 
     public function store(StorePartRequest $request): JsonResponse
     {
-        $part = $this->parts->create($request->user(), $request->validated());
+        $user = $request->user();
+
+        if ($user->isSeller()) {
+            return response()->json([
+                'message' => 'Standard Sellers are authorized to list vehicle builds only. Garage or Sales Team role is required to list auto parts.',
+            ], 403);
+        }
+
+        $this->ensureKycVerified($user);
+
+        $part = $this->parts->create($user, $request->validated());
 
         // Keep the `data` envelope consistent with every other part endpoint.
         return (new PartResource($part))->response()->setStatusCode(201);
@@ -68,6 +80,7 @@ class SellerPartController extends Controller
     public function publish(Request $request, Part $part): PartResource
     {
         $this->authorize('update', $part);
+        $this->ensureKycVerified($request->user());
 
         return new PartResource($this->parts->publish($part));
     }
@@ -84,5 +97,23 @@ class SellerPartController extends Controller
         $this->authorize('update', $part);
 
         return new PartResource($this->parts->markSold($part));
+    }
+
+    /**
+     * Security gate: seller-role accounts must hold a verified KYC badge
+     * before creating or publishing listings. Staff/admins are exempt.
+     */
+    private function ensureKycVerified(User $user): void
+    {
+        if ($user->isAdmin() || $user->isInspector()) {
+            return;
+        }
+
+        if (!$user->isKycVerified()) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'KYC verification is required before listing auto parts. Complete Seller KYC & Verification to unlock selling.',
+                'code' => 'kyc_verification_required',
+            ], 403));
+        }
     }
 }

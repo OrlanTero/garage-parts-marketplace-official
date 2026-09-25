@@ -32,7 +32,9 @@ export function Breadcrumbs() {
       style={{
         display: 'flex',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: 8,
+        rowGap: 4,
         fontSize: 13,
         color: 'var(--admin-text-muted)',
         marginBottom: 20,

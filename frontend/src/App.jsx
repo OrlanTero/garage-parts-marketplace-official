@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { 
   Search, 
-  ShoppingBag, 
   Heart, 
   User as UserIcon, 
   Menu as MenuIcon, 
@@ -16,7 +15,8 @@ import {
   LogOut,
   Car,
   Layers,
-  Coffee
+  Coffee,
+  MessageSquare
 } from 'lucide-react'
 import Home from './pages/Home.jsx'
 import Marketplace from './pages/Marketplace.jsx'
@@ -27,14 +27,21 @@ import Checkout from './pages/Checkout.jsx'
 import SalesOrder from './pages/SalesOrder.jsx'
 import AgentPortal from './pages/AgentPortal.jsx'
 import CreateListing from './pages/CreateListing.jsx'
+import BecomeSeller from './pages/BecomeSeller.jsx'
+import MyListings from './pages/MyListings.jsx'
+import Offers from './pages/Offers.jsx'
 import Favorites from './pages/Favorites.jsx'
+import Messages from './pages/Messages.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import SearchModal from './components/SearchModal.jsx'
+import MobileQuickActions from './components/MobileQuickActions.jsx'
 import AuthModal from './components/AuthModal.jsx'
 import UserMenu from './components/UserMenu.jsx'
+import FloatingChatDrawer from './components/chat/FloatingChatDrawer.jsx'
 import { useAuth } from './auth/AuthContext.jsx'
 import { useFavorites } from './context/FavoritesContext.jsx'
+import { useChat } from './context/ChatContext.jsx'
 import { getActiveReferralCode } from './utils/referral.js'
 
 const NAV = [
@@ -83,6 +90,7 @@ export default function App() {
     closeAuthModal 
   } = useAuth()
   const { favoritesCount } = useFavorites()
+  const { unreadCount } = useChat()
   const location = useLocation()
   const navigate = useNavigate()
   const isAuthRoute = location.pathname === '/login' || location.pathname === '/register'
@@ -96,7 +104,11 @@ export default function App() {
   const [announcementIndex, setAnnouncementIndex] = useState(0)
 
   const isBuyer = user?.role === 'buyer'
-  const navItems = NAV.filter((item) => !(isBuyer && item.to === '/sell'))
+  const isSellerAccount = user && ['seller', 'dealer', 'parts_seller', 'admin', 'super_admin'].includes(user.role)
+  const navItems = [
+    ...NAV.filter((item) => !(isBuyer && item.to === '/sell')),
+    ...(isAuthenticated && isBuyer ? [{ to: '/become-seller', label: 'Become a Seller' }] : []),
+  ]
 
   // Global Keyboard Shortcut for Search (Cmd+K / Ctrl+K / "/")
   useEffect(() => {
@@ -224,7 +236,7 @@ export default function App() {
             {/* Dedicated Search Action Trigger with Keyboard Hint */}
             <button
               type="button"
-              className="action-btn topbar-search-btn"
+              className="action-btn topbar-search-btn topbar-quick"
               onClick={() => setSearchModalOpen(true)}
               title="Search Parts & Cars "
               aria-label="Search Marketplace"
@@ -232,14 +244,14 @@ export default function App() {
               <Search size={18} />
             </button>
 
-            <Link to="/favorites" className="action-btn" title="Saved Vehicles & Wishlist" aria-label="Wishlist">
+            <Link to="/favorites" className="action-btn topbar-quick" title="Saved Vehicles & Wishlist" aria-label="Wishlist">
               <Heart size={18} fill={favoritesCount > 0 ? '#d8622c' : 'none'} color={favoritesCount > 0 ? '#d8622c' : 'currentColor'} />
               {favoritesCount > 0 && <span className="action-badge">{favoritesCount}</span>}
             </Link>
 
-            <Link to="/parts" className="action-btn" title="Parts Inquiries & Cart" aria-label="Parts Inquiries">
-              <ShoppingBag size={18} />
-              <span className="action-badge">4</span>
+            <Link to="/messages" className="action-btn topbar-quick" title="Messages & Seller Inquiries" aria-label="Messages">
+              <MessageSquare size={18} />
+              {unreadCount > 0 && <span className="action-badge action-badge--chat">{unreadCount}</span>}
             </Link>
 
             {isAuthenticated ? (
@@ -379,6 +391,14 @@ export default function App() {
                     <Heart size={15} fill={favoritesCount > 0 ? '#d8622c' : 'none'} color={favoritesCount > 0 ? '#d8622c' : 'currentColor'} />
                     <span>Saved Wishlist & Cars ({favoritesCount})</span>
                   </Link>
+                  <Link 
+                    to="/messages" 
+                    className="mobile-drawer-quicklink" 
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <MessageSquare size={15} />
+                    <span>Messages & Inquiries {unreadCount > 0 ? `(${unreadCount})` : ''}</span>
+                  </Link>
                 </div>
 
                 <button 
@@ -437,12 +457,24 @@ export default function App() {
         onClose={closeAuthModal} 
       />
 
+      {/* Floating 1:1 Live Chat Drawer */}
+      <FloatingChatDrawer />
+
+      {/* Mobile floating quick-actions (Search / Saved / Messages) */}
+      <MobileQuickActions
+        onSearch={() => setSearchModalOpen(true)}
+        favoritesCount={favoritesCount}
+        unreadCount={unreadCount}
+      />
+
       {/* Main Content View */}
       <main className={isAuthRoute ? 'content--auth' : isHome ? 'content--home' : 'content'}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/marketplace/:id" element={<CarDetail />} />
+          <Route path="/cars" element={<Marketplace />} />
+          <Route path="/cars/:id" element={<CarDetail />} />
           <Route path="/parts" element={<PartsMarketplace />} />
           <Route path="/parts/:id" element={<PartDetail />} />
           <Route path="/checkout" element={<Checkout />} />
@@ -454,10 +486,16 @@ export default function App() {
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/saved" element={<Favorites />} />
           <Route path="/wishlist" element={<Favorites />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/inbox" element={<Messages />} />
+          <Route path="/offers" element={<Offers />} />
           <Route path="/sell" element={<CreateListing />} />
           <Route path="/sell/cars" element={<CreateListing defaultType="car" />} />
           <Route path="/sell/parts" element={<CreateListing defaultType="part" />} />
           <Route path="/create-listing" element={<CreateListing />} />
+          <Route path="/become-seller" element={<BecomeSeller />} />
+          <Route path="/my-listings" element={<MyListings />} />
+          <Route path="/seller-dashboard" element={<MyListings />} />
           <Route path="/showroom" element={<Placeholder title="Showroom & Café" />} />
           <Route path="/services" element={<Placeholder title="Garage Inspection Services" />} />
           <Route path="/about" element={<Placeholder title="About Garage Marketplace" />} />

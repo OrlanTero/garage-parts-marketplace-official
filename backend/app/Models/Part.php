@@ -16,7 +16,11 @@ class Part extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'uuid',
         'seller_id',
+        'brand_id',
+        'category_id',
+        'subcategory_id',
         'title',
         'category',
         'brand',
@@ -60,9 +64,72 @@ class Part extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+            // Sync legacy strings from taxonomy FKs.
+            if (!empty($model->brand_id) && empty($model->brand)) {
+                $model->brand = Brand::whereKey($model->brand_id)->value('name') ?? $model->brand;
+            }
+            if (!empty($model->category_id) && empty($model->category)) {
+                $model->category = Category::whereKey($model->category_id)->value('slug') ?? $model->category;
+            }
+        });
+
+        static::updating(function ($model) {
+            if ($model->isDirty('brand_id') && !empty($model->brand_id)) {
+                $name = Brand::whereKey($model->brand_id)->value('name');
+                if ($name) {
+                    $model->brand = $name;
+                }
+            }
+            if ($model->isDirty('category_id') && !empty($model->category_id)) {
+                $slug = Category::whereKey($model->category_id)->value('slug');
+                if ($slug) {
+                    $model->category = $slug;
+                }
+            }
+        });
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if ($field) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        return $this->where('uuid', $value)
+            ->orWhere('id', is_numeric($value) ? (int) $value : 0)
+            ->first();
+    }
+
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function brandRef(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function categoryRef(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    public function subcategoryRef(): BelongsTo
+    {
+        return $this->belongsTo(Subcategory::class, 'subcategory_id');
+    }
+
+    /** Vehicle models this part is verified to fit. */
+    public function compatibleModels(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(CarModel::class, 'car_model_part')->withTimestamps();
     }
 
     public function media(): \Illuminate\Database\Eloquent\Relations\MorphMany

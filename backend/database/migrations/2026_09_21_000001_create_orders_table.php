@@ -51,6 +51,8 @@ return new class extends Migration
             $table->string('payment_method', 50)->default('bank_transfer');
             $table->string('payment_status', 30)->default('pending');
             $table->string('status', 30)->default('processing');
+            $table->string('tracking_number', 100)->nullable();
+            $table->string('carrier', 100)->nullable();
             $table->text('notes')->nullable();
 
             $table->timestamps();

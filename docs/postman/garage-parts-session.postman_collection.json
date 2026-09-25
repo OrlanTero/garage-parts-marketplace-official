@@ -2,7 +2,7 @@
     "info": {
         "name": "Garage Parts — Full Marketplace & Realtime API Collection",
         "_postman_id": "garage-parts-marketplace-v1",
-        "description": "Comprehensive Postman collection for Garage Parts Marketplace API.\n\n### Included Modules & Workflows:\n1. **System & Health Probes**: Health check, database/cache/queue probes, Laravel uptime, CSRF cookie initialization.\n2. **Authentication & Session**: Registration (Buyer, Seller, Dealer, Parts Seller), Multi-role Login, Profile (`/auth/me`), Role-specific probes (`buyer`, `seller`, `dealer`, `parts_seller`, `admin`), OAuth redirect/callback, Single & All-device logout.\n3. **Cars Marketplace & Seller Inventory**: Public listings with filters/search/pagination, Car detail, Seller Car creation, media array uploads, update, publish, unpublish, and mark-sold transitions.\n4. **Parts & Accessories Marketplace & Inventory**: Public parts catalog with category/condition/price filters, Part detail, Seller Part creation, media uploads, update, publish, unpublish, and mark-sold.\n5. **Real-time WebSockets & Broadcasting (Laravel Reverb)**: Channel authorization (`/api/v1/broadcasting/auth`) for `private-user.{id}`, `private-seller.{id}`, and `presence-marketplace` channels.\n6. **Nginx FastCGI Edge Performance & Caching**: Cache hit/miss/bypass validation probes.\n\n### Automatic Variable Sync:\n- Authentication requests automatically capture the Bearer `{{token}}` and `{{userId}}`.\n- Creating a car or part automatically captures `{{carId}}` and `{{partId}}` for downstream tests.",
+        "description": "Comprehensive Postman collection for Garage Parts Marketplace API.\n\n### Included Modules & Workflows:\n1. **System & Health Probes**: Health check, database/cache/queue probes, Laravel uptime, CSRF cookie initialization, remote migrations & seeding.\n2. **Authentication & Session**: Registration (Buyer, Seller, Dealer, Parts Seller), Multi-role Login, Profile (`/auth/me`), Role-specific probes (`buyer`, `seller`, `dealer`, `parts_seller`, `admin`), OAuth redirect/callback, Single & All-device logout.\n3. **Media Uploads & File Storage**: Upload single/batch high-resolution images & PDFs (AWS EFS & Local Storage ready), view, and delete media.\n4. **Saved & Favorites**: Save/unsave cars & parts, fetch favorite IDs for fast UI badges, filtered queries, and clear favorites.\n5. **Cars Marketplace (Public)**: Public vehicle catalog with multi-facet filters (brand, model, price, year, mileage, transmission), sorting, pagination, and detail specs.\n6. **Seller Cars Inventory**: Seller vehicle creation, media gallery linkage, updates, draft/publish/sold workflow transitions, and deletion.\n7. **Parts Marketplace (Public)**: Public automotive parts catalog with category, condition, free shipping, brand filters, and stock inspection.\n8. **Seller Parts Inventory**: Seller parts creation, inventory quantities, pricing, compatibility list, workflow transitions, and deletion.\n9. **Checkout & Orders**: Public/Customer order placement with line items, agent attribution, public order lookup by order number, and authenticated order history.\n10. **Sales Agent Portal**: Public referral code verification, agent sales performance analytics, and payout configuration.\n11. **Chat & Direct Messaging**: 1:1 user-to-user direct chat with listing context linkage, unread count badge, conversation listing, message history, read receipts, and automated PII sanitization engine.\n12. **Real-time WebSockets & Broadcasting (Laravel Reverb)**: Channel authorization (`/api/v1/broadcasting/auth`) for `private-user.{id}`, `private-seller.{id}`, `private-conversation.{id}`, and `presence-marketplace` channels.\n13. **Nginx FastCGI Edge Performance & Caching**: Microcache hit/miss validation and cache bypass checks.\n\n### Automatic Variable Sync:\n- Authentication requests automatically capture the Bearer `{{token}}` and `{{userId}}`.\n- Creating a car or part automatically captures `{{carId}}` and `{{partId}}`.\n- Creating an order or starting a conversation automatically captures `{{orderNumber}}` and `{{conversationId}}`.\n- Submitting a seller application automatically captures `{{applicationId}}`.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -34,6 +34,31 @@
         {
             "key": "mediaId",
             "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "conversationId",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "applicationId",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "recipientId",
+            "value": "2",
+            "type": "string"
+        },
+        {
+            "key": "orderNumber",
+            "value": "ORD-20260922-0001",
+            "type": "string"
+        },
+        {
+            "key": "agentCode",
+            "value": "AGENT-DEMO",
             "type": "string"
         },
         {
@@ -465,7 +490,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1789762994@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
+                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1790232828@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -521,7 +546,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1789762994@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
+                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1790232828@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -577,7 +602,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1789762994@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
+                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1790232828@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -633,7 +658,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1789762994@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
+                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1790232828@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -1282,7 +1307,7 @@
             ]
         },
         {
-            "name": "3. Media & High-Resolution File Storage",
+            "name": "3. Media & High-Resolution File Storage (AWS EFS / Local)",
             "item": [
                 {
                     "name": "POST Upload Single Media File",
@@ -1750,7 +1775,7 @@
             ]
         },
         {
-            "name": "4. Cars Marketplace (Public)",
+            "name": "5. Cars Marketplace (Public)",
             "item": [
                 {
                     "name": "GET List Public Cars",
@@ -1913,7 +1938,7 @@
             ]
         },
         {
-            "name": "5. Seller Cars Inventory (CRUD & Workflow)",
+            "name": "6. Seller Cars Inventory (CRUD & Workflow)",
             "item": [
                 {
                     "name": "GET My Cars Inventory",
@@ -2215,7 +2240,7 @@
             ]
         },
         {
-            "name": "6. Parts & Accessories Marketplace (Public)",
+            "name": "7. Parts & Accessories Marketplace (Public)",
             "item": [
                 {
                     "name": "GET List Public Parts",
@@ -2374,7 +2399,7 @@
             ]
         },
         {
-            "name": "7. Seller Parts & Accessories Inventory (CRUD & Workflow)",
+            "name": "8. Seller Parts & Accessories Inventory (CRUD & Workflow)",
             "item": [
                 {
                     "name": "GET My Parts Inventory",
@@ -2676,7 +2701,1582 @@
             ]
         },
         {
-            "name": "8. Real-time WebSockets & Broadcasting (Laravel Reverb)",
+            "name": "9. Checkout & Orders",
+            "item": [
+                {
+                    "name": "POST Create Checkout Order (Customer / Guest / Auth)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Order placed successfully (201)\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "    const res = pm.response.json();",
+                                    "    if (res.data && res.data.order_number) {",
+                                    "        pm.collectionVariables.set(\"orderNumber\", String(res.data.order_number));",
+                                    "    }",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"customer_name\": \"Juan Dela Cruz\",\n    \"customer_email\": \"buyer@example.com\",\n    \"customer_phone\": \"09171234567\",\n    \"shipping_address\": \"Unit 1204 High Street South, BGC, Taguig City, Metro Manila\",\n    \"notes\": \"Please coordinate delivery ahead of time.\",\n    \"items\": [\n        {\n            \"part_id\": 1,\n            \"quantity\": 1\n        }\n    ],\n    \"agent_referral_code\": \"AGENT-DEMO\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "orders"
+                            ]
+                        },
+                        "description": "Places an order for marketplace parts/items with customer details and optional agent referral code. Sets {{orderNumber}} variable."
+                    }
+                },
+                {
+                    "name": "GET Public Order Details Lookup",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Order details returned\", function () { const d = pm.response.json().data; pm.expect(d.order_number).to.be.a(\"string\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/orders/{{orderNumber}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "orders",
+                                "{{orderNumber}}"
+                            ]
+                        },
+                        "description": "Fetches order summary, line items, and fulfillment status using order number or UUID identifier."
+                    }
+                },
+                {
+                    "name": "GET User Orders History (Authenticated)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Orders array present\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "orders"
+                            ]
+                        },
+                        "description": "Returns order history for the currently authenticated buyer or seller."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "10. Sales Agent Portal",
+            "item": [
+                {
+                    "name": "GET Verify Sales Agent Referral Code (Public)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Agent verification response\", function () { const d = pm.response.json(); pm.expect(d).to.have.property(\"valid\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/agents/verify/{{agentCode}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agents",
+                                "verify",
+                                "{{agentCode}}"
+                            ]
+                        },
+                        "description": "Verifies whether a sales agent referral code is active and valid for checkout attribution."
+                    }
+                },
+                {
+                    "name": "GET Sales Agent Performance & Commission Stats (Authenticated)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Agent stats data loaded\", function () { const d = pm.response.json.data; pm.expect(d).to.be.an(\"object\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/agent/stats",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "stats"
+                            ]
+                        },
+                        "description": "Returns performance metrics, referred orders count, and commission earnings for the agent."
+                    }
+                },
+                {
+                    "name": "POST Update Agent Profile & Payout Settings (Authenticated)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Profile updated successfully\", function () { const d = pm.response.json(); pm.expect(d.status).to.eql(\"success\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"bio\": \"Certified Japanese Domestic Market (JDM) and Performance Parts Specialist.\",\n    \"commission_payout_details\": \"GCash: 0917-555-8888 | BDO Checking: 0012-3456-7890\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/agent/profile",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "profile"
+                            ]
+                        },
+                        "description": "Updates agent bio, specialties, and commission disbursement payout account."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "11. Seller KYC & Verification Badging",
+            "item": [
+                {
+                    "name": "GET KYC Status & Verification Credentials (Authenticated)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"KYC status loaded\", function () { const d = pm.response.json(); pm.expect(d.kyc).to.be.an(\"object\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/kyc/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "kyc",
+                                "status"
+                            ]
+                        },
+                        "description": "Returns the authenticated seller's KYC accreditation status, document credentials, and approval timestamps."
+                    }
+                },
+                {
+                    "name": "POST Submit KYC Verification Documents (Authenticated)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"KYC submitted for compliance review\", function () { const d = pm.response.json(); pm.expect(d.kyc.status).to.eql(\"pending\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"document_type\": \"drivers_license\",\n    \"document_number\": \"N02-18-992140\",\n    \"document_url\": \"https:\\/\\/images.unsplash.com\\/photo-1544717305-2782549b5136?w=800\",\n    \"selfie_url\": \"https:\\/\\/images.unsplash.com\\/photo-1507003211169-0a1dd7228f2d?w=800\",\n    \"notes\": \"Official Philippine Driver's License for Makati Showroom verification.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/kyc/submit",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "kyc",
+                                "submit"
+                            ]
+                        },
+                        "description": "Submits government ID or business permit credentials for compliance review to unlock the Verified Seller Badge."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "12. Buyer-to-Seller Upgrade Applications & Seller Dashboard",
+            "item": [
+                {
+                    "name": "POST Submit Seller Upgrade Application (Buyer)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "pm.test(\"Application pending\", function () { const d = pm.response.json(); pm.expect(d.application.status).to.eql(\"pending\"); pm.collectionVariables.set(\"applicationId\", String(d.application.id)); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"requested_role\": \"seller\",\n    \"shop_name\": \"Calamaya Garage\",\n    \"contact_phone\": \"09175551234\",\n    \"city\": \"Makati City\",\n    \"address\": \"123 Osmena Highway\",\n    \"reason\": \"Restored classic builds for the marketplace.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/seller-applications",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "seller-applications"
+                            ]
+                        },
+                        "description": "Buyer submits a seller/dealer/parts_seller upgrade request. One pending application per buyer; sellers and staff are rejected with 422."
+                    }
+                },
+                {
+                    "name": "GET My Applications & Upgrade Eligibility (Buyer)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Eligibility flags present\", function () { const d = pm.response.json(); pm.expect(d.eligibility).to.be.an(\"object\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/seller-applications",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "seller-applications"
+                            ]
+                        },
+                        "description": "Lists the authenticated buyer's own applications plus can_apply / kyc_verified eligibility flags and the pending application."
+                    }
+                },
+                {
+                    "name": "POST Withdraw Own Pending Application (Buyer)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/seller-applications/{{applicationId}}/withdraw",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "seller-applications",
+                                "{{applicationId}}",
+                                "withdraw"
+                            ]
+                        },
+                        "description": "Withdraws the buyer's own pending application. Withdrawn applicants may submit a fresh request."
+                    }
+                },
+                {
+                    "name": "GET Seller Dashboard Summary (Per-Status Counts)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Per-status counts present\", function () { const d = pm.response.json(); pm.expect(d.cars).to.be.an(\"object\"); pm.expect(d.parts).to.be.an(\"object\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/seller/summary",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "seller",
+                                "summary"
+                            ]
+                        },
+                        "description": "Per-status inventory counts across the seller's own cars (draft, pending_inspection, inspected, active, rejected, sold, archived) and parts."
+                    }
+                },
+                {
+                    "name": "GET Admin Seller Application Queue (Staff)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Queue stats present\", function () { const d = pm.response.json(); pm.expect(d.stats).to.be.an(\"object\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/seller-applications?status=pending",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "seller-applications"
+                            ]
+                        },
+                        "description": "Staff queue of upgrade applications with pending/approved/rejected/withdrawn stats. Filters: status, requested_role, q."
+                    }
+                },
+                {
+                    "name": "POST Admin Approve Application & Upgrade Role (Staff)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Role upgraded\", function () { const d = pm.response.json(); pm.expect(d.application.status).to.eql(\"approved\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"review_notes\": \"Docs check out.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/seller-applications/{{applicationId}}/approve",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "seller-applications",
+                                "{{applicationId}}",
+                                "approve"
+                            ]
+                        },
+                        "description": "Approves the upgrade and atomically grants the requested seller role. SECURITY GATE: 422 unless the applicant holds a verified KYC badge."
+                    }
+                },
+                {
+                    "name": "POST Admin Reject Application (Staff)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Business permit is expired. Please re-apply with valid documents.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/seller-applications/{{applicationId}}/reject",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "seller-applications",
+                                "{{applicationId}}",
+                                "reject"
+                            ]
+                        },
+                        "description": "Rejects the upgrade with a formal reason. Buyer role is kept; the applicant may re-apply."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "13. Chat & Direct Messaging (1:1 + PII Safety Engine)",
+            "item": [
+                {
+                    "name": "GET Unread Messages Total Count",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Unread count integer present\", function () { const d = pm.response.json(); pm.expect(d.unread_count).to.be.a(\"number\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/unread-count",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "unread-count"
+                            ]
+                        },
+                        "description": "Returns total count of unread incoming direct messages for navigation badge updates."
+                    }
+                },
+                {
+                    "name": "GET List Inbox Conversations",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Inbox list array present\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/conversations?per_page=15",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "conversations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15"
+                                }
+                            ]
+                        },
+                        "description": "Retrieves user inbox conversations with latest message preview, unread status, and recipient profile."
+                    }
+                },
+                {
+                    "name": "POST Start / Resolve 1:1 Conversation (With Listing Context)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Conversation created or resolved (200/201)\", function () {",
+                                    "    pm.expect([200, 201]).to.include(pm.response.code);",
+                                    "    const res = pm.response.json();",
+                                    "    if (res.data && res.data.id) {",
+                                    "        pm.collectionVariables.set(\"conversationId\", String(res.data.id));",
+                                    "    }",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"recipient_id\": 2,\n    \"initial_message\": \"Hello! Is this car build still available for inspection and test drive?\",\n    \"listing_type\": \"car\",\n    \"listing_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/conversations",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "conversations"
+                            ]
+                        },
+                        "description": "Finds existing or creates a new strictly 1:1 conversation thread between two users. Attaches listing context card and sets {{conversationId}} variable."
+                    }
+                },
+                {
+                    "name": "GET Single Conversation Details",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Conversation metadata and recipient data returned\", function () { const d = pm.response.json().data; pm.expect(d.id).to.be.a(\"number\"); pm.expect(d.other_user).to.be.an(\"object\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "conversations",
+                                "{{conversationId}}"
+                            ]
+                        },
+                        "description": "Retrieves conversation details, participant info, and pinned listing summary."
+                    }
+                },
+                {
+                    "name": "GET Conversation Message History (Paginated)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Messages array returned\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages?per_page=30",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "conversations",
+                                "{{conversationId}}",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "30"
+                                }
+                            ]
+                        },
+                        "description": "Fetches paginated chronological messages for a conversation thread."
+                    }
+                },
+                {
+                    "name": "POST Send Message (Clean Text)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "pm.test(\"Message dispatched\", function () { const d = pm.response.json().data; pm.expect(d.is_redacted).to.eql(false); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"body\": \"Can you provide dyno tuning charts and maintenance records for this build?\",\n    \"listing_type\": \"car\",\n    \"listing_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "conversations",
+                                "{{conversationId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Sends a standard clean message to the conversation and triggers WebSocket broadcasts."
+                    }
+                },
+                {
+                    "name": "POST Send Message (Automatic PII Redaction Verification)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 201 Created\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "pm.test(\"PII was automatically redacted\", function () { const d = pm.response.json().data; pm.expect(d.is_redacted).to.eql(true); pm.expect(d.body).to.include(\"[Phone Number Redacted for Safety]\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"body\": \"Call me directly at 0917-555-1234 or email me at seller@example.com for off-platform payment.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "conversations",
+                                "{{conversationId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Demonstrates server-side PII filter redacting phone numbers, emails, social handles, and payment cards."
+                    }
+                },
+                {
+                    "name": "POST Mark Conversation as Read",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Mark read status returned\", function () { const d = pm.response.json(); pm.expect(d.status).to.eql(\"success\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/read",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "conversations",
+                                "{{conversationId}}",
+                                "read"
+                            ]
+                        },
+                        "description": "Marks all unread messages from the other user in this conversation as read and broadcasts MessageRead event."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "14. Administrator, KYC Review & Moderation Portal",
+            "item": [
+                {
+                    "name": "GET Moderation Cars Queue",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Returns car queue\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/moderation/cars?status=pending_inspection",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "moderation",
+                                "cars"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "pending_inspection"
+                                }
+                            ]
+                        },
+                        "description": "Fetches cars in pending inspection or moderation queue."
+                    }
+                },
+                {
+                    "name": "POST Schedule Inspection (Garage Drop-off / On-Site)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Inspection scheduled\", function () { const d = pm.response.json(); pm.expect(d.data.inspection_status).to.eql(\"scheduled\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"inspection_type\": \"garage_dropoff\",\n    \"inspection_date\": \"2026-09-26 06:53:48\",\n    \"inspection_location\": \"Makati Certified Bay 1\",\n    \"notes\": \"Underside rust and turbo manifold inspection\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/moderation/cars/{{carId}}/schedule-inspection",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "moderation",
+                                "cars",
+                                "{{carId}}",
+                                "schedule-inspection"
+                            ]
+                        },
+                        "description": "Schedules an inspection slot (garage drop-off or mobile on-site visit)."
+                    }
+                },
+                {
+                    "name": "POST Record Inspection Results & Score",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Inspection recorded\", function () { const d = pm.response.json(); pm.expect(d.data.score).to.be.a(\"string\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"passed\": true,\n    \"inspection_score\": \"96\\/100\",\n    \"inspector_notes\": \"Structural integrity and engine compression verified.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/moderation/cars/{{carId}}/record-inspection",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "moderation",
+                                "cars",
+                                "{{carId}}",
+                                "record-inspection"
+                            ]
+                        },
+                        "description": "Records inspection checklist result, condition score, and notes."
+                    }
+                },
+                {
+                    "name": "POST Approve Vehicle Listing",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Approved and active\", function () { const d = pm.response.json(); pm.expect(d.data.status).to.eql(\"active\"); pm.expect(d.data.is_approved).to.eql(true); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/moderation/cars/{{carId}}/approve",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "moderation",
+                                "cars",
+                                "{{carId}}",
+                                "approve"
+                            ]
+                        },
+                        "description": "Approves vehicle build and publishes it live to public marketplace."
+                    }
+                },
+                {
+                    "name": "POST Reject Vehicle Listing",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Rejected listing\", function () { const d = pm.response.json(); pm.expect(d.data.status).to.eql(\"rejected\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Failed roadworthiness braking test.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/moderation/cars/{{carId}}/reject",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "moderation",
+                                "cars",
+                                "{{carId}}",
+                                "reject"
+                            ]
+                        },
+                        "description": "Rejects listing with clear reason feedback to seller."
+                    }
+                },
+                {
+                    "name": "GET Inspection Appointments",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Appointments list\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/appointments",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "appointments"
+                            ]
+                        },
+                        "description": "Lists scheduled and completed inspection appointments with method filters."
+                    }
+                },
+                {
+                    "name": "GET Chat Moderation Conversations",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Chat audit list\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/chat/conversations?redacted_only=false",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "chat",
+                                "conversations"
+                            ]
+                        },
+                        "description": "Audits conversations and identifies flagged/redacted PII messages."
+                    }
+                },
+                {
+                    "name": "GET KYC Seller Verification Queue",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"KYC queue loaded\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/kyc-verifications?status=pending",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "kyc-verifications"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "pending"
+                                }
+                            ]
+                        },
+                        "description": "Retrieves pending seller & dealer KYC submissions awaiting compliance document review."
+                    }
+                },
+                {
+                    "name": "POST Approve KYC Verification & Grant Verified Badge",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"KYC approved and badge granted\", function () { const d = pm.response.json(); pm.expect(d.user.is_kyc_verified).to.eql(true); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/kyc-verifications/{{userId}}/approve",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "kyc-verifications",
+                                "{{userId}}",
+                                "approve"
+                            ]
+                        },
+                        "description": "Approves seller identity credentials and assigns the official Verified Seller Badge."
+                    }
+                },
+                {
+                    "name": "POST Reject KYC Verification with Reason",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"KYC rejected with feedback\", function () { const d = pm.response.json(); pm.expect(d.user.is_kyc_verified).to.eql(false); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Blurry photo scan. Please submit a clearer image of your government ID.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/kyc-verifications/{{userId}}/reject",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "kyc-verifications",
+                                "{{userId}}",
+                                "reject"
+                            ]
+                        },
+                        "description": "Rejects KYC verification with formal compliance feedback to the seller."
+                    }
+                },
+                {
+                    "name": "GET Admin User List with Roles",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"User list\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/users",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "users"
+                            ]
+                        },
+                        "description": "Lists buyers, sellers, dealers, and staff accounts."
+                    }
+                },
+                {
+                    "name": "PATCH Update User Role (RBAC)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Role updated\", function () { const d = pm.response.json(); pm.expect(d.user.role).to.eql(\"inspector\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"role\": \"inspector\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}/role",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "users",
+                                "{{userId}}",
+                                "role"
+                            ]
+                        },
+                        "description": "Elevates or modifies user role across Super Admin, Admin, Inspector, Dealer, Seller, or Buyer."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "15. Real-time WebSockets & Broadcasting (Laravel Reverb)",
             "item": [
                 {
                     "name": "POST Authorize Private User Channel (private-user.{id})",
@@ -2773,6 +4373,53 @@
                     }
                 },
                 {
+                    "name": "POST Authorize Private Conversation Channel (private-conversation.{id})",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Conversation channel auth signature\", function () { const d = pm.response.json(); pm.expect(d.auth).to.be.a(\"string\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"socket_id\": \"{{socketId}}\",\n    \"channel_name\": \"private-conversation.{{conversationId}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/broadcasting/auth",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "broadcasting",
+                                "auth"
+                            ]
+                        },
+                        "description": "Authenticates WebSocket connection to private 1:1 conversation message stream."
+                    }
+                },
+                {
                     "name": "POST Authorize Presence Channel (presence-marketplace)",
                     "event": [
                         {
@@ -2822,7 +4469,7 @@
             ]
         },
         {
-            "name": "9. Nginx Caching & Edge Performance",
+            "name": "16. Nginx Caching & Edge Performance",
             "item": [
                 {
                     "name": "GET Public Cars (Validate Nginx FastCGI Cache Header)",

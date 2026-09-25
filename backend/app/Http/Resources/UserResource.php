@@ -16,6 +16,7 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'username' => $this->username,
             'email' => $this->email,
             'role' => $role,
             'provider' => $this->provider,
@@ -24,6 +25,12 @@ class UserResource extends JsonResource
             'commission_rate' => (float) ($this->commission_rate ?? 5.00),
             'is_agent' => (bool) ($this->is_agent ?? true),
             'agent_tagline' => $this->agent_tagline,
+            'kyc_status' => $this->kyc_status ?? 'not_submitted',
+            'is_kyc_verified' => (bool) ($this->is_kyc_verified && $this->kyc_status === 'approved'),
+            'kyc_document_type' => $this->kyc_document_type,
+            'kyc_submitted_at' => $this->kyc_submitted_at?->toISOString(),
+            'kyc_verified_at' => $this->kyc_verified_at?->toISOString(),
+            'kyc_rejection_reason' => $this->kyc_rejection_reason,
             'email_verified_at' => $this->email_verified_at,
             'last_login_at' => $this->last_login_at,
         ];

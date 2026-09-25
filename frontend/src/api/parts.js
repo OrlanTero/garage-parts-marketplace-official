@@ -27,6 +27,7 @@ export const sellerParts = {
 
 export const PART_FILTER_META = {
   sorts: ['newest', 'price_asc', 'price_desc'],
-  categories: ['engine', 'transmission', 'suspension', 'brakes', 'exhaust', 'electrical', 'tires_wheels', 'wheels', 'body_exterior', 'interior', 'fluids_lubricants', 'accessories', 'other'],
   conditions: ['new', 'used', 'refurbished'],
 }
+// NOTE: category options are NOT defined here anymore — use `useTaxonomy()`
+// from './taxonomy.js' for the live backend Category catalog.

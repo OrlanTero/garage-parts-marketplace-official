@@ -95,6 +95,46 @@ class OrderTest extends TestCase
             ->assertJsonValidationErrors(['vin']);
     }
 
+    public function test_car_checkout_does_not_require_buyer_chassis_or_vin(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $car = Car::create([
+            'seller_id' => $seller->id,
+            'title' => '1998 Nissan Silvia S15 Spec-R Aero',
+            'brand' => 'Nissan',
+            'model' => 'Silvia S15 Spec-R',
+            'year' => 1998,
+            'price' => 1240000.00,
+            'vin' => 'JN100S15A01239845',
+            'status' => 'active',
+            'published_at' => now(),
+        ]);
+
+        $payload = [
+            'buyer_name' => 'Anton Valenzuela',
+            'buyer_email' => 'anton@garagemarket.ph',
+            'shipping_address' => '124 Chino Roces Ave, Makati',
+            'car_id' => $car->id,
+            'item_type' => 'car',
+            'quantity' => 1,
+            'payment_method' => 'bank_transfer',
+            // No chassis_number / vin — recorded from the listing instead.
+        ];
+
+        $response = $this->postJson('/api/v1/orders', $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.vehicle.chassis_number', null)
+            ->assertJsonPath('data.vehicle.vin', 'JN100S15A01239845')
+            ->assertJsonPath('data.item.type', 'car');
+
+        $this->assertDatabaseHas('orders', [
+            'buyer_email' => 'anton@garagemarket.ph',
+            'car_id' => $car->id,
+            'vin' => 'JN100S15A01239845',
+        ]);
+    }
+
     public function test_sales_order_can_be_retrieved_with_chassis_and_vin_details(): void
     {
         $order = Order::create([

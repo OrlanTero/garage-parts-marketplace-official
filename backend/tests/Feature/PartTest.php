@@ -31,10 +31,10 @@ class PartTest extends TestCase
         ];
     }
 
-    public function test_seller_can_create_draft_and_publish_to_marketplace(): void
+    public function test_dealer_can_create_draft_and_publish_to_marketplace(): void
     {
-        $seller = User::factory()->create(['role' => 'seller']);
-        $headers = $this->sellerToken($seller);
+        $dealer = User::factory()->kycVerified()->create(['role' => 'dealer']);
+        $headers = $this->sellerToken($dealer);
 
         $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
             ->assertCreated()
@@ -54,9 +54,17 @@ class PartTest extends TestCase
         $this->getJson("/api/v1/marketplace/parts/{$partId}")->assertOk();
     }
 
+    public function test_standard_seller_cannot_create_parts(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $this->sellerToken($seller))
+            ->assertForbidden();
+    }
+
     public function test_parts_seller_can_create_and_publish_parts(): void
     {
-        $partsSeller = User::factory()->create(['role' => 'parts_seller']);
+        $partsSeller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
         $headers = $this->sellerToken($partsSeller);
 
         $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
@@ -105,8 +113,8 @@ class PartTest extends TestCase
 
     public function test_owner_only_update_and_sold_flow(): void
     {
-        $owner = User::factory()->create(['role' => 'seller']);
-        $other = User::factory()->create(['role' => 'seller']);
+        $owner = User::factory()->create(['role' => 'parts_seller']);
+        $other = User::factory()->create(['role' => 'parts_seller']);
         $part = Part::factory()->for($owner, 'seller')->active()->create();
 
         // Non-owner cannot update.
@@ -125,7 +133,7 @@ class PartTest extends TestCase
 
     public function test_part_supports_multiple_images_and_marketplace_serialization(): void
     {
-        $seller = User::factory()->create(['role' => 'seller']);
+        $seller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
         $headers = $this->sellerToken($seller);
 
         $payload = array_merge($this->partPayload(), [
@@ -156,5 +164,29 @@ class PartTest extends TestCase
             ->assertJsonCount(2, 'data.images')
             ->assertJsonCount(2, 'data.image_urls')
             ->assertJsonPath('data.primary_image_url', 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3');
+    }
+
+    public function test_part_is_accessible_via_uuid_in_marketplace_and_seller_routes(): void
+    {
+        $partsSeller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
+        $headers = $this->sellerToken($partsSeller);
+
+        $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertCreated();
+
+        $uuid = $create->json('data.uuid');
+        $this->assertNotEmpty($uuid);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $uuid);
+
+        // Publish using UUID
+        $this->postJson("/api/v1/seller/parts/{$uuid}/publish", [], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
+
+        // Fetch via UUID on public marketplace
+        $this->getJson("/api/v1/marketplace/parts/{$uuid}")
+            ->assertOk()
+            ->assertJsonPath('data.uuid', $uuid)
+            ->assertJsonPath('data.title', 'Bosch Front Brake Pads Set');
     }
 }

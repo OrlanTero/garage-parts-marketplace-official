@@ -17,9 +17,11 @@ import {
   Download
 } from 'lucide-react'
 import { ordersApi } from '../api/orders.js'
+import { useMediaQuery } from '../hooks/useMediaQuery.js'
 
 export default function SalesOrder() {
   const { orderNumber } = useParams()
+  const isNarrow = useMediaQuery('(max-width: 700px)')
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -54,6 +56,28 @@ export default function SalesOrder() {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  const [payMethod, setPayMethod] = useState('bank_transfer')
+  const [paySaving, setPaySaving] = useState(false)
+
+  useEffect(() => {
+    const current = order?.financials?.payment_method || order?.payment_method
+    if (current) setPayMethod(current)
+  }, [order?.order_number])
+
+  const handlePayMethodChange = async (method) => {
+    if (!order) return
+    setPayMethod(method)
+    try {
+      setPaySaving(true)
+      const updated = await ordersApi.updatePaymentMethod(order.order_number || order.id || orderNumber, method)
+      setOrder(updated)
+    } catch {
+      // keep local selection; server state unchanged
+    } finally {
+      setPaySaving(false)
+    }
   }
 
   if (loading) {
@@ -101,6 +125,16 @@ export default function SalesOrder() {
   const chassisNum = vehicle.chassis_number || order.chassis_number || 'N/A'
   const vinNum = vehicle.vin || order.vin || 'N/A'
   const vehicleModel = vehicle.make_model || order.vehicle_make_model || 'Target Vehicle Specification'
+
+  // Fitment identity (chassis/VIN of the buyer's vehicle) applies to PART
+  // orders only. Car orders certify the purchased vehicle's own VIN instead.
+  const isCarOrder = (order.item?.type || order.item_type) === 'car'
+  const hasChassis = chassisNum !== 'N/A'
+
+  // Seller verification gate — payment unlocks only after acceptance.
+  const verification = order.verification_status || 'pending'
+  const isAccepted = verification === 'accepted'
+  const isRejected = verification === 'rejected'
 
   return (
     <div className="sales-order-wrapper" style={{ maxWidth: 960, margin: '0 auto', padding: '32px 20px 80px 20px' }}>
@@ -186,10 +220,43 @@ export default function SalesOrder() {
             Sales Order Successfully Generated & Serialized!
           </h2>
           <div style={{ fontSize: 13, color: '#cbd5e1' }}>
-            Thank you, <strong>{buyer.name || 'Customer'}</strong>. Your sales order reference is <strong>{orderNum}</strong>. Vehicle fitment validation has been recorded for chassis <strong>{chassisNum}</strong>.
+            Thank you, <strong>{buyer.name || 'Customer'}</strong>. Your sales order reference is <strong>{orderNum}</strong>.{' '}
+            {isCarOrder
+              ? <>Ownership transfer documentation has been recorded for VIN <strong>{vinNum}</strong>.</>
+              : <>Vehicle fitment validation has been recorded for chassis <strong>{chassisNum}</strong>.</>}
           </div>
         </div>
       </div>
+
+      {/* VERIFICATION STATUS — payment unlocks only after seller acceptance */}
+      {!isAccepted && !isRejected && (
+        <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid #eab308', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <AlertCircle size={20} color="#eab308" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#eab308' }}>Awaiting Seller Verification.</strong>{' '}
+            Your request is queued with the seller, who may receive multiple requests for this listing and will accept one buyer.
+            Payment instructions unlock here automatically once your request is verified & accepted.
+          </div>
+        </div>
+      )}
+      {isRejected && (
+        <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#ef4444' }}>Request Declined by Seller.</strong>{' '}
+            {order.verification_note || 'Another buyer request was accepted for this listing.'}
+          </div>
+        </div>
+      )}
+      {isAccepted && (
+        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <CheckCircle2 size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#10b981' }}>Verified & Accepted.</strong>{' '}
+            The seller confirmed your request. Settlement details below are now active — please proceed with payment.
+          </div>
+        </div>
+      )}
 
       {/* THE OFFICIAL SALES ORDER DOCUMENT */}
       <div 
@@ -198,14 +265,14 @@ export default function SalesOrder() {
           background: '#161922',
           border: '1px solid #1e293b',
           borderRadius: 12,
-          padding: '40px 36px',
+          padding: isNarrow ? '24px 16px' : '40px 36px',
           boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
           position: 'relative',
           overflow: 'hidden'
         }}
       >
         {/* Document Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #1e293b', paddingBottom: 24, marginBottom: 28 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #1e293b', paddingBottom: 24, marginBottom: 28 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ width: 14, height: 14, background: '#d8622c', borderRadius: 3 }} />
@@ -214,7 +281,7 @@ export default function SalesOrder() {
               </span>
             </div>
             <div style={{ fontSize: 12, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
-              Official Automotive Sales Order & Fitment Certification
+              {isCarOrder ? 'Official Vehicle Sales Order & Transfer Documentation' : 'Official Automotive Sales Order & Fitment Certification'}
             </div>
             <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
               Depot Logistics & Fulfillment Center · Makati Showroom Hub
@@ -253,8 +320,12 @@ export default function SalesOrder() {
             </strong>
           </div>
           <div>
-            <span style={{ color: '#64748b', display: 'block', marginBottom: 2 }}>Fitment Validation:</span>
-            <strong style={{ color: '#10b981' }}>✓ Chassis Certified</strong>
+            <span style={{ color: '#64748b', display: 'block', marginBottom: 2 }}>
+              {isCarOrder ? 'Documentation:' : 'Fitment Validation:'}
+            </span>
+            <strong style={{ color: '#10b981' }}>
+              {isCarOrder ? '✓ VIN Verified' : '✓ Chassis Certified'}
+            </strong>
           </div>
         </div>
 
@@ -267,6 +338,8 @@ export default function SalesOrder() {
             padding: '12px 18px',
             marginBottom: 24,
             display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: 12
@@ -290,7 +363,7 @@ export default function SalesOrder() {
         )}
 
         {/* SECTION: TWO-COLUMN DETAILS GRID (CUSTOMER & VEHICLE IDENTIFICATION) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr', gap: isNarrow ? 16 : 24, marginBottom: 32 }}>
           
           {/* Customer & Shipping Details Box */}
           <div style={{ background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: 20 }}>
@@ -332,7 +405,8 @@ export default function SalesOrder() {
               </span>
             </div>
 
-            {/* Chassis Number */}
+            {/* Chassis Number (part orders only — cars certify their own VIN) */}
+            {hasChassis && (
             <div style={{ marginBottom: 10 }}>
               <span style={{ fontSize: 11, color: '#94a3b8', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Chassis / Frame Number:
@@ -341,6 +415,7 @@ export default function SalesOrder() {
                 {chassisNum}
               </span>
             </div>
+            )}
 
             {/* VIN */}
             <div style={{ marginBottom: 10 }}>
@@ -368,11 +443,11 @@ export default function SalesOrder() {
         {/* SECTION: ITEMIZED ORDER TABLE */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-            Ordered Items & Fitment Line Specifications
+            Ordered Items{isCarOrder ? ' & Transfer Line Specifications' : ' & Fitment Line Specifications'}
           </div>
 
-          <div style={{ border: '1px solid #1e293b', borderRadius: 8, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+          <div style={{ border: '1px solid #1e293b', borderRadius: 8, overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#0f1117', borderBottom: '1px solid #1e293b', color: '#94a3b8' }}>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Item Description</th>
@@ -428,12 +503,35 @@ export default function SalesOrder() {
         </div>
 
         {/* SECTION: FINANCIALS & SETTLEMENT SUMMARY */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, marginBottom: 28, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? '1fr' : '1fr 340px', gap: isNarrow ? 16 : 24, marginBottom: 28, alignItems: 'start' }}>
           
-          {/* Payment & Wire Transfer Instructions */}
+          {/* Payment & Wire Transfer Instructions (accepted orders only) */}
+          {isAccepted ? (
           <div style={{ background: '#0f1117', border: '1px solid #1e293b', borderRadius: 8, padding: 18 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#f8fafc', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
               <CreditCard size={14} color="#d8622c" /> Official Settlement & Bank Details
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              {[
+                { id: 'bank_transfer', label: 'Bank Transfer' },
+                { id: 'ewallet', label: 'GCash / Maya' },
+                { id: 'credit_card', label: 'Card' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => handlePayMethodChange(m.id)}
+                  disabled={paySaving}
+                  style={{
+                    fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                    background: payMethod === m.id ? 'rgba(216, 98, 44, 0.15)' : 'transparent',
+                    border: payMethod === m.id ? '1px solid #d8622c' : '1px solid #2d3748',
+                    color: payMethod === m.id ? '#fb923c' : '#94a3b8',
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
             </div>
             <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
               <div>Bank: <strong>BDO Unibank (Banco de Oro) / BPI</strong></div>
@@ -445,6 +543,18 @@ export default function SalesOrder() {
               </div>
             </div>
           </div>
+          ) : (
+          <div style={{ background: '#0f1117', border: '1px dashed #2d3748', borderRadius: 8, padding: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CreditCard size={14} color="#64748b" /> Settlement Details Locked
+            </div>
+            <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
+              {isRejected
+                ? 'This request was declined — no payment is due.'
+                : 'Bank details and payment options will appear here once the seller verifies & accepts your request.'}
+            </div>
+          </div>
+          )}
 
           {/* Pricing Totals Box */}
           <div style={{ background: '#0f1117', border: '1px solid #1e293b', borderRadius: 8, padding: 18 }}>
@@ -462,7 +572,7 @@ export default function SalesOrder() {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-                <span>Chassis Fitment Check:</span>
+                <span>{isCarOrder ? 'Ownership Documentation:' : 'Chassis Fitment Check:'}</span>
                 <span style={{ color: '#10b981', fontWeight: 600 }}>Included (₱0.00)</span>
               </div>
               
@@ -480,7 +590,7 @@ export default function SalesOrder() {
         {/* Order Notes (if any) */}
         {order.notes && (
           <div style={{ background: '#0f1117', border: '1px solid #1e293b', borderRadius: 8, padding: 14, marginBottom: 28, fontSize: 12 }}>
-            <span style={{ color: '#64748b', display: 'block', marginBottom: 4, fontWeight: 600 }}>Order Fitment Notes:</span>
+            <span style={{ color: '#64748b', display: 'block', marginBottom: 4, fontWeight: 600 }}>Order {isCarOrder ? 'Transfer' : 'Fitment'} Notes:</span>
             <div style={{ color: '#cbd5e1', fontStyle: 'italic' }}>{order.notes}</div>
           </div>
         )}
@@ -488,7 +598,10 @@ export default function SalesOrder() {
         {/* Document Footer & Security Guarantee */}
         <div style={{ borderTop: '2px solid #1e293b', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, fontSize: 11, color: '#64748b' }}>
           <div>
-            Official Garage Parts Marketplace Document · Certified for Chassis {chassisNum} & VIN {vinNum}
+            Official Garage Parts Marketplace Document ·{' '}
+            {isCarOrder
+              ? <>Certified for VIN {vinNum}</>
+              : <>Certified for Chassis {chassisNum} & VIN {vinNum}</>}
           </div>
           <div style={{ fontFamily: 'monospace', color: '#475569' }}>
             SERIAL: GP-AUTH-{orderNum}-SECURED

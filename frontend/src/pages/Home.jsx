@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -9,12 +9,7 @@ import {
   Sparkles,
   Wrench,
   Gauge,
-  Disc,
-  Flame,
-  Armchair,
-  Compass,
   ArrowRight,
-  Heart,
   Star,
   Calendar,
   Clock,
@@ -22,56 +17,17 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
-  HelpCircle,
   Award,
-  Filter,
   Check,
   ArrowUpRight,
-  Sliders,
-  Radio
 } from 'lucide-react'
 import { marketplaceCars } from '../api/cars.js'
 import { marketplaceParts } from '../api/parts.js'
-import { BRAND_REGIONS } from '../constants/brands.js'
+import { useTaxonomy, groupBrandsByRegion, categoryDisplay, formatCount } from '../api/taxonomy.js'
 import CarCard from '../components/CarCard.jsx'
 import PartCard from '../components/PartCard.jsx'
 import CategoryCard from '../components/CategoryCard.jsx'
 import './Home.css'
-
-/* ——— Categories Data ——— */
-const CATEGORIES = [
-  { id: 'engine', name: 'Engine & Turbo', count: '1,420 items', icon: Wrench, img: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=600&auto=format&fit=crop' },
-  { id: 'wheels', name: 'Wheels & Rims', count: '890 items', icon: Disc, img: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=600&auto=format&fit=crop' },
-  { id: 'brakes', name: 'Brakes & Suspension', count: '760 items', icon: Sliders, img: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?q=80&w=600&auto=format&fit=crop' },
-  { id: 'exhaust', name: 'Exhaust & Headers', count: '520 items', icon: Flame, img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=600&auto=format&fit=crop' },
-  { id: 'interior', name: 'Interior & Recaro', count: '640 items', icon: Armchair, img: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=600&auto=format&fit=crop' },
-  { id: 'offroad', name: '4x4 & Overlanding', count: '580 items', icon: Compass, img: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=600&auto=format&fit=crop' },
-]
-
-/* ——— Featured Cars Data ——— */
-const FEATURED_CARS = [
-  { id: 1, year: 1972, make: 'Toyota', model: 'Celica GT 1600', category: 'classics', price: '₱ 890,000', origPrice: '₱ 950,000', mileage: '42,000 km', trans: 'Manual 5-Spd', fuel: 'Petrol', score: '98/100', img: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=800&auto=format&fit=crop', loc: 'Makati Showroom', tag: 'Restored Classic', rating: 4.9 },
-  { id: 2, year: 1998, make: 'Nissan', model: 'Silvia S15 Spec-R', category: 'jdm', price: '₱ 1,240,000', origPrice: '₱ 1,320,000', mileage: '88,000 km', trans: 'Manual 6-Spd', fuel: 'Petrol Turbo', score: '99/100', img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800&auto=format&fit=crop', loc: 'Cebu City', tag: 'JDM Icon · SR20DET', rating: 5.0 },
-  { id: 3, year: 2019, make: 'Ford', model: 'Ranger Raptor 4x4', category: '4x4', price: '₱ 1,650,000', origPrice: '₱ 1,750,000', mileage: '31,000 km', trans: 'Automatic', fuel: 'Bi-Turbo Diesel', score: '97/100', img: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=800&auto=format&fit=crop', loc: 'Pampanga', tag: 'Overland Ready', rating: 4.8 },
-  { id: 4, year: 1986, make: 'Mercedes-Benz', model: '190E 2.3-16 Cosworth', category: 'classics', price: '₱ 1,050,000', origPrice: '₱ 1,150,000', mileage: '112,000 km', trans: 'Dogleg Manual', fuel: 'Petrol', score: '96/100', img: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=800&auto=format&fit=crop', loc: 'Manila HQ', tag: 'Cosworth DTM', rating: 4.9 },
-  { id: 5, year: 1975, make: 'Datsun', model: '240Z Fairlady S30', category: 'classics', price: '₱ 1,380,000', origPrice: '₱ 1,450,000', mileage: '67,000 km', trans: 'Manual', fuel: 'Triple Mikuni', score: '99/100', img: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?q=80&w=800&auto=format&fit=crop', loc: 'Makati Showroom', tag: 'Concours Resto', rating: 5.0 },
-  { id: 6, year: 2021, make: 'Toyota', model: 'Hilux Conquest 4x4', category: '4x4', price: '₱ 1,420,000', origPrice: '₱ 1,480,000', mileage: '18,500 km', trans: 'Automatic', fuel: '1GD-FTV Diesel', score: '99/100', img: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=800&auto=format&fit=crop', loc: 'Batangas', tag: '1st Owner · Like New', rating: 4.9 },
-  { id: 7, year: 1995, make: 'Honda', model: 'Civic EG6 SiR-II', category: 'jdm', price: '₱ 620,000', origPrice: '₱ 680,000', mileage: '95,000 km', trans: 'Manual LSD', fuel: 'B16A VTEC', score: '97/100', img: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?q=80&w=800&auto=format&fit=crop', loc: 'Cebu Hub', tag: 'Original B16A SiR', rating: 4.8 },
-  { id: 8, year: 1970, make: 'Ford', model: 'Mustang Fastback 302', category: 'classics', price: '₱ 2,100,000', origPrice: '₱ 2,250,000', mileage: '51,000 km', trans: 'Manual 4-Spd', fuel: 'V8 302ci', score: '98/100', img: 'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?q=80&w=800&auto=format&fit=crop', loc: 'Manila HQ', tag: 'American Muscle', rating: 5.0 },
-]
-
-/* ——— Featured Parts Data ——— */
-const FEATURED_PARTS = [
-  { id: 1, title: 'Brembo GT 6-Piston Monobloc Big Brake Kit', cat: 'brakes', catName: 'Brakes', price: '₱ 42,500', origPrice: '₱ 48,000', cond: 'Brand New OEM', freeShip: true, img: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=500&auto=format&fit=crop', reviews: 24, rating: 4.9 },
-  { id: 2, title: 'Recaro SR-7 KK100 Reclinable Seats (Pair)', cat: 'interior', catName: 'Interior', price: '₱ 58,000', origPrice: '₱ 64,000', cond: 'Surplus Mint 9.5/10', freeShip: true, img: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=500&auto=format&fit=crop', reviews: 18, rating: 5.0 },
-  { id: 3, title: 'HKS Hi-Power Spec-L II Titanium Catback Exhaust', cat: 'exhaust', catName: 'Exhaust', price: '₱ 31,000', origPrice: '₱ 35,500', cond: 'Brand New in Box', freeShip: false, img: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?q=80&w=500&auto=format&fit=crop', reviews: 31, rating: 4.8 },
-  { id: 4, title: 'Work Meister S1 3-Piece 18x9.5 +22 5x114.3', cat: 'wheels', catName: 'Wheels', price: '₱ 72,000', origPrice: '₱ 80,000', cond: 'Surplus 9/10 Polished', freeShip: true, img: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=500&auto=format&fit=crop', reviews: 14, rating: 4.9 },
-  { id: 5, title: 'Nardi Classic 360mm Wood Steering Wheel + Horn', cat: 'interior', catName: 'Interior', price: '₱ 18,500', origPrice: '₱ 21,000', cond: 'Brand New Made in Italy', freeShip: true, img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=500&auto=format&fit=crop', reviews: 42, rating: 5.0 },
-  { id: 6, title: 'Koyo N-Flow Dual-Pass Aluminum Radiator', cat: 'engine', catName: 'Engine', price: '₱ 24,900', origPrice: '₱ 27,500', cond: 'Brand New Made in Japan', freeShip: true, img: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=500&auto=format&fit=crop', reviews: 19, rating: 4.9 },
-  { id: 7, title: 'RAYS Volk Racing TE37 Saga S-Plus 18" Bronze', cat: 'wheels', catName: 'Wheels', price: '₱ 88,000', origPrice: '₱ 96,000', cond: 'Brand New in Box', freeShip: true, img: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=500&auto=format&fit=crop', reviews: 29, rating: 5.0 },
-  { id: 8, title: 'Garrett Motion G25-550 Dual Ball Bearing Turbo', cat: 'engine', catName: 'Engine', price: '₱ 95,000', origPrice: '₱ 105,000', cond: 'Brand New Genuine USA', freeShip: true, img: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=500&auto=format&fit=crop', reviews: 16, rating: 4.9 },
-  { id: 9, title: 'Cusco Type-RS 1.5-Way Limited Slip Differential', cat: 'engine', catName: 'Drivetrain', price: '₱ 38,500', origPrice: '₱ 42,000', cond: 'Surplus Mint 9/10', freeShip: false, img: 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?q=80&w=500&auto=format&fit=crop', reviews: 11, rating: 4.8 },
-]
 
 /* ——— FAQ Data ——— */
 const FAQS = [
@@ -137,25 +93,68 @@ export default function Home() {
   const [finderCat, setFinderCat] = useState('')
 
   // Live Database Records
-  const [liveCars, setLiveCars] = useState(null)
-  const [liveParts, setLiveParts] = useState(null)
+  const [liveCars, setLiveCars] = useState([])
+  const [liveParts, setLiveParts] = useState([])
+  const [isLoadingCars, setIsLoadingCars] = useState(true)
+  const [isLoadingParts, setIsLoadingParts] = useState(true)
+
+  // Live taxonomy — brands, models & categories served by the backend.
+  const { brands: liveBrands, categories: liveCategories, models: allModels } = useTaxonomy()
+  const brandGroups = useMemo(() => groupBrandsByRegion(liveBrands), [liveBrands])
+  const selectedBrand = useMemo(
+    () => liveBrands.find((b) => b.name === finderMake),
+    [liveBrands, finderMake]
+  )
+  // Model/Chassis dropdown always has contents: every cataloged model up
+  // front, narrowed to the picked Make when one is selected.
+  const finderModels = useMemo(
+    () => (selectedBrand ? allModels.filter((m) => m.brand_id === selectedBrand.id) : allModels),
+    [allModels, selectedBrand]
+  )
+  const finderModelGroups = useMemo(() => {
+    if (selectedBrand) return null
+    const byBrand = new Map()
+    for (const m of allModels) {
+      if (!byBrand.has(m.brand_name)) byBrand.set(m.brand_name, [])
+      byBrand.get(m.brand_name).push(m)
+    }
+    return [...byBrand.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [allModels, selectedBrand])
+  const displayCategories = useMemo(
+    () =>
+      liveCategories.slice(0, 6).map((cat) => {
+        const display = categoryDisplay(cat.slug)
+        return {
+          id: cat.slug,
+          name: cat.name,
+          count: formatCount(cat.parts_count),
+          icon: display.icon,
+          img: cat.image_url || display.img,
+        }
+      }),
+    [liveCategories]
+  )
 
   useEffect(() => {
+    setIsLoadingCars(true)
     marketplaceCars.list({ per_page: 8, sort: 'newest' })
       .then((res) => {
-        if (res?.data && res.data.length > 0) {
-          setLiveCars(res.data)
-        }
+        setLiveCars(res?.data || [])
       })
-      .catch(() => {})
+      .catch(() => {
+        setLiveCars([])
+      })
+      .finally(() => setIsLoadingCars(false))
 
+    setIsLoadingParts(true)
     marketplaceParts.list({ per_page: 9, sort: 'newest' })
       .then((res) => {
-        if (res?.data && res.data.length > 0) {
-          setLiveParts(res.data)
-        }
+        setLiveParts(res?.data || [])
       })
-      .catch(() => {})
+      .catch(() => {
+        setLiveParts([])
+      })
+      .finally(() => setIsLoadingParts(false))
   }, [])
 
   // Scroll Reveal Observer
@@ -196,12 +195,9 @@ export default function Home() {
     }, 3000)
   }
 
-  const baseCars = liveCars || FEATURED_CARS
-  const baseParts = liveParts || FEATURED_PARTS
-
   const filteredCars = carFilter === 'all' 
-    ? baseCars 
-    : baseCars.filter(c => {
+    ? liveCars 
+    : liveCars.filter(c => {
         if (c.category) return c.category === carFilter
         if (carFilter === 'jdm') return ['nissan', 'toyota', 'honda', 'mazda', 'subaru', 'mitsubishi'].includes((c.brand || c.make || '').toLowerCase())
         if (carFilter === 'classics') return (c.year && Number(c.year) <= 1990)
@@ -210,8 +206,8 @@ export default function Home() {
       })
 
   const filteredParts = partFilter === 'all'
-    ? baseParts
-    : baseParts.filter(p => {
+    ? liveParts
+    : liveParts.filter(p => {
         const cat = (p.category || p.cat || '').toLowerCase()
         return cat.includes(partFilter) || (partFilter === 'wheels' && cat.includes('tire'))
       })
@@ -274,11 +270,11 @@ export default function Home() {
                     onChange={(e) => setFinderMake(e.target.value)}
                   >
                     <option value="">All Makes (Toyota, Nissan, Ford, BMW...)</option>
-                    {BRAND_REGIONS.map((group) => (
+                    {brandGroups.map((group) => (
                       <optgroup key={group.key} label={group.region}>
-                        {group.brands.map((brandName) => (
-                          <option key={brandName} value={brandName}>
-                            {brandName}
+                        {group.brands.map((brand) => (
+                          <option key={brand.id} value={brand.name}>
+                            {brand.name}
                           </option>
                         ))}
                       </optgroup>
@@ -294,14 +290,23 @@ export default function Home() {
                     onChange={(e) => setFinderModel(e.target.value)}
                   >
                     <option value="">All Models (Civic, Silvia, Celica...)</option>
-                    <option value="Civic">Civic (EG6 / EK9 / FD2)</option>
-                    <option value="Silvia">Silvia (S13 / S14 / S15)</option>
-                    <option value="Celica">Celica / Supra / AE86</option>
-                    <option value="Lancer">Lancer Evolution</option>
-                    <option value="Ranger">Ranger Raptor / Hilux</option>
-                    <option value="Mustang">Mustang Fastback / Classic</option>
-                    <option value="Impreza">Impreza WRX STI</option>
-                    <option value="190E">190E / E36 / E46</option>
+                    {selectedBrand ? (
+                      finderModels.map((model) => (
+                        <option key={model.id} value={model.name}>
+                          {model.name}{model.chassis_code ? ` (${model.chassis_code})` : ''}
+                        </option>
+                      ))
+                    ) : (
+                      (finderModelGroups || []).map(([brandName, models]) => (
+                        <optgroup key={brandName} label={brandName}>
+                          {models.map((model) => (
+                            <option key={model.id} value={model.name}>
+                              {model.name}{model.chassis_code ? ` (${model.chassis_code})` : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -314,12 +319,11 @@ export default function Home() {
                       onChange={(e) => setFinderCat(e.target.value)}
                     >
                       <option value="">All Categories</option>
-                      <option value="Engine">Engine & Turbo</option>
-                      <option value="Brakes">Brakes & Calipers</option>
-                      <option value="Wheels">Wheels & Tires</option>
-                      <option value="Exhaust">Exhaust Systems</option>
-                      <option value="Interior">Seats & Interior</option>
-                      <option value="Suspension">Coilovers & Suspension</option>
+                      {liveCategories.map((cat) => (
+                        <option key={cat.id} value={cat.slug}>
+                          {cat.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 )}
@@ -448,7 +452,7 @@ export default function Home() {
           </div>
 
           <div className="categories-grid">
-            {CATEGORIES.map((cat, i) => (
+            {displayCategories.map((cat, i) => (
               <CategoryCard 
                 key={cat.id} 
                 category={cat} 

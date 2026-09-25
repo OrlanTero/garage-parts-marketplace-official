@@ -13,11 +13,14 @@ import {
   ShoppingCart,
   Sparkles,
   MessageSquare,
-  Share2
+  Share2,
+  Tag
 } from 'lucide-react'
 import { marketplaceParts } from '../api/parts.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import { useChat } from '../context/ChatContext.jsx'
 import ShareModal from '../components/ShareModal.jsx'
+import OfferModal from '../components/OfferModal.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
@@ -44,13 +47,16 @@ export default function PartDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isPartSaved, togglePartFavorite } = useFavorites()
+  const { openDrawerWithListing } = useChat()
   const [part, setPart] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [offerModalOpen, setOfferModalOpen] = useState(false)
+  const [offerNotice, setOfferNotice] = useState('')
   const activeReferralCode = getActiveReferralCode()
 
-  const isSaved = isPartSaved(id)
+  const isSaved = isPartSaved(part?.id || id)
 
   useEffect(() => {
     marketplaceParts
@@ -254,15 +260,42 @@ export default function PartDetail() {
                 </div>
               )}
 
+              {offerNotice && (
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#10b981' }}>
+                  {offerNotice}
+                </div>
+              )}
+
               <div className="detail-actions-row">
                 <button 
                   type="button" 
                   className="btn btn-primary"
-                  onClick={() => navigate(`/checkout?part_id=${part.id}`)}
+                  onClick={() => navigate(`/checkout?part_id=${part.uuid || part.id}`)}
                 >
                   <ShoppingCart size={16} />
                   <span>Buy Now / Direct Checkout</span>
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={part.quantity != null && Number(part.quantity) <= 0}
+                  onClick={() => { setOfferNotice(''); setOfferModalOpen(true) }}
+                  title="Propose your own price with a comment"
+                >
+                  <Tag size={16} />
+                  <span>Make an Offer</span>
+                </button>
+                {part.seller && (
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary"
+                    onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part' })}
+                    title="Inquire directly with the verified parts seller"
+                  >
+                    <MessageSquare size={16} />
+                    <span>Chat with Seller</span>
+                  </button>
+                )}
                 <button 
                   type="button" 
                   className="btn btn-secondary"
@@ -308,14 +341,33 @@ export default function PartDetail() {
                     <div className="detail-seller-sub">Verified Parts Supplier · {location}</div>
                   </div>
                 </div>
-                <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>
-                  ✓ Verified Shop
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 12px', fontSize: 13 }}
+                    onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part' })}
+                  >
+                    <MessageSquare size={14} />
+                    <span>Chat</span>
+                  </button>
+                  <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>
+                    ✓ Verified
+                  </span>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Buyer Price Offer Modal */}
+      <OfferModal
+        open={offerModalOpen}
+        onClose={() => setOfferModalOpen(false)}
+        listing={part ? { id: part.id, title: title, price: part.price, type: 'part' } : null}
+        onSubmitted={() => setOfferNotice('Offer sent — the seller will review it under your Offers.')}
+      />
 
       {/* Product Share & Agent Referral Modal */}
       <ShareModal
@@ -323,12 +375,13 @@ export default function PartDetail() {
         onClose={() => setShareModalOpen(false)}
         item={{
           id: part.id,
+          uuid: part.uuid,
           type: 'part',
           title: title,
           price: part.price,
           image: currentImgUrl,
           brand: part.brand,
-          path: `/parts/${part.id}`
+          path: `/parts/${part.uuid || part.id}`
         }}
       />
     </div>

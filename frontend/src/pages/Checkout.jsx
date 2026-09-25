@@ -8,12 +8,11 @@ import {
   CheckCircle2, 
   AlertCircle, 
   CreditCard, 
-  Building2, 
-  Smartphone, 
   HelpCircle,
   Package,
   Wrench,
-  Car
+  Car,
+  Sparkles
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { marketplaceParts } from '../api/parts.js'
@@ -21,11 +20,14 @@ import { marketplaceCars } from '../api/cars.js'
 import { ordersApi } from '../api/orders.js'
 import { agentsApi } from '../api/agents.js'
 import { getActiveReferralCode } from '../utils/referral.js'
+import { useMediaQuery } from '../hooks/useMediaQuery.js'
 
 export default function Checkout() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
+  const isCompact = useMediaQuery('(max-width: 900px)')
+  const isPhone = useMediaQuery('(max-width: 600px)')
 
   const partId = searchParams.get('part_id')
   const carId = searchParams.get('car_id')
@@ -161,6 +163,11 @@ export default function Checkout() {
   const shippingFee = isFreeShipping ? 0 : 350
   const grandTotal = subtotal + shippingFee
 
+  // Chassis/VIN fitment identity is mandatory for PART orders only —
+  // the buyer's vehicle must match the part. Car orders record the
+  // purchased vehicle's own VIN automatically, so buyers enter nothing.
+  const isPartOrder = itemType === 'part'
+
   const formatCurrency = (val) => {
     return '₱ ' + Number(val || 0).toLocaleString('en-US', {
       minimumFractionDigits: 2,
@@ -179,12 +186,14 @@ export default function Checkout() {
     if (!formData.buyer_email.trim()) newErrors.buyer_email = 'Valid email is required'
     if (!formData.shipping_address.trim()) newErrors.shipping_address = 'Shipping destination address is required'
     
-    // Vehicle identification validation (Mandatory for Sales Order)
-    if (!formData.chassis_number.trim()) {
-      newErrors.chassis_number = 'Vehicle Chassis Number is required for fitment validation & sales order serialization'
-    }
-    if (!formData.vin.trim()) {
-      newErrors.vin = 'VIN (Vehicle Identification Number) is required'
+    // Vehicle identification validation (Mandatory for PART orders only)
+    if (isPartOrder) {
+      if (!formData.chassis_number.trim()) {
+        newErrors.chassis_number = 'Vehicle Chassis Number is required for fitment validation & sales order serialization'
+      }
+      if (!formData.vin.trim()) {
+        newErrors.vin = 'VIN (Vehicle Identification Number) is required'
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -204,10 +213,10 @@ export default function Checkout() {
         shipping_city: formData.shipping_city,
         shipping_postal_code: formData.shipping_postal_code,
 
-        // Required Vehicle Identification Fields
-        chassis_number: formData.chassis_number.trim().toUpperCase(),
-        vin: formData.vin.trim().toUpperCase(),
-        vehicle_make_model: formData.vehicle_make_model.trim() || undefined,
+        // Vehicle Identification Fields (parts only — car orders use the listing's own VIN)
+        chassis_number: isPartOrder ? formData.chassis_number.trim().toUpperCase() : undefined,
+        vin: isPartOrder ? formData.vin.trim().toUpperCase() : undefined,
+        vehicle_make_model: isPartOrder ? formData.vehicle_make_model.trim() || undefined : undefined,
 
         // Sales Agent Attribution
         agent_code: formData.agent_code?.trim().toUpperCase() || undefined,
@@ -264,7 +273,9 @@ export default function Checkout() {
           Secure Checkout & Sales Order Generation
         </h1>
         <p style={{ color: '#94a3b8', fontSize: 15, margin: 0 }}>
-          Please enter your delivery destination and mandatory vehicle identification details (Chassis Number and VIN) to verify exact mechanical fitment and serialize your official sales order.
+          {isPartOrder
+            ? 'Please enter your delivery destination and mandatory vehicle identification details (Chassis Number and VIN) to verify exact mechanical fitment and serialize your official sales order.'
+            : 'Please enter your delivery destination to serialize your official vehicle sales order. The vehicle\u2019s own VIN is recorded automatically from its verified listing.'}
         </p>
       </div>
 
@@ -287,12 +298,13 @@ export default function Checkout() {
       )}
 
       <form onSubmit={handleSubmitOrder}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: 32, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : 'minmax(0, 1fr) 380px', gap: isCompact ? 20 : 32, alignItems: 'start' }}>
           
           {/* Left Column: Checkout Form Sections */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             
-            {/* SECTION 1: VEHICLE IDENTIFICATION & FITMENT DETAILS (MANDATORY REQUIREMENT) */}
+            {/* SECTION 1: VEHICLE IDENTIFICATION & FITMENT DETAILS (PART ORDERS ONLY) */}
+            {isPartOrder && (
             <div style={{ 
               background: '#161922', 
               border: '1px solid #d8622c', 
@@ -339,8 +351,8 @@ export default function Checkout() {
                 To guarantee 100% bolt-on compatibility and serialize your official sales order documentation, our master depot engineers cross-reference the chassis number and VIN with original factory schematics.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                
+              <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 16 }}>
+
                 {/* Chassis Number */}
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
@@ -437,6 +449,7 @@ export default function Checkout() {
 
               </div>
             </div>
+            )}
 
             {/* SECTION 2: CUSTOMER & DELIVERY ADDRESS */}
             <div style={{ 
@@ -466,8 +479,8 @@ export default function Checkout() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                
+              <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 16 }}>
+
                 {/* Full Name */}
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
@@ -714,17 +727,17 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* SECTION 4: PAYMENT METHOD */}
+            {/* SECTION 4: PAYMENT — LOCKED UNTIL SELLER VERIFIES */}
             <div style={{ 
               background: '#161922', 
-              border: '1px solid #1e293b', 
+              border: '1px dashed #2d3748', 
               borderRadius: 12, 
               padding: 24 
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <div style={{ 
-                  background: 'rgba(16, 185, 129, 0.15)', 
-                  color: '#34d399', 
+                  background: 'rgba(148, 163, 184, 0.15)', 
+                  color: '#94a3b8', 
                   width: 36, 
                   height: 36, 
                   borderRadius: 8, 
@@ -736,53 +749,21 @@ export default function Checkout() {
                 </div>
                 <div>
                   <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Payment Settlement Method</h2>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                    Sales order is generated immediately; settlement instructions provided upon submission
+                  <div style={{ fontSize: 12, color: '#eab308', marginTop: 2, fontWeight: 600 }}>
+                    Locked — unlocks after the seller verifies your request
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                {[
-                  { id: 'bank_transfer', label: 'Direct Bank Wire / Transfer', desc: 'BDO / BPI / UnionBank Corporate', icon: Building2 },
-                  { id: 'ewallet', label: 'GCash / Maya Digital Pay', desc: 'Instant QR Code verification', icon: Smartphone },
-                  { id: 'credit_card', label: 'Credit / Debit Card', desc: 'Visa, Mastercard, JCB Secure', icon: CreditCard },
-                ].map((pay) => {
-                  const Icon = pay.icon
-                  const isSelected = formData.payment_method === pay.id
-                  return (
-                    <label
-                      key={pay.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 12,
-                        padding: '14px 16px',
-                        background: isSelected ? 'rgba(216, 98, 44, 0.08)' : '#0f1117',
-                        border: isSelected ? '1px solid #d8622c' : '1px solid #2d3748',
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="payment_method"
-                        value={pay.id}
-                        checked={isSelected}
-                        onChange={handleInputChange}
-                        style={{ marginTop: 3, accentColor: '#d8622c' }}
-                      />
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13, color: '#f8fafc' }}>
-                          <Icon size={14} color={isSelected ? '#d8622c' : '#94a3b8'} />
-                          {pay.label}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{pay.desc}</div>
-                      </div>
-                    </label>
-                  )
-                })}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px' }}>
+                <AlertCircle size={16} color="#eab308" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+                  Your sales order is submitted as a <strong style={{ color: '#e2e8f0' }}>verification request</strong>.
+                  Sellers often receive multiple requests per listing and accept one buyer.
+                  Once your request is <strong style={{ color: '#10b981' }}>verified & accepted</strong>,
+                  settlement details and payment options will appear on your official sales order page.
+                  No payment is possible before acceptance.
+                </div>
               </div>
             </div>
 
@@ -953,12 +934,20 @@ export default function Checkout() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
                   <CheckCircle2 size={13} color="#10b981" /> Official Sales Order document serialized instantly
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
-                  <CheckCircle2 size={13} color="#10b981" /> Chassis number & VIN recorded on official receipt
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
-                  <CheckCircle2 size={13} color="#10b981" /> Money-back fitment guarantee policy
-                </div>
+                {isPartOrder ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
+                      <CheckCircle2 size={13} color="#10b981" /> Chassis number & VIN recorded on official receipt
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
+                      <CheckCircle2 size={13} color="#10b981" /> Money-back fitment guarantee policy
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
+                    <CheckCircle2 size={13} color="#10b981" /> Vehicle VIN recorded from verified listing
+                  </div>
+                )}
               </div>
 
             </div>
