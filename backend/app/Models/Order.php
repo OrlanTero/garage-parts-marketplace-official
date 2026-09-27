@@ -41,17 +41,23 @@ class Order extends Model
         'quantity',
         'unit_price',
         'shipping_fee',
+        'delivery_distance_km',
+        'delivery_zone',
         'total_amount',
         'commission_rate',
         'commission_amount',
         'commission_status',
         'payment_method',
+        'payment_reference',
         'payment_status',
         'status',
         'verification_status',
         'verification_note',
         'tracking_number',
+        'tracking_url',
         'carrier',
+        'estimated_arrival',
+        'warehouse_id',
         'notes',
     ];
 
@@ -61,9 +67,11 @@ class Order extends Model
             'quantity' => 'integer',
             'unit_price' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
+            'delivery_distance_km' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'commission_rate' => 'decimal:2',
             'commission_amount' => 'decimal:2',
+            'estimated_arrival' => 'datetime',
         ];
     }
 
@@ -72,6 +80,12 @@ class Order extends Model
         static::creating(function (Order $order) {
             if (empty($order->order_number)) {
                 $order->order_number = 'SO-' . date('Y') . '-' . strtoupper(Str::random(6));
+            }
+            // One immutable security hash per transaction — minted once,
+            // never rotated. The receipt QR encodes it; only this value
+            // verifies the transaction as valid.
+            if (empty($order->security_hash)) {
+                $order->security_hash = hash('sha256', $order->order_number . '|' . Str::random(32));
             }
         });
     }
@@ -84,6 +98,11 @@ class Order extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
     }
 
     public function agent(): BelongsTo

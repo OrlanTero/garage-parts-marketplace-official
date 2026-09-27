@@ -18,6 +18,9 @@ class Message extends Model
         'is_redacted',
         'listing_type',
         'listing_id',
+        'offer_id',
+        'reservation_id',
+        'metadata',
         'read_at',
     ];
 
@@ -25,6 +28,7 @@ class Message extends Model
     {
         return [
             'is_redacted' => 'boolean',
+            'metadata' => 'array',
             'read_at' => 'datetime',
         ];
     }
@@ -37,6 +41,16 @@ class Message extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function offer(): BelongsTo
+    {
+        return $this->belongsTo(Offer::class);
+    }
+
+    public function reservation(): BelongsTo
+    {
+        return $this->belongsTo(Reservation::class);
     }
 
     /**

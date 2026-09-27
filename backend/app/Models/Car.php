@@ -50,6 +50,8 @@ class Car extends Model
         'inspector_id',
         'inspector_notes',
         'is_approved',
+        'is_in_showroom',
+        'showroom_status',
         'approved_by',
         'approved_at',
         'rejection_reason',
@@ -77,6 +79,7 @@ class Car extends Model
             'condition' => CarCondition::class,
             'status' => CarStatus::class,
             'is_approved' => 'boolean',
+            'is_in_showroom' => 'boolean',
             'inspection_date' => 'datetime',
             'approved_at' => 'datetime',
             'published_at' => 'datetime',
@@ -151,6 +154,11 @@ class Car extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function showroomSlots(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ShowroomSlot::class, 'car_id');
+    }
+
     public function media(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Media::class, 'mediable')
@@ -179,6 +187,42 @@ class Car extends Model
         return $this->morphMany(Favorite::class, 'favoritable');
     }
 
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'car_id');
+    }
+
+    /**
+     * Orders holding money on this car right now: payment settled into
+     * escrow (paid/confirmed) on an order that is still open. Released
+     * (completed payout), refunded, and cancelled orders hold nothing.
+     * A disputed order still holds funds — they are frozen, not freed.
+     */
+    public function heldOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->orders()
+            ->whereIn('payment_status', ['paid', 'confirmed'])
+            ->whereNotIn('status', ['completed', 'refunded', 'cancelled']);
+    }
+
+    /**
+     * "Paid" display state: a buyer already secured this listing with
+     * payment. Prefers the eager-loaded held_orders_count; falls back
+     * to a single exists query when the count was not loaded.
+     */
+    public function getPaymentSecuredAttribute(): bool
+    {
+        if (array_key_exists('held_orders_count', $this->attributes)) {
+            return (int) $this->attributes['held_orders_count'] > 0;
+        }
+
+        if ($this->relationLoaded('heldOrders')) {
+            return $this->heldOrders->isNotEmpty();
+        }
+
+        return $this->heldOrders()->exists();
+    }
+
     public function getPrimaryImageUrlAttribute(): ?string
     {
         if ($this->relationLoaded('media')) {
@@ -199,12 +243,18 @@ class Car extends Model
         return $this->media()->pluck('url')->all();
     }
 
-    /** Public marketplace scope: approved active listings, newest first. */
+    /**
+     * Public marketplace scope: approved active listings with stock,
+     * newest first. Zero-stock units are unavailable on the marketplace
+     * (their payment is secured by an open order — see heldOrders).
+     * NULL quantity means "unspecified single unit" (legacy rows).
+     */
     public function scopeListed(Builder $query): Builder
     {
         return $query->where('status', CarStatus::Active->value)
             ->where('is_approved', true)
             ->whereNotNull('published_at')
+            ->where(fn (Builder $q) => $q->where('quantity', '>', 0)->orWhereNull('quantity'))
             ->orderByDesc('published_at');
     }
 
@@ -240,6 +290,8 @@ class Car extends Model
             ->when($filters['transmission'] ?? null, fn (Builder $q, $v) => $q->where('transmission', $v))
             ->when($filters['condition'] ?? null, fn (Builder $q, $v) => $q->where('condition', $v))
             ->when($filters['city'] ?? null, fn (Builder $q, $v) => $q->where('city', $v))
+            ->when($filters['seller_id'] ?? null, fn (Builder $q, $v) => $q->where('seller_id', $v))
+            ->when($filters['seller_username'] ?? null, fn (Builder $q, $v) => $q->whereHas('seller', fn ($sq) => $sq->where('username', $v)))
             ->when($filters['min_price'] ?? null, fn (Builder $q, $v) => $q->where('price', '>=', $v))
             ->when($filters['max_price'] ?? null, fn (Builder $q, $v) => $q->where('price', '<=', $v))
             ->when($filters['min_year'] ?? null, fn (Builder $q, $v) => $q->where('year', '>=', $v))

@@ -12,8 +12,11 @@ import {
   X,
   Trash2,
   Package,
+  Pencil,
+  MapPin,
 } from 'lucide-react'
 import { inventoryApi, MOVEMENT_TYPES, MOVEMENT_LABELS } from '../api/inventory.js'
+import LocationPicker from '../components/LocationPicker.jsx'
 
 const money = (v) => `₱${Number(v || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
 
@@ -47,10 +50,34 @@ export default function InventoryManagement() {
   const [supplierOpen, setSupplierOpen] = useState(false)
   const [supplierForm, setSupplierForm] = useState({ name: '', contact_person: '', email: '', phone: '', city: '', lead_time_days: 7 })
 
-  // Warehouse modal
+  // Warehouse modal (create + edit). The pinned address doubles as the
+  // delivery-fee origin for orders dispatched from this warehouse.
+  const emptyWarehouse = { name: '', code: '', address: '', city: '', latitude: '', longitude: '', is_default: false, is_active: true }
   const [warehouseOpen, setWarehouseOpen] = useState(false)
-  const [warehouseForm, setWarehouseForm] = useState({ name: '', code: '', city: '' })
+  const [warehouseForm, setWarehouseForm] = useState(emptyWarehouse)
+  const [editingWarehouse, setEditingWarehouse] = useState(null)
   const [binForms, setBinForms] = useState({}) // warehouseId -> { code, zone, rack, shelf }
+
+  const openWarehouseCreate = () => {
+    setEditingWarehouse(null)
+    setWarehouseForm(emptyWarehouse)
+    setWarehouseOpen(true)
+  }
+
+  const openWarehouseEdit = (w) => {
+    setEditingWarehouse(w)
+    setWarehouseForm({
+      name: w.name || '',
+      code: w.code || '',
+      address: w.address || '',
+      city: w.city || '',
+      latitude: w.latitude ?? '',
+      longitude: w.longitude ?? '',
+      is_default: Boolean(w.is_default),
+      is_active: w.is_active !== false,
+    })
+    setWarehouseOpen(true)
+  }
 
   const loadAll = async () => {
     setLoading(true)
@@ -177,12 +204,26 @@ export default function InventoryManagement() {
     e.preventDefault()
     setSaving(true)
     try {
-      await inventoryApi.createWarehouse({
-        ...warehouseForm,
-      })
-      setNotice(`Warehouse "${warehouseForm.name}" added.`)
+      const payload = {
+        name: warehouseForm.name.trim(),
+        code: warehouseForm.code.trim().toUpperCase(),
+        address: warehouseForm.address.trim() || undefined,
+        city: warehouseForm.city.trim() || undefined,
+        latitude: warehouseForm.latitude !== '' && warehouseForm.latitude != null ? Number(warehouseForm.latitude) : null,
+        longitude: warehouseForm.longitude !== '' && warehouseForm.longitude != null ? Number(warehouseForm.longitude) : null,
+        is_default: Boolean(warehouseForm.is_default),
+        is_active: warehouseForm.is_active !== false,
+      }
+      if (editingWarehouse) {
+        await inventoryApi.updateWarehouse(editingWarehouse.id, payload)
+        setNotice(`Warehouse "${payload.name}" updated.`)
+      } else {
+        await inventoryApi.createWarehouse(payload)
+        setNotice(`Warehouse "${payload.name}" added.`)
+      }
       setWarehouseOpen(false)
-      setWarehouseForm({ name: '', code: '', city: '' })
+      setEditingWarehouse(null)
+      setWarehouseForm(emptyWarehouse)
       await loadAll()
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to save warehouse.')
@@ -483,7 +524,7 @@ export default function InventoryManagement() {
           {tab === 'warehouses' && (
             <>
               <div style={{ marginBottom: 16 }}>
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => setWarehouseOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <button type="button" className="btn btn-primary btn-sm" onClick={openWarehouseCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <Plus size={14} /> Add Warehouse
                 </button>
               </div>
@@ -494,19 +535,43 @@ export default function InventoryManagement() {
                       <div style={{ fontWeight: 800, fontSize: 15 }}>
                         {w.name} <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--admin-text-muted)' }}>{w.code}</span>
                         {w.is_default && <span className="badge badge-success" style={{ fontSize: 11, marginLeft: 8 }}>Default</span>}
+                        {w.has_pin && <span className="badge badge-info" style={{ fontSize: 11, marginLeft: 6 }}>Pinned · fee origin</span>}
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={async () => {
-                          if (!window.confirm(`Delete warehouse "${w.name}" and its bins?`)) return
-                          await inventoryApi.deleteWarehouse(w.id)
-                          await loadAll()
-                        }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          title="Edit warehouse address & pin"
+                          onClick={() => openWarehouseEdit(w)}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={async () => {
+                            if (!window.confirm(`Delete warehouse "${w.name}" and its bins?`)) return
+                            await inventoryApi.deleteWarehouse(w.id)
+                            await loadAll()
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
+                    {(w.address || w.city || w.has_pin) && (
+                      <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <MapPin size={13} style={{ color: 'var(--color-rust)', flexShrink: 0 }} />
+                        <span>
+                          {[w.address, w.city].filter(Boolean).join(' · ')}
+                          {w.has_pin && (
+                            <span style={{ fontFamily: 'monospace', color: 'var(--admin-text-muted)' }}>
+                              {' '}({Number(w.latitude).toFixed(5)}, {Number(w.longitude).toFixed(5)})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                       {(w.bins || []).map((b) => (
                         <span key={b.id} className="badge badge-neutral" style={{ fontSize: 12, fontFamily: 'monospace' }} title={b.path}>
@@ -677,34 +742,75 @@ export default function InventoryManagement() {
       {/* Warehouse modal */}
       {warehouseOpen && (
         <div className="modal-backdrop" onClick={() => setWarehouseOpen(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
             <div className="modal-header">
-              <h3 className="modal-title">Add Warehouse</h3>
+              <h3 className="modal-title">{editingWarehouse ? `Edit Warehouse — ${editingWarehouse.name}` : 'Add Warehouse'}</h3>
               <button type="button" onClick={() => setWarehouseOpen(false)} className="modal-close">
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={submitWarehouse}>
+            <form onSubmit={submitWarehouse} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div className="modal-body" style={{ padding: 24 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 14 }}>
                   <div>
                     <label className="admin-label">Warehouse Name *</label>
-                    <input type="text" className="admin-input" required value={warehouseForm.name} onChange={(e) => setWarehouseForm({ ...warehouseForm, name: e.target.value })} placeholder="e.g. Makati Main Depot" />
+                    <input type="text" className="admin-input" required value={warehouseForm.name} onChange={(e) => setWarehouseForm({ ...warehouseForm, name: e.target.value })} placeholder="e.g. GAP Valenzuela Main Depot" />
                   </div>
                   <div>
                     <label className="admin-label">Code *</label>
                     <input type="text" className="admin-input" required value={warehouseForm.code} onChange={(e) => setWarehouseForm({ ...warehouseForm, code: e.target.value.toUpperCase() })} placeholder="MAIN" />
                   </div>
                 </div>
-                <div>
-                  <label className="admin-label">City</label>
-                  <input type="text" className="admin-input" value={warehouseForm.city} onChange={(e) => setWarehouseForm({ ...warehouseForm, city: e.target.value })} />
+                <div style={{ marginBottom: 14 }}>
+                  <label className="admin-label">Street Address</label>
+                  <input type="text" className="admin-input" value={warehouseForm.address} onChange={(e) => setWarehouseForm({ ...warehouseForm, address: e.target.value })} placeholder="e.g. GAP Valenzuela Main, Valenzuela City, Metro Manila" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <div>
+                    <label className="admin-label">City</label>
+                    <input type="text" className="admin-input" value={warehouseForm.city} onChange={(e) => setWarehouseForm({ ...warehouseForm, city: e.target.value })} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', paddingBottom: 10 }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                      <input type="checkbox" checked={Boolean(warehouseForm.is_default)} onChange={(e) => setWarehouseForm({ ...warehouseForm, is_default: e.target.checked })} />
+                      Default depot
+                    </label>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                      <input type="checkbox" checked={warehouseForm.is_active !== false} onChange={(e) => setWarehouseForm({ ...warehouseForm, is_active: e.target.checked })} />
+                      Active
+                    </label>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <label className="admin-label">
+                    Dispatch Pin — delivery fees are measured from here
+                    {warehouseForm.latitude !== '' && warehouseForm.longitude !== '' && (
+                      <span style={{ fontFamily: 'monospace', color: 'var(--color-rust)', marginLeft: 6 }}>
+                        {Number(warehouseForm.latitude).toFixed(5)}, {Number(warehouseForm.longitude).toFixed(5)}
+                      </span>
+                    )}
+                  </label>
+                  <LocationPicker
+                    height={260}
+                    value={warehouseForm.latitude !== '' && warehouseForm.longitude !== '' ? {
+                      latitude: Number(warehouseForm.latitude),
+                      longitude: Number(warehouseForm.longitude),
+                      label: warehouseForm.address,
+                    } : null}
+                    confirmLabel={warehouseForm.latitude !== '' ? 'Update Pin' : 'Set Dispatch Pin'}
+                    onConfirm={(pin) => setWarehouseForm((prev) => ({
+                      ...prev,
+                      latitude: pin.latitude,
+                      longitude: pin.longitude,
+                      address: prev.address.trim() ? prev.address : (pin.label || ''),
+                    }))}
+                  />
                 </div>
               </div>
               <div className="modal-footer">
                 <button type="button" onClick={() => setWarehouseOpen(false)} className="btn btn-secondary">Cancel</button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Saving…' : 'Add Warehouse'}
+                  {saving ? 'Saving…' : editingWarehouse ? 'Save Changes' : 'Add Warehouse'}
                 </button>
               </div>
             </form>

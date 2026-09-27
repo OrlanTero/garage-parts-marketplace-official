@@ -18,7 +18,15 @@ export const sellerOrdersApi = {
     client.post(`/seller/orders/${id}/accept`, verification_note ? { verification_note } : {}).then((r) => r.data?.data ?? r.data),
   reject: (id, verification_note) =>
     client.post(`/seller/orders/${id}/reject`, verification_note ? { verification_note } : {}).then((r) => r.data?.data ?? r.data),
+  updateStatus: (id, payload) =>
+    client.patch(`/seller/orders/${id}/status`, payload).then((r) => r.data?.data ?? r.data),
+  refund: (id, verification_note) =>
+    client.post(`/seller/orders/${id}/refund`, verification_note ? { verification_note } : {}).then((r) => r.data?.data ?? r.data),
 }
+
+// Escrow lifecycle: processing → negotiating → sold → shipped →
+// delivered → completed (payout) or disputed → refunded.
+export const SELLER_ORDER_STATUSES = ['processing', 'negotiating', 'reserved', 'preparing', 'sold', 'shipped', 'delivered', 'completed', 'disputed']
 
 export const CAR_STATUSES = [
   'draft',

@@ -34,12 +34,17 @@ export default function Checkout() {
 
   const partId = searchParams.get('part_id')
   const carId = searchParams.get('car_id')
+  const offerToken = searchParams.get('offer_token')
   const initialRef = searchParams.get('ref') || searchParams.get('agent') || getActiveReferralCode() || ''
 
   const [item, setItem] = useState(null)
   const [itemType, setItemType] = useState(carId ? 'car' : 'part')
   const [loadingItem, setLoadingItem] = useState(true)
   const [quantity, setQuantity] = useState(1)
+
+  // Deal checkout: seller-issued link locks the agreed chat price.
+  const [dealLocked, setDealLocked] = useState(false)
+  const [dealSeller, setDealSeller] = useState('')
 
   // Customer Form Data
   const [formData, setFormData] = useState({
@@ -137,6 +142,31 @@ export default function Checkout() {
   const [errors, setErrors] = useState({})
   const [generalError, setGeneralError] = useState('')
 
+  // Mock settlement (real gateway plugs in later): paid automatically
+  // when the sales order is generated — every created order is paid.
+  // The Pay button below is an optional early-pay that just pre-fills
+  // the reference shown on the receipt.
+  const [mockPaid, setMockPaid] = useState(false)
+  const [mockRef, setMockRef] = useState('')
+  const [payProcessing, setPayProcessing] = useState(false)
+
+  const choosePayMethod = (method) => {
+    setFormData((prev) => ({ ...prev, payment_method: method }))
+    setMockPaid(false)
+    setMockRef('')
+  }
+
+  const handleMockPay = () => {
+    if (payProcessing || mockPaid) return
+    setPayProcessing(true)
+    window.setTimeout(() => {
+      const ref = `MOCK-${(formData.payment_method || 'bank_transfer').replace('_', '').toUpperCase().slice(0, 4)}-${Date.now().toString(36).toUpperCase()}`
+      setMockRef(ref)
+      setMockPaid(true)
+      setPayProcessing(false)
+    }, 1200)
+  }
+
   // Verify Agent Code
   useEffect(() => {
     let active = true
@@ -186,7 +216,22 @@ export default function Checkout() {
 
     async function loadItemData() {
       try {
-        if (partId) {
+        if (offerToken) {
+          const q = await ordersApi.getOfferQuote(offerToken)
+          if (isMounted) {
+            setItemType(q.item_type || 'car')
+            setItem({
+              id: q.item_type === 'car' ? q.car_id : q.part_id,
+              title: q.listing_title || 'Agreed Deal',
+              price: q.agreed_amount,
+              primary_image_url: q.listing_image_url,
+              seller: { name: q.seller_username || 'Verified Seller' },
+              free_shipping: false,
+            })
+            setDealLocked(true)
+            setDealSeller(q.seller_username || '')
+          }
+        } else if (partId) {
           setItemType('part')
           const partData = await marketplaceParts.show(partId)
           if (isMounted) setItem(partData)
@@ -217,7 +262,7 @@ export default function Checkout() {
 
     loadItemData()
     return () => { isMounted = false }
-  }, [partId, carId])
+  }, [partId, carId, offerToken])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -227,11 +272,41 @@ export default function Checkout() {
     }
   }
 
-  // Price calculation
+  // Price calculation — server is the source of truth at submit time;
+  // the live quote below mirrors the backend DeliveryFeeService tiers
+  // (GAP Valenzuela Main Depot → drop-off pin or city centroid).
   const unitPrice = item ? parseFloat(item.price || 0) : 0
   const subtotal = unitPrice * quantity
-  const isFreeShipping = (item && (item.free_shipping || item.freeShip)) || subtotal >= 10000 || itemType === 'car'
-  const shippingFee = isFreeShipping ? 0 : 350
+  const [quote, setQuote] = useState(null)
+
+  useEffect(() => {
+    if (itemType !== 'part' || !item?.id) return
+    const latRaw = formData.delivery_latitude
+    const lngRaw = formData.delivery_longitude
+    const lat = latRaw !== '' && latRaw != null ? Number(latRaw) : undefined
+    const lng = lngRaw !== '' && lngRaw != null ? Number(lngRaw) : undefined
+    if ((lat !== undefined && Number.isNaN(lat)) || (lng !== undefined && Number.isNaN(lng))) return
+    const timer = setTimeout(async () => {
+      try {
+        const q = await ordersApi.getDeliveryQuote({
+          latitude: lat,
+          longitude: lng,
+          city: formData.shipping_city?.trim() || undefined,
+          part_id: item.id,
+          item_type: 'part',
+          quantity,
+        })
+        setQuote(q)
+      } catch {
+        setQuote(null)
+      }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [itemType, item?.id, quantity, formData.delivery_latitude, formData.delivery_longitude, formData.shipping_city])
+
+  const localFreeShipping = (item && (item.free_shipping || item.freeShip)) || subtotal >= 10000 || itemType === 'car'
+  const isFreeShipping = quote ? Boolean(quote.free) : localFreeShipping
+  const shippingFee = quote ? Number(quote.fee || 0) : (isFreeShipping ? 0 : 350)
   const grandTotal = subtotal + shippingFee
 
   // Chassis/VIN fitment identity is mandatory for PART orders only —
@@ -256,7 +331,17 @@ export default function Checkout() {
     if (!formData.buyer_name.trim()) newErrors.buyer_name = 'Full name is required'
     if (!formData.buyer_email.trim()) newErrors.buyer_email = 'Valid email is required'
     if (!formData.shipping_address.trim()) newErrors.shipping_address = 'Shipping destination address is required'
-    
+
+    // Auto-pay on generate: submitting the sales order settles payment
+    // inline (mock gateway), so generating always produces a paid order —
+    // no separate pay step required.
+    let payRef = mockRef
+    if (!mockPaid || !payRef) {
+      payRef = `MOCK-${(formData.payment_method || 'bank_transfer').replace('_', '').toUpperCase().slice(0, 4)}-${Date.now().toString(36).toUpperCase()}`
+      setMockRef(payRef)
+      setMockPaid(true)
+    }
+
     // Vehicle identification validation (Mandatory for PART orders only)
     if (isPartOrder) {
       if (!formData.chassis_number.trim()) {
@@ -300,6 +385,11 @@ export default function Checkout() {
         item_sku: item?.part_number || item?.vin || (item?.id ? `GP-${item.id}` : 'GP-ORD-01'),
         quantity: quantity,
         payment_method: formData.payment_method,
+        // Settled inline on generate — the order is born paid.
+        mock_paid: true,
+        payment_reference: payRef,
+        // Deal checkout: agreed chat price (single-use token).
+        offer_token: offerToken || undefined,
         notes: formData.notes,
         // Optional upfront delivery pinpoint
         delivery_latitude: formData.delivery_latitude !== '' ? Number(formData.delivery_latitude) : undefined,
@@ -366,6 +456,16 @@ export default function Checkout() {
         <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 8px 0', fontFamily: 'var(--font-display, inherit)' }}>
           Secure Checkout & Sales Order Generation
         </h1>
+        {dealLocked && (
+          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#10b981' }}>Deal checkout — agreed price locked.</strong>{' '}
+            You negotiated this price in chat{dealSeller ? <> with <strong>@{dealSeller}</strong></> : null}; the seller-issued link applies it automatically and can be used once.
+          </div>
+        )}
+        <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+          <strong style={{ color: '#60a5fa' }}>Payment is held & secured — order not complete yet.</strong>{' '}
+          Your payment goes into platform escrow when you check out. It is released to the seller only after the car is delivered and you accept it on inspection. Rejected delivery opens a dispute → refund path.
+        </div>
         <p style={{ color: '#94a3b8', fontSize: 15, margin: 0 }}>
           {isPartOrder
             ? 'Please enter your delivery destination and mandatory vehicle identification details (Chassis Number and VIN) to verify exact mechanical fitment and serialize your official sales order.'
@@ -960,45 +1060,87 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* SECTION 4: PAYMENT — LOCKED UNTIL SELLER VERIFIES */}
-            {/*<div style={{ */}
-            {/*  background: '#161922', */}
-            {/*  border: '1px dashed #2d3748', */}
-            {/*  borderRadius: 12, */}
-            {/*  padding: 24 */}
-            {/*}}>*/}
-            {/*  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>*/}
-            {/*    <div style={{ */}
-            {/*      background: 'rgba(148, 163, 184, 0.15)', */}
-            {/*      color: '#94a3b8', */}
-            {/*      width: 36, */}
-            {/*      height: 36, */}
-            {/*      borderRadius: 8, */}
-            {/*      display: 'flex', */}
-            {/*      alignItems: 'center', */}
-            {/*      justifyContent: 'center' */}
-            {/*    }}>*/}
-            {/*      <CreditCard size={20} />*/}
-            {/*    </div>*/}
-            {/*    <div>*/}
-            {/*      <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Payment Settlement Method</h2>*/}
-            {/*      <div style={{ fontSize: 12, color: '#eab308', marginTop: 2, fontWeight: 600 }}>*/}
-            {/*        Locked — unlocks after the seller verifies your request*/}
-            {/*      </div>*/}
-            {/*    </div>*/}
-            {/*  </div>*/}
+            {/* SECTION 4: PAYMENT — PAY FIRST (MOCK SETTLEMENT) */}
+            <div style={{
+              background: '#161922',
+              border: mockPaid ? '1px solid #10b981' : '1px solid #1e293b',
+              borderRadius: 12,
+              padding: 24,
+              transition: 'border-color 0.2s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{
+                  background: mockPaid ? 'rgba(16, 185, 129, 0.15)' : 'rgba(216, 98, 44, 0.15)',
+                  color: mockPaid ? '#10b981' : '#d8622c',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Payment Settlement</h2>
+                  <div style={{ fontSize: 12, color: mockPaid ? '#10b981' : '#eab308', marginTop: 2, fontWeight: 600 }}>
+                    {mockPaid ? 'Paid — order will be created as a complete sales order' : 'Pay now — checkout completes only after settlement'}
+                  </div>
+                </div>
+              </div>
 
-            {/*  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px' }}>*/}
-            {/*    <AlertCircle size={16} color="#eab308" style={{ flexShrink: 0, marginTop: 2 }} />*/}
-            {/*    <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>*/}
-            {/*      Your sales order is submitted as a <strong style={{ color: '#e2e8f0' }}>verification request</strong>.*/}
-            {/*      Sellers often receive multiple requests per listing and accept one buyer.*/}
-            {/*      Once your request is <strong style={{ color: '#10b981' }}>verified & accepted</strong>,*/}
-            {/*      settlement details and payment options will appear on your official sales order page.*/}
-            {/*      No payment is possible before acceptance.*/}
-            {/*    </div>*/}
-            {/*  </div>*/}
-            {/*</div>*/}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                {[
+                  { id: 'bank_transfer', label: 'Bank Transfer' },
+                  { id: 'ewallet', label: 'GCash / Maya' },
+                  { id: 'credit_card', label: 'Card' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => choosePayMethod(m.id)}
+                    disabled={payProcessing}
+                    style={{
+                      fontSize: 13, fontWeight: 600, padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
+                      background: formData.payment_method === m.id ? 'rgba(216, 98, 44, 0.15)' : 'transparent',
+                      border: formData.payment_method === m.id ? '1px solid #d8622c' : '1px solid #2d3748',
+                      color: formData.payment_method === m.id ? '#fb923c' : '#94a3b8',
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ flex: '1 1 200px' }}>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Amount due</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#d8622c', fontFamily: 'var(--font-display, inherit)' }}>
+                    {formatCurrency(grandTotal)}
+                  </div>
+                  {mockPaid && (
+                    <div style={{ fontSize: 11, color: '#10b981', fontFamily: 'monospace', marginTop: 2 }}>
+                      Ref: {mockRef} · MOCK — real gateway plugs in later
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleMockPay}
+                  disabled={payProcessing || mockPaid}
+                  style={{
+                    background: mockPaid ? '#10b981' : '#d8622c',
+                    color: '#fff', border: 'none', borderRadius: 8, padding: '12px 22px',
+                    fontSize: 14, fontWeight: 700, cursor: (payProcessing || mockPaid) ? 'default' : 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    opacity: payProcessing ? 0.7 : 1,
+                  }}
+                >
+                  <CreditCard size={16} />
+                  <span>{payProcessing ? 'Processing Payment…' : mockPaid ? '✓ Payment Complete' : `Pay ${formatCurrency(grandTotal)}`}</span>
+                </button>
+              </div>
+            </div>
 
             {/* SECTION 4: NOTES & FITMENT INSTRUCTIONS */}
             <div style={{ 
@@ -1114,7 +1256,14 @@ export default function Checkout() {
                   <span style={{ color: '#f8fafc', fontWeight: 600 }}>{formatCurrency(subtotal)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-                  <span>Express Freight Logistics</span>
+                  <span>
+                    Express Freight Logistics
+                    {quote?.zone && (
+                      <span style={{ display: 'block', fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                        From GAP Valenzuela Main · {quote.zone}{quote.distance_km != null ? ` · ${quote.distance_km} km` : ''}
+                      </span>
+                    )}
+                  </span>
                   <span style={{ color: isFreeShipping ? '#10b981' : '#f8fafc', fontWeight: 600 }}>
                     {isFreeShipping ? 'FREE (Special Promo)' : formatCurrency(shippingFee)}
                   </span>

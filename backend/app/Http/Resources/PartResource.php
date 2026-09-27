@@ -31,6 +31,8 @@ class PartResource extends JsonResource
             'cond' => $enum($this->condition),
             'tag' => $this->tag,
             'quantity' => (int) ($this->quantity ?? 0),
+            // "Paid" display state — see CarResource.
+            'payment_secured' => (bool) $this->payment_secured,
             'reserved_quantity' => (int) ($this->reserved_quantity ?? 0),
             'available_quantity' => max(0, (int) ($this->quantity ?? 0) - (int) ($this->reserved_quantity ?? 0)),
             'min_stock' => (int) ($this->min_stock ?? 0),
@@ -62,8 +64,12 @@ class PartResource extends JsonResource
             'updated_at' => $this->updated_at,
             'seller' => $this->whenLoaded('seller', fn () => [
                 'id' => $this->seller->id,
-                'name' => $this->seller->name,
-                'email' => $this->seller->email,
+                'username' => $this->seller->username,
+                'avatar_url' => $this->seller->avatar_url,
+                'is_kyc_verified' => (bool) ($this->seller->is_kyc_verified && $this->seller->kyc_status === 'approved'),
+                'kyc_status' => $this->seller->kyc_status ?? 'not_submitted',
+                'role' => $this->seller->role instanceof BackedEnum ? $this->seller->role->value : $this->seller->role,
+                'rating' => (float) ($this->seller->rating ?? 5.0),
             ]),
         ];
     }

@@ -16,13 +16,16 @@ import {
   MessageSquare,
   Sparkles,
   FileText,
-  Tag
+  Tag,
+  Building2,
+  Store
 } from 'lucide-react'
 import { marketplaceCars } from '../api/cars.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import { useAuth } from '../auth/AuthContext.jsx'
 import { useChat } from '../context/ChatContext.jsx'
+import ListingStatusPicker from '../components/ListingStatusPicker.jsx'
 import ShareModal from '../components/ShareModal.jsx'
-import OfferModal from '../components/OfferModal.jsx'
 import ReviewSection from '../components/ReviewSection.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
@@ -45,14 +48,24 @@ export default function CarDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isCarSaved, toggleCarFavorite } = useFavorites()
+  const { user } = useAuth()
   const { openDrawerWithListing } = useChat()
   const [car, setCar] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
   const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [offerModalOpen, setOfferModalOpen] = useState(false)
-  const [offerNotice, setOfferNotice] = useState('')
   const activeReferralCode = getActiveReferralCode()
+
+  // Own listing: the seller gets manage controls, never buy buttons.
+  const isOwner = Boolean(
+    user?.id && car?.seller?.id && Number(user.id) === Number(car.seller.id),
+  )
+  const reloadCar = () => {
+    marketplaceCars
+      .show(id)
+      .then((data) => setCar(data))
+      .catch(() => {})
+  }
 
   const isSaved = isCarSaved(car?.id || id)
 
@@ -63,7 +76,11 @@ export default function CarDetail() {
         setCar(data)
         setSelectedImgIdx(0)
       })
-      .catch((e) => setError(e.response?.status === 404 ? 'Car not found or no longer listed.' : e.message))
+      .catch((e) => setError(
+        e.response?.status === 404 || e.response?.status === 403
+          ? 'This listing is no longer available on the marketplace.'
+          : e.message,
+      ))
   }, [id])
 
   if (error) {
@@ -125,6 +142,20 @@ export default function CarDetail() {
   ]
   const stockCount = car.quantity == null ? 1 : Number(car.quantity)
   const isSoldOut = stockCount <= 0
+  const carStatusValue = String(car.status?.value || car.status || '').toLowerCase()
+  const isMarkedSold = carStatusValue === 'sold'
+  // "Paid" display state: payment already secured in escrow on an open
+  // order. Stock reserved, but the seller has not marked it sold yet.
+  const isPaymentSecured = Boolean(car.payment_secured) && !isMarkedSold
+  const stockLabel = isMarkedSold
+    ? 'Sold Out'
+    : isPaymentSecured
+      ? 'Paid · Payment Secured'
+      : isSoldOut
+        ? 'Unavailable'
+        : stockCount === 1
+          ? 'Only 1 unit left'
+          : `${stockCount} units in stock`
 
   return (
     <div className="detail-page">
@@ -206,12 +237,33 @@ export default function CarDetail() {
                   className="detail-meta-item"
                   style={{
                     marginLeft: 12, fontSize: 13, fontWeight: 700,
-                    color: isSoldOut ? '#ef4444' : '#10b981',
+                    color: isMarkedSold || (isSoldOut && !isPaymentSecured) ? '#ef4444' : isPaymentSecured ? '#60a5fa' : '#10b981',
                   }}
                 >
-                  {isSoldOut ? 'Sold Out' : stockCount === 1 ? 'Only 1 unit left' : `${stockCount} units in stock`}
+                  {stockLabel}
                 </span>
               </div>
+
+              {isPaymentSecured && (
+                <div style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  color: '#93c5fd',
+                }}>
+                  <ShieldCheck size={16} />
+                  <div>
+                    <strong>Paid — payment already secured.</strong> A buyer settled this unit (funds held in
+                    escrow). The seller marks it sold once the deal is committed.
+                  </div>
+                </div>
+              )}
 
               <div className="detail-trust-strip">
                 <div className="detail-trust-item">
@@ -228,8 +280,8 @@ export default function CarDetail() {
                 </div>
               </div>
 
-              {/* Referring Agent Banner */}
-              {activeReferralCode && (
+              {/* Referring Agent Banner (buyers only) */}
+              {activeReferralCode && !isOwner && (
                 <div style={{
                   background: 'rgba(16, 185, 129, 0.12)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
@@ -244,50 +296,104 @@ export default function CarDetail() {
                 }}>
                   <span>🤝</span>
                   <div>
-                    Referred by Sales Agent <strong>{activeReferralCode}</strong>. Your reservation is accredited to a verified partner.
+                    Referred by Sales Agent <strong>{activeReferralCode}</strong>. Your inquiry is accredited to a verified partner.
                   </div>
                 </div>
               )}
 
-              {offerNotice && (
-                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#10b981' }}>
-                  {offerNotice}
-                </div>
-              )}
-
+              {isOwner ? (
+                <>
+                  <div style={{
+                    background: 'rgba(124, 58, 237, 0.1)',
+                    border: '1px solid rgba(124, 58, 237, 0.4)',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    marginBottom: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 13,
+                    color: '#c4b5fd',
+                  }}>
+                    <Store size={16} />
+                    <div>
+                      <strong>This is your listing.</strong> Buyers see the public view — you get manage controls.
+                    </div>
+                  </div>
+                  <div className="detail-actions-row">
+                    <ListingStatusPicker
+                      listingType="car"
+                      listingId={car.id}
+                      value={car.status}
+                      onChanged={reloadCar}
+                      onError={(err) => alert(err?.response?.data?.message || 'Failed to update listing status.')}
+                      className="btn btn-primary"
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <Link
+                      to={`/messages?listing=car:${car.id}`}
+                      className="btn btn-secondary"
+                      title="Open every buyer inquiry on this listing"
+                    >
+                      <MessageSquare size={16} />
+                      <span>Inquiries</span>
+                    </Link>
+                    <Link
+                      to="/my-listings?tab=requests"
+                      className="btn btn-secondary"
+                      title="Paid orders and buyer requests on your listings"
+                    >
+                      <FileText size={16} />
+                      <span>Orders</span>
+                    </Link>
+                    <Link
+                      to="/my-listings"
+                      className="btn btn-secondary"
+                      title="Manage all your listings"
+                    >
+                      <Store size={16} />
+                      <span>Manage</span>
+                    </Link>
+                  </div>
+                </>
+              ) : (
               <div className="detail-actions-row">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={isSoldOut}
-                  onClick={() => navigate(`/checkout?car_id=${car.uuid || car.id}`)}
-                  title={isSoldOut ? 'This build is sold out' : 'Reserve this vehicle'}
-                >
-                  <FileText size={16} />
-                  <span>{isSoldOut ? 'Sold Out' : 'Reserve'}</span>
-                </button>
                 {car.seller && (
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary"
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={isSoldOut}
                     onClick={() => openDrawerWithListing({ seller: car.seller, listing: car, listingType: 'car' })}
-                    title="Inquire directly with the verified seller"
+                    title={isSoldOut ? 'This build is currently unavailable' : 'Inquire directly with the verified seller'}
                   >
                     <MessageSquare size={16} />
-                    <span>Chat</span>
+                    <span>{isSoldOut ? (isMarkedSold ? 'Sold Out' : 'Unavailable') : 'Inquire'}</span>
+                  </button>
+                )}
+                {car.seller && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={isSoldOut}
+                    onClick={() => openDrawerWithListing({ seller: car.seller, listing: car, listingType: 'car', openOffer: true })}
+                    title={isSoldOut ? 'This build is currently unavailable' : 'Open chat and propose your price on this listing'}
+                  >
+                    <Tag size={16} />
+                    <span>Make an Offer</span>
                   </button>
                 )}
                 <button
                   type="button"
                   className="btn btn-secondary"
                   disabled={isSoldOut}
-                  onClick={() => { setOfferNotice(''); setOfferModalOpen(true) }}
-                  title={isSoldOut ? 'This build is sold out' : 'Propose your own price with a comment'}
+                  onClick={() => navigate(`/checkout?car_id=${car.uuid || car.id}`)}
+                  title={isSoldOut ? 'This build is currently unavailable' : 'Buy at list price — payment is held in escrow'}
                 >
-                  <Tag size={16} />
-                  <span>Make an Offer</span>
+                  <FileText size={16} />
+                  <span>Buy Now</span>
                 </button>
               </div>
+              )}
               <div className="detail-actions-row">
                 <button
                     type="button"
@@ -345,16 +451,27 @@ export default function CarDetail() {
                     <div className="detail-seller-sub">Marketplace Builder · {location}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    type="button"
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Link
+                    to={`/showroom?seller=${car.seller.username || car.seller.id}`}
                     className="btn btn-secondary"
                     style={{ padding: '6px 12px', fontSize: 13 }}
-                    onClick={() => openDrawerWithListing({ seller: car.seller, listing: car, listingType: 'car' })}
+                    title="Visit Builder's Garage Showroom"
                   >
-                    <MessageSquare size={14} />
-                    <span>Chat</span>
-                  </button>
+                    <Building2 size={14} />
+                    <span>Showroom</span>
+                  </Link>
+                  {!isOwner && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: 13 }}
+                      onClick={() => openDrawerWithListing({ seller: car.seller, listing: car, listingType: 'car' })}
+                    >
+                      <MessageSquare size={14} />
+                      <span>Chat</span>
+                    </button>
+                  )}
                   {car.seller.is_kyc_verified ? (
                     <span className="badge" style={{ background: '#dcfce7', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <ShieldCheck size={13} />
@@ -371,14 +488,6 @@ export default function CarDetail() {
           </div>
         </div>
       </div>
-
-      {/* Buyer Price Offer Modal */}
-      <OfferModal
-        open={offerModalOpen}
-        onClose={() => setOfferModalOpen(false)}
-        listing={car ? { id: car.id, title: title, price: car.price, type: 'car' } : null}
-        onSubmitted={() => setOfferNotice('Offer sent — the seller will review it under your Offers.')}
-      />
 
       {/* Car Share & Agent Referral Modal */}
       <ShareModal

@@ -12,9 +12,12 @@ import {
   Building2,
   Edit,
   X,
+  SlidersHorizontal,
+  Truck,
 } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../components/Accordion.jsx'
 import { taxonomyApi, normalizeBrand, normalizeCategory, REGION_LABELS } from '../api/taxonomy.js'
+import { adminApi } from '../api/admin.js'
 
 const COUNTRY_REGION = {
   Japan: 'japanese',
@@ -27,7 +30,7 @@ const COUNTRY_REGION = {
 }
 
 export default function TaxonomyManagement() {
-  const [activeTab, setActiveTab] = useState('vehicles') // vehicles | categories
+  const [activeTab, setActiveTab] = useState('vehicles') // vehicles | categories | variables
   const [taxonomy, setTaxonomy] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -89,6 +92,93 @@ export default function TaxonomyManagement() {
   useEffect(() => {
     fetchTaxonomy()
   }, [])
+
+  // Configurations → Variables (delivery services, freight rules).
+  const [variables, setVariables] = useState({
+    delivery_services: [],
+    free_freight_threshold: '10000',
+    standard_flat_fee: '350',
+    reservation_fee_percentage: '5',
+  })
+  const [varsLoaded, setVarsLoaded] = useState(false)
+  const [varSaving, setVarSaving] = useState(false)
+  const [newService, setNewService] = useState({ name: '', code: '', tracking_url_template: '' })
+
+  const fetchVariables = async () => {
+    try {
+      const data = await adminApi.getConfig({ group: 'variables' })
+      setVariables({
+        delivery_services: Array.isArray(data?.delivery_services?.value) ? data.delivery_services.value : [],
+        free_freight_threshold: data?.free_freight_threshold?.value ?? '10000',
+        standard_flat_fee: data?.standard_flat_fee?.value ?? '350',
+        reservation_fee_percentage: data?.reservation_fee_percentage?.value ?? '5',
+      })
+      setVarsLoaded(true)
+    } catch {
+      setActionError('Could not load configuration variables.')
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'variables' && !varsLoaded) fetchVariables()
+  }, [activeTab, varsLoaded])
+
+  const saveVariables = async (e) => {
+    if (e) e.preventDefault()
+    setVarSaving(true)
+    setActionError(null)
+    try {
+      await adminApi.updateConfig({
+        delivery_services: variables.delivery_services,
+        free_freight_threshold: variables.free_freight_threshold,
+        standard_flat_fee: variables.standard_flat_fee,
+        reservation_fee_percentage: variables.reservation_fee_percentage,
+      })
+      setActionSuccess('Configuration variables saved — delivery fees and tracking links resolve from these live.')
+    } catch (err) {
+      setActionError(err?.response?.data?.message || 'Failed to save variables.')
+    } finally {
+      setVarSaving(false)
+    }
+  }
+
+  const addService = () => {
+    const name = newService.name.trim()
+    const code = newService.code.trim().toLowerCase()
+    if (!name || !code) {
+      setActionError('Delivery service needs both a name and a code.')
+      return
+    }
+    if (variables.delivery_services.some((s) => (s.code || '').toLowerCase() === code)) {
+      setActionError(`Service code "${code}" already exists.`)
+      return
+    }
+    setVariables((v) => ({
+      ...v,
+      delivery_services: [...v.delivery_services, {
+        name,
+        code,
+        tracking_url_template: newService.tracking_url_template.trim(),
+        active: true,
+      }],
+    }))
+    setNewService({ name: '', code: '', tracking_url_template: '' })
+    setActionError(null)
+  }
+
+  const updateService = (index, field, value) => {
+    setVariables((v) => ({
+      ...v,
+      delivery_services: v.delivery_services.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
+    }))
+  }
+
+  const removeService = (index) => {
+    setVariables((v) => ({
+      ...v,
+      delivery_services: v.delivery_services.filter((_, i) => i !== index),
+    }))
+  }
 
   const availableRegions = useMemo(() => {
     const keys = [...new Set(taxonomy.map((b) => b.region).filter(Boolean))]
@@ -356,11 +446,11 @@ export default function TaxonomyManagement() {
               <Tag size={20} />
             </span>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', fontWeight: 800, color: 'var(--admin-text-primary)', margin: 0 }}>
-              Brand, Model & Category Taxonomy
+              Configurations
             </h1>
           </div>
           <p style={{ color: 'var(--admin-text-secondary)', fontSize: 14, margin: 0 }}>
-            Standardize manufacturer platforms, chassis fitments, engines, and parts catalog hierarchies.
+            Vehicle brands & model specs, parts groups, and platform variables (delivery services, freight rules).
           </p>
         </div>
 
@@ -442,6 +532,15 @@ export default function TaxonomyManagement() {
             >
               <Layers size={16} />
               <span>Parts Categories & Sub-Groups ({categories.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('variables')}
+              className={`btn ${activeTab === 'variables' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', fontWeight: 700 }}
+            >
+              <SlidersHorizontal size={16} />
+              <span>Variables</span>
             </button>
           </div>
 
@@ -685,7 +784,159 @@ export default function TaxonomyManagement() {
         </>
       )}
 
-      {/* Add Brand Modal */}
+          {/* Tab 3: Platform Variables */}
+          {activeTab === 'variables' && (
+            <>
+              <div className="admin-card" style={{ padding: '18px 20px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Truck size={17} style={{ color: 'var(--color-rust)' }} />
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>Delivery Services</h3>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--admin-text-muted)', margin: '0 0 14px 0', lineHeight: 1.6 }}>
+                  Couriers offered at dispatch. The tracking template may contain <code>{'{tracking}'}</code> — when an
+                  order ships with a matching courier + tracking number, buyers get a live Track link automatically.
+                  A per-order tracking URL pasted in the order workspace always wins.
+                </p>
+
+                {(variables.delivery_services || []).length === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--admin-text-muted)', padding: '12px 0' }}>
+                    No delivery services configured yet — add the first courier below.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+                    {variables.delivery_services.map((s, i) => (
+                      <div key={`${s.code}-${i}`} className="admin-card" style={{ padding: '12px 14px', background: 'var(--admin-bg-subtle)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px auto auto', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                          <input
+                            className="admin-input"
+                            value={s.name || ''}
+                            onChange={(e) => updateService(i, 'name', e.target.value)}
+                            placeholder="Courier name"
+                          />
+                          <input
+                            className="admin-input"
+                            value={s.code || ''}
+                            onChange={(e) => updateService(i, 'code', e.target.value.toLowerCase())}
+                            placeholder="code"
+                            style={{ fontFamily: 'monospace' }}
+                          />
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, whiteSpace: 'nowrap' }}>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(s.active)}
+                              onChange={(e) => updateService(i, 'active', e.target.checked)}
+                            />
+                            Active
+                          </label>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => removeService(i)} title="Remove service">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                        <input
+                          className="admin-input"
+                          value={s.tracking_url_template || ''}
+                          onChange={(e) => updateService(i, 'tracking_url_template', e.target.value)}
+                          placeholder="Tracking URL template, e.g. https://courier.example/track/{tracking}"
+                          style={{ fontFamily: 'monospace', fontSize: 12 }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 2fr auto', gap: 10, alignItems: 'end' }}>
+                  <div>
+                    <label className="admin-label">New courier name</label>
+                    <input
+                      className="admin-input"
+                      value={newService.name}
+                      onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                      placeholder="e.g. Grab Express"
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Code</label>
+                    <input
+                      className="admin-input"
+                      value={newService.code}
+                      onChange={(e) => setNewService({ ...newService, code: e.target.value.toLowerCase() })}
+                      placeholder="e.g. grab"
+                      style={{ fontFamily: 'monospace' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Tracking URL template (optional)</label>
+                    <input
+                      className="admin-input"
+                      value={newService.tracking_url_template}
+                      onChange={(e) => setNewService({ ...newService, tracking_url_template: e.target.value })}
+                      placeholder="https://…/{tracking}"
+                      style={{ fontFamily: 'monospace', fontSize: 12 }}
+                    />
+                  </div>
+                  <button type="button" className="btn btn-secondary" onClick={addService} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+              </div>
+
+              <div className="admin-card" style={{ padding: '18px 20px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <SlidersHorizontal size={17} style={{ color: 'var(--color-rust)' }} />
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>Freight Rules</h3>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--admin-text-muted)', margin: '0 0 14px 0', lineHeight: 1.6 }}>
+                  Live inputs to the delivery-fee engine. The fee origin is the house default warehouse pin
+                  (Inventory → Warehouses); these numbers price everything around it.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label className="admin-label">Free-freight threshold (₱ subtotal)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="admin-input"
+                      value={variables.free_freight_threshold}
+                      onChange={(e) => setVariables({ ...variables, free_freight_threshold: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Standard flat fee (₱ fallback)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="admin-input"
+                      value={variables.standard_flat_fee}
+                      onChange={(e) => setVariables({ ...variables, standard_flat_fee: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Reservation fee (% of deal)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      className="admin-input"
+                      value={variables.reservation_fee_percentage}
+                      onChange={(e) => setVariables({ ...variables, reservation_fee_percentage: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button type="button" className="btn btn-primary" onClick={saveVariables} disabled={varSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <CheckCircle2 size={15} /> {varSaving ? 'Saving…' : 'Save Variables'}
+                </button>
+                <span style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
+                  Applies instantly to quotes, checkout, and tracking links.
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* Add Brand Modal */}
       {brandModalOpen && (
         <div className="modal-backdrop" onClick={() => setBrandModalOpen(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>

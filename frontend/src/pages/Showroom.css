@@ -1,0 +1,1047 @@
+/* ==========================================================================
+   Showroom & Verified Builders Hub CSS
+   High-utility, modern automotive marketplace styling for the Garage Showroom.
+   ========================================================================== */
+
+.showroom-page {
+  background: var(--color-background);
+  min-height: calc(100vh - 85px);
+  color: var(--color-text);
+  padding-bottom: 80px;
+}
+
+/* ==========================================================================
+   1. HERO SECTION
+   ========================================================================== */
+.showroom-hero {
+  position: relative;
+  background: 
+    linear-gradient(135deg, rgba(20, 23, 26, 0.95) 0%, rgba(20, 23, 26, 0.88) 50%, rgba(58, 30, 18, 0.85) 100%),
+    url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1920&auto=format&fit=crop') center/cover no-repeat;
+  color: #ffffff;
+  padding: 60px 0 70px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.showroom-hero-glow {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(650px 350px at 15% 30%, rgba(216, 98, 44, 0.22), transparent 70%),
+    radial-gradient(600px 300px at 85% 70%, rgba(44, 66, 80, 0.28), transparent 65%);
+  pointer-events: none;
+}
+
+.showroom-hero-container {
+  width: min(1320px, 94vw);
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.showroom-hero-header {
+  max-width: 840px;
+}
+
+.showroom-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f7f4ee;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.showroom-hero-title {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.showroom-gradient-text {
+  background: linear-gradient(135deg, #ffae7e 0%, #ff833e 50%, #d8622c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.showroom-hero-subtitle {
+  margin: 0;
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.6;
+  color: #d1d5dc;
+  max-width: 720px;
+}
+
+/* Hero Stats Bar */
+.showroom-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding-top: 10px;
+}
+
+.showroom-stat-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.showroom-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(216, 98, 44, 0.4);
+}
+
+.showroom-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: rgba(216, 98, 44, 0.18);
+  color: #ff9b66;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.showroom-stat-val {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.showroom-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   2. SEARCH & FILTER CONTROLS BAR
+   ========================================================================== */
+.showroom-controls-wrapper {
+  position: sticky;
+  top: 70px;
+  z-index: 30;
+  background: rgba(245, 242, 235, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 16px 0;
+  box-shadow: 0 4px 16px -4px rgba(20, 23, 26, 0.05);
+}
+
+.showroom-controls-container {
+  width: min(1320px, 94vw);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.showroom-search-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.showroom-search-box {
+  flex: 1 1 300px;
+  position: relative;
+}
+
+.showroom-search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  background: #ffffff;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--color-heading);
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-xs);
+}
+
+.showroom-search-box input:focus {
+  border-color: var(--color-rust);
+  box-shadow: 0 0 0 3px rgba(146, 68, 36, 0.12);
+}
+
+.showroom-search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.showroom-sort-box {
+  min-width: 200px;
+}
+
+.showroom-sort-box select {
+  width: 100%;
+  padding: 11px 16px;
+  background: #ffffff;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-heading);
+  outline: none;
+  cursor: pointer;
+}
+
+/* Category Filter Tabs */
+.showroom-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.showroom-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.showroom-tab-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.18s ease;
+}
+
+.showroom-tab-btn:hover {
+  background: var(--color-surface-subtle);
+  border-color: var(--color-concrete);
+  color: var(--color-heading);
+}
+
+.showroom-tab-btn.active {
+  background: var(--color-charcoal);
+  color: #ffffff;
+  border-color: var(--color-charcoal);
+  box-shadow: 0 2px 8px rgba(20, 23, 26, 0.2);
+}
+
+.showroom-tab-badge {
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.showroom-tab-btn.active .showroom-tab-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   3. SELLERS SHOWROOM GRID
+   ========================================================================== */
+.showroom-main {
+  width: min(1320px, 94vw);
+  margin: 36px auto 0;
+}
+
+.showroom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 28px;
+}
+
+@media (max-width: 640px) {
+  .showroom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Individual Seller Card */
+.seller-showroom-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+.seller-showroom-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(146, 68, 36, 0.35);
+}
+
+/* Card Header Banner */
+.seller-card-header {
+  padding: 24px 24px 18px;
+  background: linear-gradient(180deg, #faf7f2 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--color-border-subtle);
+  position: relative;
+}
+
+.seller-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.seller-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.seller-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(20, 23, 26, 0.12);
+  background: var(--color-sand-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-rust);
+}
+
+.seller-kyc-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  background: #10b981;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+}
+
+.seller-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.seller-username-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.seller-username {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-heading);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seller-role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.seller-role-badge.builder {
+  background: #fbeee7;
+  color: var(--color-rust);
+  border: 1px solid rgba(146, 68, 36, 0.2);
+}
+
+.seller-role-badge.dealer {
+  background: #edf2f5;
+  color: var(--color-steel);
+  border: 1px solid rgba(44, 66, 80, 0.2);
+}
+
+.seller-role-badge.parts_seller {
+  background: #e8f5ec;
+  color: var(--color-success);
+  border: 1px solid rgba(27, 135, 63, 0.2);
+}
+
+.seller-meta-sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  flex-wrap: wrap;
+}
+
+.seller-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seller-tagline {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--color-text);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Card KPI Strip */
+.seller-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: #ffffff;
+}
+
+.seller-kpi-item {
+  padding: 12px 14px;
+  text-align: center;
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+.seller-kpi-item:last-child {
+  border-right: none;
+}
+
+.seller-kpi-val {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-heading);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.seller-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Specialties Tag Chips */
+.seller-specialties {
+  padding: 12px 20px 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.specialty-chip {
+  padding: 3px 9px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Live Inventory Preview Showcase in Card */
+.seller-preview-section {
+  padding: 14px 20px 18px;
+  flex: 1;
+}
+
+.preview-header {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-items-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.preview-item-pill {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.preview-item-pill:hover {
+  transform: scale(1.02);
+  border-color: var(--color-rust);
+}
+
+.preview-item-img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.preview-item-info {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-item-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-item-price {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-rust);
+}
+
+.preview-item-type-tag {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 2px 5px;
+  background: rgba(20, 23, 26, 0.75);
+  backdrop-filter: blur(4px);
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+/* Card Action Footer */
+.seller-card-footer {
+  padding: 14px 20px;
+  background: var(--color-surface-subtle);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  gap: 10px;
+}
+
+.seller-card-footer .btn-primary {
+  flex: 1;
+  font-size: 13.5px;
+}
+
+.seller-card-footer .btn-secondary {
+  padding: 10px 14px;
+}
+
+/* Empty State */
+.showroom-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 24px;
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
+
+.showroom-empty-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--color-orange-light);
+  color: var(--color-rust);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   4. DEDICATED SELLER SHOWCASE MODAL / DRAWER
+   ========================================================================== */
+.showcase-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(16, 18, 20, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.showcase-modal {
+  background: #ffffff;
+  width: min(1140px, 96vw);
+  max-height: 90vh;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Showcase Banner Header */
+.showcase-modal-banner {
+  background: 
+    linear-gradient(135deg, rgba(20, 23, 26, 0.94) 0%, rgba(58, 30, 18, 0.9) 100%),
+    url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=1200&auto=format&fit=crop') center/cover;
+  padding: 36px 32px;
+  color: #ffffff;
+  position: relative;
+}
+
+.showcase-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.showcase-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.showcase-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.showcase-large-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background: var(--color-sand);
+}
+
+.showcase-profile-details {
+  flex: 1;
+  min-width: 240px;
+}
+
+.showcase-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.showcase-username {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.showcase-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+/* Showcase Body & Tabs */
+.showcase-modal-body {
+  padding: 24px 32px 36px;
+}
+
+.showcase-nav-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.showcase-nav-tab {
+  padding: 10px 20px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.showcase-nav-tab:hover {
+  color: var(--color-heading);
+}
+
+.showcase-nav-tab.active {
+  color: var(--color-rust);
+  border-bottom-color: var(--color-rust);
+}
+
+.showcase-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Showcase Review Items */
+.showcase-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.showcase-review-card {
+  padding: 16px 20px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.showcase-review-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.showcase-reviewer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--color-heading);
+}
+
+.showcase-reviewer-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-border);
+}
+
+.showcase-review-stars {
+  display: flex;
+  gap: 2px;
+  color: #f59e0b;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ==========================================================================
+   OFFICIAL GARAGE HIGHLIGHTS SPOTLIGHT SECTION
+   ========================================================================== */
+.garage-highlights-section {
+  background: linear-gradient(180deg, #181b20 0%, #1e2229 100%);
+  border-bottom: 2px solid rgba(216, 98, 44, 0.35);
+  padding: 44px 0 54px;
+  position: relative;
+  overflow: hidden;
+}
+
+.garage-highlights-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ff9b66, #d8622c, #852a08);
+}
+
+.garage-highlights-container {
+  width: min(1320px, 94vw);
+  margin: 0 auto;
+}
+
+.garage-highlights-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.garage-highlights-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(216, 98, 44, 0.2);
+  border: 1px solid rgba(255, 155, 102, 0.4);
+  color: #ff9b66;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.garage-highlights-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.5vw, 32px);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.garage-highlights-sub {
+  margin: 0;
+  font-size: 14px;
+  color: #cbd5e1;
+  max-width: 680px;
+  line-height: 1.5;
+}
+
+.garage-highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 22px;
+}
+
+.garage-highlight-card {
+  background: #242930;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+}
+
+.garage-highlight-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 155, 102, 0.5);
+  box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(216, 98, 44, 0.3);
+}
+
+.highlight-image-box {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background: #111418;
+  overflow: hidden;
+}
+
+.highlight-image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.garage-highlight-card:hover .highlight-image-box img {
+  transform: scale(1.05);
+}
+
+.highlight-tags-floating {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+}
+
+.highlight-official-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #d8622c 0%, #a43809 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.highlight-feature-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #f1f5f9;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: var(--radius-xs);
+  backdrop-filter: blur(4px);
+}
+
+.highlight-inspection-badge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.95);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 2;
+}
+
+.highlight-card-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.highlight-specs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.highlight-card-title {
+  margin: 0 0 16px;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+.highlight-card-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.highlight-price-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+}
+
+.highlight-price-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ff9b66;
+  font-family: var(--font-display);
+}
+
+/* Official Seller Card styling */
+.seller-showroom-card.seller-card-official {
+  border: 2px solid rgba(216, 98, 44, 0.4);
+  background: linear-gradient(180deg, #fffcf9 0%, #ffffff 100%);
+  box-shadow: 0 4px 16px -2px rgba(216, 98, 44, 0.12);
+}
+
+.seller-role-badge.official {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}

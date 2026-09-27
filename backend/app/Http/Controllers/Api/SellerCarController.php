@@ -12,6 +12,7 @@ use App\Services\CarService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Seller inventory — auth + role:seller,admin.
@@ -31,6 +32,7 @@ class SellerCarController extends Controller
         $query = Car::query()
             ->ofSeller((int) $request->user()->id)
             ->with('media')
+            ->withCount('heldOrders')
             ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('created_at');
 
@@ -59,7 +61,7 @@ class SellerCarController extends Controller
     {
         $this->authorize('view', $car);
 
-        return new CarResource($car->loadMissing(['seller:id,name', 'media']));
+        return new CarResource($car->loadMissing(['seller:id,name', 'media'])->loadCount('heldOrders'));
     }
 
     public function update(UpdateCarRequest $request, Car $car): CarResource
@@ -97,6 +99,52 @@ class SellerCarController extends Controller
         $this->authorize('update', $car);
 
         return new CarResource($this->cars->markSold($car));
+    }
+
+    /**
+     * Set any seller-manageable status: draft/active/archived/sold.
+     * Routes through the guarded transitions (publish/markSold) where
+     * they apply; inspection & moderation states (pending_inspection,
+     * inspected, rejected) stay house-managed and are rejected here.
+     */
+    public function setStatus(Request $request, Car $car): CarResource
+    {
+        $this->authorize('update', $car);
+
+        $data = $request->validate([
+            'status' => ['required', 'string', 'in:draft,active,archived,sold'],
+        ]);
+
+        $current = $car->status instanceof \App\Enums\CarStatus
+            ? $car->status->value
+            : (string) $car->status;
+
+        if ($data['status'] === $current) {
+            return new CarResource($car->refresh());
+        }
+
+        if ($data['status'] === 'active') {
+            $this->ensureKycVerified($request->user());
+
+            return new CarResource($this->cars->publish($car));
+        }
+
+        if ($data['status'] === 'sold') {
+            return new CarResource($this->cars->markSold($car));
+        }
+
+        if (in_array($current, ['pending_inspection', 'inspected', 'rejected'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Inspection and moderation states are managed by the house.'],
+            ]);
+        }
+
+        $prev = $current;
+        $car->forceFill(['status' => $data['status']])->save();
+        $car = $car->refresh();
+        event(new \App\Events\CarStatusChanged($car, $prev));
+
+        return new CarResource($car);
     }
 
     /**

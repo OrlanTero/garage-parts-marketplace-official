@@ -202,6 +202,35 @@ class Part extends Model
         return $this->morphMany(Favorite::class, 'favoritable');
     }
 
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'part_id');
+    }
+
+    /**
+     * Orders holding money on this part right now — same escrow rule
+     * as cars (see Car::heldOrders).
+     */
+    public function heldOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->orders()
+            ->whereIn('payment_status', ['paid', 'confirmed'])
+            ->whereNotIn('status', ['completed', 'refunded', 'cancelled']);
+    }
+
+    public function getPaymentSecuredAttribute(): bool
+    {
+        if (array_key_exists('held_orders_count', $this->attributes)) {
+            return (int) $this->attributes['held_orders_count'] > 0;
+        }
+
+        if ($this->relationLoaded('heldOrders')) {
+            return $this->heldOrders->isNotEmpty();
+        }
+
+        return $this->heldOrders()->exists();
+    }
+
     public function getPrimaryImageUrlAttribute(): ?string
     {
         if ($this->relationLoaded('media')) {
@@ -222,12 +251,17 @@ class Part extends Model
         return $this->media()->pluck('url')->all();
     }
 
-    /** Public marketplace scope: active listings with live catalog status. */
+    /**
+     * Public marketplace scope: active listings with live catalog status
+     * and stock. Zero-stock units are unavailable (payment secured by an
+     * open order). NULL quantity means "unspecified" (legacy rows).
+     */
     public function scopeListed(Builder $query): Builder
     {
         return $query->where('status', PartStatus::Active->value)
             ->where('lifecycle_status', 'active')
             ->whereNotNull('published_at')
+            ->where(fn (Builder $q) => $q->where('quantity', '>', 0)->orWhereNull('quantity'))
             ->orderByDesc('published_at');
     }
 
@@ -253,6 +287,8 @@ class Part extends Model
             ->when($filters['brand'] ?? null, fn (Builder $q, $v) => $q->where('brand', $v))
             ->when($filters['condition'] ?? null, fn (Builder $q, $v) => $q->where('condition', $v))
             ->when($filters['city'] ?? null, fn (Builder $q, $v) => $q->where('city', $v))
+            ->when($filters['seller_id'] ?? null, fn (Builder $q, $v) => $q->where('seller_id', $v))
+            ->when($filters['seller_username'] ?? null, fn (Builder $q, $v) => $q->whereHas('seller', fn ($sq) => $sq->where('username', $v)))
             ->when($filters['min_price'] ?? null, fn (Builder $q, $v) => $q->where('price', '>=', $v))
             ->when($filters['max_price'] ?? null, fn (Builder $q, $v) => $q->where('price', '<=', $v))
             ->when($filters['in_stock'] ?? null, fn (Builder $q) => $q->where('quantity', '>', 0));

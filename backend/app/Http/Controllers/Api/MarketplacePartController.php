@@ -21,6 +21,8 @@ class MarketplacePartController extends Controller
             'brand' => ['sometimes', 'string', 'max:80'],
             'condition' => ['sometimes', 'string', 'max:30'],
             'city' => ['sometimes', 'string', 'max:120'],
+            'seller_id' => ['sometimes', 'integer'],
+            'seller_username' => ['sometimes', 'string', 'max:80'],
             'min_price' => ['sometimes', 'numeric', 'min:0'],
             'max_price' => ['sometimes', 'numeric', 'min:0'],
             'in_stock' => ['sometimes', 'boolean'],
@@ -37,6 +39,6 @@ class MarketplacePartController extends Controller
     {
         $this->authorize('view', $part);
 
-        return new PartResource($part->loadMissing(['seller:id,name', 'media']));
+        return new PartResource($part->loadMissing(['seller:id,name', 'media'])->loadCount('heldOrders'));
     }
 }

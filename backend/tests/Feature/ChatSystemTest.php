@@ -31,30 +31,33 @@ class ChatSystemTest extends TestCase
     {
         $buyer = User::factory()->buyer()->create();
         $seller = User::factory()->seller()->create();
+        $car = Car::factory()->create(['seller_id' => $seller->id]);
+
+        $listingParams = ['listing_type' => 'car', 'listing_id' => $car->id];
 
         // 1. First call to create conversation
-        $response1 = $this->postJson('/api/v1/chat/conversations', [
+        $response1 = $this->postJson('/api/v1/chat/conversations', array_merge([
             'recipient_id' => $seller->id,
             'initial_message' => 'Hello seller, is this car negotiable?',
-        ], $this->authToken($buyer));
+        ], $listingParams), $this->authToken($buyer));
 
         $response1->assertStatus(201);
         $convId1 = $response1->json('data.id');
         $this->assertNotNull($convId1);
 
         // 2. Second call with same users from buyer to seller
-        $response2 = $this->postJson('/api/v1/chat/conversations', [
+        $response2 = $this->postJson('/api/v1/chat/conversations', array_merge([
             'recipient_id' => $seller->id,
-        ], $this->authToken($buyer));
+        ], $listingParams), $this->authToken($buyer));
 
         $response2->assertStatus(201);
         $convId2 = $response2->json('data.id');
         $this->assertEquals($convId1, $convId2);
 
         // 3. Third call initiated inversely from seller to buyer
-        $response3 = $this->postJson('/api/v1/chat/conversations', [
+        $response3 = $this->postJson('/api/v1/chat/conversations', array_merge([
             'recipient_id' => $buyer->id,
-        ], $this->authToken($seller));
+        ], $listingParams), $this->authToken($seller));
 
         $response3->assertStatus(201);
         $convId3 = $response3->json('data.id');
@@ -64,13 +67,31 @@ class ChatSystemTest extends TestCase
         $this->assertEquals(1, Conversation::count());
     }
 
+    public function test_user_only_conversation_without_listing_is_rejected(): void
+    {
+        $buyer = User::factory()->buyer()->create();
+        $seller = User::factory()->seller()->create();
+
+        // Listing-focused inbox: every conversation must belong to a listing.
+        $this->postJson('/api/v1/chat/conversations', [
+            'recipient_id' => $seller->id,
+            'initial_message' => 'Hello without a listing',
+        ], $this->authToken($buyer))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['listing_type', 'listing_id']);
+    }
+
     public function test_self_messaging_is_rejected(): void
     {
         $user = User::factory()->buyer()->create();
+        $seller = User::factory()->seller()->create();
+        $car = Car::factory()->create(['seller_id' => $seller->id]);
 
         $response = $this->postJson('/api/v1/chat/conversations', [
             'recipient_id' => $user->id,
             'initial_message' => 'Talking to myself',
+            'listing_type' => 'car',
+            'listing_id' => $car->id,
         ], $this->authToken($user));
 
         $response->assertStatus(422)
@@ -201,7 +222,8 @@ class ChatSystemTest extends TestCase
     {
         $buyer = User::factory()->buyer()->create();
         $seller = User::factory()->seller()->create();
-        $conversation = Conversation::findOrCreateBetween($buyer->id, $seller->id);
+        $car = Car::factory()->create(['seller_id' => $seller->id]);
+        $conversation = Conversation::findOrCreateBetween($buyer->id, $seller->id, 'car', $car->id);
 
         // Seller sends 2 messages to Buyer
         $this->postJson("/api/v1/chat/conversations/{$conversation->id}/messages", [

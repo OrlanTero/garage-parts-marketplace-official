@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ShoppingBag,
   Search,
@@ -27,6 +28,9 @@ export default function OrdersManagement() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [updatingId, setUpdatingId] = useState(null)
+
+  const storefrontBase = (import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:5173').replace(/\/$/, '')
+  const receiptUrl = (ord) => `${storefrontBase}/sales-order/${ord.order_number || ord.id}`
 
   const loadOrders = async () => {
     setLoading(true)
@@ -66,14 +70,14 @@ export default function OrdersManagement() {
   const markCompleted = async (orderId) => {
     setUpdatingId(orderId)
     try {
-      await adminApi.updateOrderStatus(orderId, { status: 'delivered' })
+      await adminApi.updateOrderStatus(orderId, { status: 'completed' })
       setOrders((prev) =>
         prev.map((o) =>
           o.id === orderId || o.order_number === orderId
             ? {
                 ...o,
-                status: 'delivered',
-                status_label: 'Delivered & Completed',
+                status: 'completed',
+                status_label: 'Completed',
                 status_variant: 'success',
               }
             : o
@@ -81,6 +85,62 @@ export default function OrdersManagement() {
       )
     } catch (err) {
       console.error('Failed to update order status:', err)
+      window.alert(err?.response?.data?.message || 'Could not complete this order. Funds must be confirmed first.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const moveFulfillment = async (ord, status) => {
+    let payload = { status }
+    if (status === 'shipped') {
+      const tracking = window.prompt('Courier tracking / waybill number:', ord.tracking_number || '')
+      if (tracking === null) return
+      const carrier = window.prompt('Carrier (e.g. LBC Express, J&T, 2GO):', ord.carrier || 'LBC Express')
+      if (carrier === null) return
+      const url = window.prompt('Buyer tracking URL (blank = auto-build from Configurations):', ord.tracking_url || '')
+      if (url === null) return
+      const eta = window.prompt('Estimated arrival (YYYY-MM-DD, blank = none):', ord.estimated_arrival || '')
+      if (eta === null) return
+      if (tracking.trim()) payload.tracking_number = tracking.trim()
+      if (carrier.trim()) payload.carrier = carrier.trim()
+      if (url.trim()) payload.tracking_url = url.trim()
+      if (eta.trim()) payload.estimated_arrival = eta.trim()
+    }
+    if (!window.confirm(`${status === 'shipped' ? 'Dispatch' : 'Mark delivered for'} order ${ord.order_number || `#${ord.id}`}?`)) return
+    setUpdatingId(ord.id)
+    try {
+      const updated = await adminApi.updateOrderStatus(ord.id, payload)
+      const next = updated?.data ?? updated ?? {}
+      setOrders((prev) =>
+        prev.map((o) => (o.id === ord.id || o.order_number === ord.order_number ? { ...o, ...next } : o))
+      )
+      loadOrders()
+    } catch (err) {
+      console.error('Failed to update order status:', err)
+      window.alert(err?.response?.data?.message || 'Could not update fulfillment status.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const confirmFunds = async (ord) => {
+    if (!window.confirm(`Confirm funds received for order ${ord.order_number || `#${ord.id}`}? This unlocks dispatch & completion.`)) return
+    setUpdatingId(ord.id)
+    try {
+      const updated = await adminApi.confirmOrderFunds(ord.id)
+      const next = updated?.data ?? updated ?? {}
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === ord.id || o.order_number === ord.order_number
+            ? { ...o, ...next, financials: { ...(o.financials || {}), payment_status: 'confirmed' } }
+            : o
+        )
+      )
+      loadOrders()
+    } catch (err) {
+      console.error('Failed to confirm funds:', err)
+      window.alert(err?.response?.data?.message || 'Could not confirm funds.')
     } finally {
       setUpdatingId(null)
     }
@@ -192,7 +252,7 @@ export default function OrdersManagement() {
       {/* Filter and Search Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div className="orders-tab-row" style={{ display: 'flex', gap: 8, background: '#e2e8f0', padding: 4, borderRadius: 'var(--radius-md)', overflowX: 'auto', maxWidth: '100%' }}>
-          {['all', 'processing', 'shipped', 'delivered', 'disputed'].map((st) => (
+          {['all', 'processing', 'preparing', 'shipped', 'delivered', 'completed', 'disputed'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -295,13 +355,26 @@ export default function OrdersManagement() {
                         </div>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{sellerTitle}</div>
                         <div style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginTop: 2 }}>
-                          Total: <strong>{totalDisplay}</strong> (Payment: {ord.payment_method || 'Bank Transfer'})
+                          Total: <strong>{totalDisplay}</strong> (Payment: {ord.payment_method || ord.financials?.payment_method || 'Bank Transfer'})
                         </div>
-                        <div style={{ marginTop: 6 }}>
-                          <span className={`badge badge-${ord.status === 'delivered' ? 'success' : 'warning'}`} style={{ fontSize: 11 }}>
-                            {ord.status === 'delivered' ? 'Payment Settled' : 'In Escrow'}
-                          </span>
-                        </div>
+                        {(ord.financials?.payment_reference || ord.payment_reference) && (
+                          <div style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginTop: 2 }}>
+                            Ref: <strong style={{ fontFamily: 'monospace' }}>{ord.financials?.payment_reference || ord.payment_reference}</strong>
+                          </div>
+                        )}
+                        {(() => {
+                          const pay = ord.financials?.payment_status || ord.payment_status || 'pending'
+                          const fund = pay === 'confirmed'
+                            ? { label: 'Funds Confirmed', cls: 'badge-success' }
+                            : pay === 'paid'
+                              ? { label: 'Paid — Verify Funds', cls: 'badge-warning' }
+                              : { label: 'Payment Pending', cls: 'badge-secondary' }
+                          return (
+                            <div style={{ marginTop: 6 }}>
+                              <span className={`badge ${fund.cls}`} style={{ fontSize: 11 }}>{fund.label}</span>
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       {/* Shipping Box */}
@@ -313,6 +386,23 @@ export default function OrdersManagement() {
                         <div style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--color-rust)', marginTop: 2 }}>
                           {ord.tracking_number || ord.trackingNumber || 'PENDING-DISPATCH'}
                         </div>
+                        {(ord.estimated_arrival_display || ord.estimated_arrival) && (
+                          <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)', marginTop: 4 }}>
+                            ETA: <strong>{ord.estimated_arrival_display || ord.estimated_arrival}</strong>
+                          </div>
+                        )}
+                        {ord.tracking_url && (
+                          <div style={{ marginTop: 4 }}>
+                            <a
+                              href={ord.tracking_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-rust)' }}
+                            >
+                              Open buyer tracking link →
+                            </a>
+                          </div>
+                        )}
                         <div style={{ fontSize: 11, color: 'var(--admin-text-muted)', marginTop: 6 }}>
                           Courier Waybill: {ord.status === 'shipped' || ord.status === 'delivered' ? 'In Transit / Validated' : 'Awaiting Carrier Scan'}
                         </div>
@@ -406,6 +496,14 @@ export default function OrdersManagement() {
                       </div>
 
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <Link
+                          to={`/orders/${ord.order_number || ord.id}`}
+                          className="admin-btn admin-btn-secondary"
+                          style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+                        >
+                          <ExternalLink size={14} />
+                          <span>Open Full View</span>
+                        </Link>
                         {isPendingVerification && (
                           <>
                             <button
@@ -427,7 +525,42 @@ export default function OrdersManagement() {
                             </button>
                           </>
                         )}
-                        {ord.status === 'processing' && (
+
+                        {/* Fund acceptance → dispatch → delivery → completion */}
+                        {!isPendingVerification && (ord.verification_status || 'pending') === 'accepted' && (ord.financials?.payment_status || ord.payment_status || 'pending') === 'paid' && (
+                          <button
+                            onClick={() => confirmFunds(ord)}
+                            disabled={updatingId === ord.id}
+                            className="admin-btn admin-btn-primary"
+                            style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          >
+                            <DollarSign size={14} />
+                            <span>{updatingId === ord.id ? 'Confirming...' : 'Confirm Funds Received'}</span>
+                          </button>
+                        )}
+                        {!isPendingVerification && (ord.financials?.payment_status || ord.payment_status) === 'confirmed' && ord.status === 'processing' && (
+                          <button
+                            onClick={() => moveFulfillment(ord, 'shipped')}
+                            disabled={updatingId === ord.id}
+                            className="admin-btn admin-btn-primary"
+                            style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          >
+                            <Truck size={14} />
+                            <span>{updatingId === ord.id ? 'Updating...' : 'Mark Shipped'}</span>
+                          </button>
+                        )}
+                        {ord.status === 'shipped' && (
+                          <button
+                            onClick={() => moveFulfillment(ord, 'delivered')}
+                            disabled={updatingId === ord.id}
+                            className="admin-btn admin-btn-primary"
+                            style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          >
+                            <PackageCheck size={14} />
+                            <span>{updatingId === ord.id ? 'Updating...' : 'Mark Delivered'}</span>
+                          </button>
+                        )}
+                        {ord.status === 'delivered' && (
                           <button
                             onClick={() => markCompleted(ord.id)}
                             disabled={updatingId === ord.id}
@@ -435,8 +568,20 @@ export default function OrdersManagement() {
                             style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                           >
                             <CheckCircle2 size={14} />
-                            <span>{updatingId === ord.id ? 'Updating...' : 'Mark Fulfilled & Settle Payout'}</span>
+                            <span>{updatingId === ord.id ? 'Updating...' : 'Complete Order'}</span>
                           </button>
+                        )}
+                        {ord.status === 'completed' && (
+                          <a
+                            href={receiptUrl(ord)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="admin-btn admin-btn-secondary"
+                            style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+                          >
+                            <ExternalLink size={14} />
+                            <span>View Transaction Receipt</span>
+                          </a>
                         )}
                       </div>
                     </div>

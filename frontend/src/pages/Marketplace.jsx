@@ -49,10 +49,12 @@ export default function Marketplace() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialSearch = searchParams.get('search') || ''
   const initialBrand = searchParams.get('brand') || ''
+  const initialSeller = searchParams.get('seller_username') || searchParams.get('seller') || ''
 
   const { cars: apiCars, meta, filters, setFilter, page, setPage, loading, error, reload } = useMarketplaceCars({
     search: initialSearch,
-    brand: initialBrand
+    brand: initialBrand,
+    seller_username: initialSeller,
   })
 
   const [activePreset, setActivePreset] = useState('all')
@@ -132,6 +134,7 @@ export default function Marketplace() {
   const activeFilterList = useMemo(() => {
     const list = []
     if (filters.search) list.push({ key: 'search', label: `Search: "${filters.search}"`, clear: () => setFilter('search', '') })
+    if (filters.seller_username) list.push({ key: 'seller_username', label: `Builder: @${filters.seller_username}`, clear: () => setFilter('seller_username', '') })
     if (filters.brand) list.push({ key: 'brand', label: `Brand: ${filters.brand}`, clear: () => setFilter('brand', '') })
     if (filters.body_style) list.push({ key: 'body_style', label: `Body: ${filters.body_style}`, clear: () => setFilter('body_style', '') })
     if (filters.transmission) list.push({ key: 'transmission', label: `Trans: ${filters.transmission}`, clear: () => setFilter('transmission', '') })

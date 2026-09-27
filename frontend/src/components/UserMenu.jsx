@@ -1,36 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { 
-  User as UserIcon, 
-  LogOut, 
-  Car, 
-  Package, 
-  Heart, 
-  ShoppingBag, 
-  PlusCircle, 
-  ChevronDown, 
-  ShieldCheck, 
-  Coffee, 
+import {
+  LogOut,
+  ShoppingBag,
+  ChevronDown,
+  ShieldCheck,
+  Coffee,
   HelpCircle,
   Sparkles,
-  ExternalLink,
   CheckCircle2,
-  MessageSquare,
-  UserCheck,
   Store,
-  Tag,
-  SlidersHorizontal,
-  LayoutDashboard
+  SlidersHorizontal
 } from 'lucide-react'
 import { useFavorites } from '../context/FavoritesContext.jsx'
-import { useChat } from '../context/ChatContext.jsx'
-import KycVerificationModal from './KycVerificationModal.jsx'
 
 export default function UserMenu({ user, logout, isTransparent = false }) {
   const { favoritesCount, carsCount, partsCount } = useFavorites()
-  const { unreadCount } = useChat()
   const [isOpen, setIsOpen] = useState(false)
-  const [kycModalOpen, setKycModalOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const menuRef = useRef(null)
   const navigate = useNavigate()
@@ -194,43 +180,6 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </div>
             </Link>
 
-            <button
-              type="button"
-              className="user-dropdown-item"
-              style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer' }}
-              onClick={() => {
-                setIsOpen(false)
-                setKycModalOpen(true)
-              }}
-            >
-              <div className="user-dropdown-item-icon" style={{ color: user?.is_kyc_verified ? '#10b981' : '#ea580c' }}>
-                <UserCheck size={16} />
-              </div>
-              <div className="user-dropdown-item-text">
-                <span className="user-dropdown-item-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                  <span>Seller KYC & Verification</span>
-                  {user?.is_kyc_verified ? (
-                    <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 700 }}>
-                      ✓ Verified
-                    </span>
-                  ) : user?.kyc_status === 'pending' ? (
-                    <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(234, 88, 12, 0.15)', color: '#ea580c', fontWeight: 700 }}>
-                      Pending
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(255, 255, 255, 0.08)', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                      Unverified
-                    </span>
-                  )}
-                </span>
-                <span className="user-dropdown-item-desc">
-                  {user?.is_kyc_verified
-                    ? 'Verified Seller Trust Badge active'
-                    : 'Submit government ID to unlock seller badge'}
-                </span>
-              </div>
-            </button>
-
             <Link to="/agent" className="user-dropdown-item" onClick={handleLinkClick}>
               <div className="user-dropdown-item-icon icon-action">
                 <Sparkles size={16} />
@@ -241,93 +190,39 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </div>
             </Link>
 
-            {isSeller ? (
-              <>
-                <Link to="/sell" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon icon-action">
-                    <PlusCircle size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Sell Your Build / Parts</span>
-                    <span className="user-dropdown-item-desc">Post new verified listing</span>
-                  </div>
-                </Link>
-
-                <Link to="/messages" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <MessageSquare size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">
-                      Buyer Messages {unreadCount > 0 && <span className="action-badge-inline">{unreadCount} new</span>}
-                    </span>
-                    <span className="user-dropdown-item-desc">Inquiries from prospective buyers</span>
-                  </div>
-                </Link>
-
-                <Link to="/offers" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <Tag size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Price Offers Received</span>
-                    <span className="user-dropdown-item-desc">Buyer offers on your listings</span>
-                  </div>
-                </Link>
-
-                <Link to="/marketplace" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <Car size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Showroom & Vehicles</span>
-                    <span className="user-dropdown-item-desc">Browse 100-Point certified cars</span>
-                  </div>
-                </Link>
-
-                <Link to="/parts" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <Package size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Parts Catalog & Inquiries</span>
-                    <span className="user-dropdown-item-desc">Performance & replacement stock</span>
-                  </div>
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link to="/become-seller" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon icon-action">
-                    <Store size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Become a Seller</span>
-                    <span className="user-dropdown-item-desc">Upgrade to sell cars & parts</span>
-                  </div>
-                </Link>
-
-                <Link to="/offers" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <Tag size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">My Price Offers</span>
-                    <span className="user-dropdown-item-desc">Track offers you submitted</span>
-                  </div>
-                </Link>
-
-                <Link to="/marketplace" className="user-dropdown-item" onClick={handleLinkClick}>
-                  <div className="user-dropdown-item-icon">
-                    <Car size={16} />
-                  </div>
-                  <div className="user-dropdown-item-text">
-                    <span className="user-dropdown-item-title">Browse Verified Cars</span>
-                    <span className="user-dropdown-item-desc">Discover 100-Point inspected builds</span>
-                  </div>
-                </Link>
-              </>
+            {isSeller && (
+              <Link to="/my-listings?tab=requests" className="user-dropdown-item" onClick={handleLinkClick}>
+                <div className="user-dropdown-item-icon icon-action">
+                  <Store size={16} />
+                </div>
+                <div className="user-dropdown-item-text">
+                  <span className="user-dropdown-item-title">My Listings & Requests</span>
+                  <span className="user-dropdown-item-desc">Paid orders, buyer requests & inventory</span>
+                </div>
+              </Link>
             )}
+
+            {!isSeller && (
+              <Link to="/become-seller" className="user-dropdown-item" onClick={handleLinkClick}>
+                <div className="user-dropdown-item-icon icon-action">
+                  <Store size={16} />
+                </div>
+                <div className="user-dropdown-item-text">
+                  <span className="user-dropdown-item-title">Become a Seller</span>
+                  <span className="user-dropdown-item-desc">Upgrade to sell cars & parts</span>
+                </div>
+              </Link>
+            )}
+
+            <Link to="/my-orders" className="user-dropdown-item" onClick={handleLinkClick}>
+              <div className="user-dropdown-item-icon">
+                <ShoppingBag size={16} />
+              </div>
+              <div className="user-dropdown-item-text">
+                <span className="user-dropdown-item-title">My Orders</span>
+                <span className="user-dropdown-item-desc">Purchases, escrow payments & receipts</span>
+              </div>
+            </Link>
           </div>
 
           <div className="user-dropdown-divider" />
@@ -383,8 +278,6 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
           </div>
         </div>
       )}
-      {/* KYC Verification & Seller Accreditation Modal */}
-      <KycVerificationModal isOpen={kycModalOpen} onClose={() => setKycModalOpen(false)} />
     </div>
   )
 }

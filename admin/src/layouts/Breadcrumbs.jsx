@@ -2,9 +2,20 @@ import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight, Home } from 'lucide-react'
 
 const ROUTE_LABELS = {
+  buyers: 'Buyer Management',
+  sellers: 'Seller Management',
+  dealers: 'Dealer Management',
   cars: 'Car Builds & Showroom',
   parts: 'Parts & Catalog Inventory',
+  inventory: 'Inventory & Stock Control',
+  moderation: 'Listing Approval & Moderation',
+  kyc: 'KYC & Seller Verification',
+  'seller-applications': 'Seller Upgrade Requests',
+  'chat-moderation': 'Chat Moderation',
+  appointments: 'Appointment Monitoring',
+  'admin-users': 'Admin Users & Permissions',
   taxonomy: 'Fitment & Taxonomy Tree',
+  configurations: 'Configurations Hub',
   promotions: 'Promotions & Boost Engine',
   orders: 'Orders & Fulfillment Lifecycle',
   payouts: 'Seller Payouts & Ledger',

@@ -8,7 +8,9 @@ const MAX_CONVS = 15
 const MAX_MSGS_PER_CONV = 40
 
 const memConvs = new Map() // uid -> conversation list
+const memInbox = new Map() // uid -> listing inbox
 const memMsgs = new Map() // `${uid}:${convId}` -> message list
+const memListingMsgs = new Map() // `${uid}:${listingKey}` -> listing message list
 
 function read(key) {
   try {
@@ -28,8 +30,11 @@ function write(key, value) {
 }
 
 const convsKey = (uid) => `gpm_chat_convs_${uid}`
+const inboxKey = (uid) => `gpm_chat_inbox_${uid}`
 const msgsKey = (uid, convId) => `gpm_chat_msgs_${uid}_${convId}`
+const listingMsgsKey = (uid, listingKey) => `gpm_chat_listing_msgs_${uid}_${listingKey}`
 const memMsgKey = (uid, convId) => `${uid}:${convId}`
+const memListingKey = (uid, listingKey) => `${uid}:listing:${listingKey}`
 
 export function getCachedConversations(uid) {
   if (!uid) return []
@@ -45,6 +50,40 @@ export function setCachedConversations(uid, list) {
   const trimmed = list.slice(0, MAX_CONVS)
   memConvs.set(uid, trimmed)
   write(convsKey(uid), trimmed)
+}
+
+export function getCachedInbox(uid) {
+  if (!uid) return []
+  if (memInbox.has(uid)) return memInbox.get(uid)
+  const stored = read(inboxKey(uid))
+  const list = Array.isArray(stored) ? stored : []
+  memInbox.set(uid, list)
+  return list
+}
+
+export function setCachedInbox(uid, list) {
+  if (!uid || !Array.isArray(list)) return
+  const trimmed = list.slice(0, MAX_CONVS)
+  memInbox.set(uid, trimmed)
+  write(inboxKey(uid), trimmed)
+}
+
+export function getCachedListingMessages(uid, listingKey) {
+  if (!uid || !listingKey) return null
+  const key = memListingKey(uid, listingKey)
+  if (memListingMsgs.has(key)) return memListingMsgs.get(key)
+  const stored = read(listingMsgsKey(uid, listingKey))
+  if (stored === null) return null
+  const list = Array.isArray(stored) ? stored.slice(-MAX_MSGS_PER_CONV) : []
+  memListingMsgs.set(key, list)
+  return list
+}
+
+export function setCachedListingMessages(uid, listingKey, msgs) {
+  if (!uid || !listingKey || !Array.isArray(msgs)) return
+  const trimmed = msgs.slice(-MAX_MSGS_PER_CONV)
+  memListingMsgs.set(memListingKey(uid, listingKey), trimmed)
+  write(listingMsgsKey(uid, listingKey), trimmed)
 }
 
 export function getCachedMessages(uid, convId) {

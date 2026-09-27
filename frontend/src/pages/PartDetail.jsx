@@ -14,13 +14,17 @@ import {
   Sparkles,
   MessageSquare,
   Share2,
-  Tag
+  Tag,
+  Building2,
+  Store,
+  FileText
 } from 'lucide-react'
 import { marketplaceParts } from '../api/parts.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import { useAuth } from '../auth/AuthContext.jsx'
 import { useChat } from '../context/ChatContext.jsx'
+import ListingStatusPicker from '../components/ListingStatusPicker.jsx'
 import ShareModal from '../components/ShareModal.jsx'
-import OfferModal from '../components/OfferModal.jsx'
 import ReviewSection from '../components/ReviewSection.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
@@ -48,14 +52,24 @@ export default function PartDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isPartSaved, togglePartFavorite } = useFavorites()
+  const { user } = useAuth()
   const { openDrawerWithListing } = useChat()
   const [part, setPart] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
   const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [offerModalOpen, setOfferModalOpen] = useState(false)
-  const [offerNotice, setOfferNotice] = useState('')
   const activeReferralCode = getActiveReferralCode()
+
+  // Own listing: the seller gets manage controls, never buy buttons.
+  const isOwner = Boolean(
+    user?.id && part?.seller?.id && Number(user.id) === Number(part.seller.id),
+  )
+  const reloadPart = () => {
+    marketplaceParts
+      .show(id)
+      .then((data) => setPart(data))
+      .catch(() => {})
+  }
 
   const isSaved = isPartSaved(part?.id || id)
 
@@ -66,7 +80,11 @@ export default function PartDetail() {
         setPart(data)
         setSelectedImgIdx(0)
       })
-      .catch((e) => setError(e.response?.status === 404 ? 'Part not found or no longer listed.' : e.message))
+      .catch((e) => setError(
+        e.response?.status === 404 || e.response?.status === 403
+          ? 'This listing is no longer available on the marketplace.'
+          : e.message,
+      ))
   }, [id])
 
   if (error) {
@@ -216,7 +234,33 @@ export default function PartDetail() {
               <div className="detail-meta-row">
                 <span className="detail-meta-item"><MapPin size={14} /> {location}</span>
                 <span className="detail-meta-item"><Package size={14} /> {part.quantity ? `${part.quantity} available` : 'In Stock'}</span>
+                {part.payment_secured && String(part.status || '').toLowerCase() !== 'sold' && (
+                  <span className="detail-meta-item" style={{ fontWeight: 700, color: '#60a5fa' }}>
+                    Paid · Payment Secured
+                  </span>
+                )}
               </div>
+
+              {part.payment_secured && String(part.status || '').toLowerCase() !== 'sold' && (
+                <div style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  color: '#93c5fd',
+                }}>
+                  <ShieldCheck size={16} />
+                  <div>
+                    <strong>Paid — payment already secured.</strong> Stock on this part is reserved by an open
+                    order (funds held in escrow).
+                  </div>
+                </div>
+              )}
 
               <div className="detail-price-box">
                 <span className="detail-price-main">{priceDisplay}</span>
@@ -243,8 +287,8 @@ export default function PartDetail() {
                 </div>
               </div>
 
-              {/* Referring Agent Banner */}
-              {activeReferralCode && (
+              {/* Referring Agent Banner (buyers only) */}
+              {activeReferralCode && !isOwner && (
                 <div style={{
                   background: 'rgba(16, 185, 129, 0.12)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
@@ -264,15 +308,65 @@ export default function PartDetail() {
                 </div>
               )}
 
-              {offerNotice && (
-                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#10b981' }}>
-                  {offerNotice}
-                </div>
-              )}
-
+              {isOwner ? (
+                <>
+                  <div style={{
+                    background: 'rgba(124, 58, 237, 0.1)',
+                    border: '1px solid rgba(124, 58, 237, 0.4)',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    marginBottom: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 13,
+                    color: '#c4b5fd',
+                  }}>
+                    <Store size={16} />
+                    <div>
+                      <strong>This is your listing.</strong> Buyers see the public view — you get manage controls.
+                    </div>
+                  </div>
+                  <div className="detail-actions-row">
+                    <ListingStatusPicker
+                      listingType="part"
+                      listingId={part.id}
+                      value={part.status}
+                      onChanged={reloadPart}
+                      onError={(err) => alert(err?.response?.data?.message || 'Failed to update listing status.')}
+                      className="btn btn-primary"
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <Link
+                      to={`/messages?listing=part:${part.id}`}
+                      className="btn btn-secondary"
+                      title="Open every buyer inquiry on this listing"
+                    >
+                      <MessageSquare size={16} />
+                      <span>Inquiries</span>
+                    </Link>
+                    <Link
+                      to="/my-listings?tab=requests"
+                      className="btn btn-secondary"
+                      title="Paid orders and buyer requests on your listings"
+                    >
+                      <FileText size={16} />
+                      <span>Orders</span>
+                    </Link>
+                    <Link
+                      to="/my-listings"
+                      className="btn btn-secondary"
+                      title="Manage all your listings"
+                    >
+                      <Store size={16} />
+                      <span>Manage</span>
+                    </Link>
+                  </div>
+                </>
+              ) : (
               <div className="detail-actions-row">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary"
                   onClick={() => navigate(`/checkout?part_id=${part.uuid || part.id}`)}
                 >
@@ -281,28 +375,31 @@ export default function PartDetail() {
                 </button>
 
                 {part.seller && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-secondary"
                     onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part' })}
                     title="Inquire directly with the verified parts seller"
                   >
                     <MessageSquare size={16} />
-                    <span>Chat</span>
+                    <span>Inquire</span>
                   </button>
                 )}
-                <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={part.quantity != null && Number(part.quantity) <= 0}
-                    onClick={() => { setOfferNotice(''); setOfferModalOpen(true) }}
-                    title="Propose your own price with a comment"
-                >
-                  <Tag size={16} />
-                  <span>Make an Offer</span>
-                </button>
+                {part.seller && (
+                  <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={part.quantity != null && Number(part.quantity) <= 0}
+                      onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part', openOffer: true })}
+                      title="Open chat and propose your price on this part"
+                  >
+                    <Tag size={16} />
+                    <span>Make an Offer</span>
+                  </button>
+                )}
 
               </div>
+              )}
 
               <div className="detail-actions-row">
                 <button
@@ -345,40 +442,59 @@ export default function PartDetail() {
               <div className="detail-seller-card">
                 <div className="detail-seller-info">
                   <div className="detail-seller-avatar">
-                    {part.seller.name ? part.seller.name.charAt(0).toUpperCase() : 'S'}
+                    {part.seller.avatar_url ? (
+                      <img src={part.seller.avatar_url} alt={part.seller.username || 'Seller'} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <span>{part.seller.username ? part.seller.username.charAt(0).toUpperCase() : 'S'}</span>
+                    )}
                   </div>
                   <div>
-                    <div className="detail-seller-name">{part.seller.name}</div>
+                    <div className="detail-seller-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>@{part.seller.username || 'seller'}</span>
+                      {part.seller.is_kyc_verified && (
+                        <ShieldCheck size={16} style={{ color: '#10b981' }} title="KYC Verified Seller" />
+                      )}
+                    </div>
                     <div className="detail-seller-sub">Verified Parts Supplier · {location}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    type="button"
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Link
+                    to={`/showroom?seller=${part.seller.username || part.seller.id}`}
                     className="btn btn-secondary"
                     style={{ padding: '6px 12px', fontSize: 13 }}
-                    onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part' })}
+                    title="Visit Builder's Garage Showroom"
                   >
-                    <MessageSquare size={14} />
-                    <span>Chat</span>
-                  </button>
-                  <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>
-                    ✓ Verified
-                  </span>
+                    <Building2 size={14} />
+                    <span>Showroom</span>
+                  </Link>
+                  {!isOwner && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: 13 }}
+                      onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part' })}
+                    >
+                      <MessageSquare size={14} />
+                      <span>Chat</span>
+                    </button>
+                  )}
+                  {part.seller.is_kyc_verified ? (
+                    <span className="badge" style={{ background: '#dcfce7', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <ShieldCheck size={13} />
+                      <span>KYC Verified</span>
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--color-text-muted)' }}>
+                      Verified Supplier
+                    </span>
+                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* Buyer Price Offer Modal */}
-      <OfferModal
-        open={offerModalOpen}
-        onClose={() => setOfferModalOpen(false)}
-        listing={part ? { id: part.id, title: title, price: part.price, type: 'part' } : null}
-        onSubmitted={() => setOfferNotice('Offer sent — the seller will review it under your Offers.')}
-      />
 
       {/* Product Share & Agent Referral Modal */}
       <ShareModal

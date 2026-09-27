@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   LayoutDashboard,
   Car,
@@ -15,11 +15,19 @@ import {
   Inbox,
   Check,
   X,
+  Building2,
+  DollarSign,
+  ShieldCheck,
+  Sparkles,
+  ExternalLink,
+  Plus,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { sellerCars } from '../api/cars.js'
 import { sellerParts } from '../api/parts.js'
-import { sellerApi, sellerOrdersApi, CAR_STATUSES, PART_STATUSES, STATUS_LABELS } from '../api/seller.js'
+import { sellerApi, sellerOrdersApi, SELLER_ORDER_STATUSES, CAR_STATUSES, PART_STATUSES, STATUS_LABELS } from '../api/seller.js'
+import ListingStatusPicker, { normalizeListingStatus } from '../components/ListingStatusPicker.jsx'
+import { showroomApi } from '../api/showroom.js'
 import './MyListings.css'
 
 const SELLER_ROLES = ['seller', 'dealer', 'parts_seller', 'admin', 'super_admin']
@@ -52,17 +60,36 @@ function extractError(err, fallback) {
 
 export default function MyListings() {
   const { user, isAuthenticated } = useAuth()
-  const [tab, setTab] = useState('cars') // cars | parts | requests
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTab = ['cars', 'parts', 'requests', 'showroom'].includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'cars'
+  const [tab, setTab] = useState(initialTab) // cars | parts | requests | showroom
   const [statusFilter, setStatusFilter] = useState('all')
   const [summary, setSummary] = useState(null)
   const [items, setItems] = useState([])
   const [requests, setRequests] = useState([])
   const [pendingRequests, setPendingRequests] = useState(0)
-  const [requestFilter, setRequestFilter] = useState('pending')
+  // Paid (auto-accepted) orders must be visible here too — not just pending.
+  const [requestFilter, setRequestFilter] = useState('all')
+
+  const switchTab = (next) => {
+    setTab(next)
+    setSearchParams(next === 'cars' ? {} : { tab: next })
+  }
   const [loading, setLoading] = useState(true)
   const [actingId, setActingId] = useState(null)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
+
+  // Showroom & Parking States
+  const [showroomData, setShowroomData] = useState(null)
+  const [slotModalOpen, setSlotModalOpen] = useState(false)
+  const [selectedCarId, setSelectedCarId] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('gcash')
+  const [paymentReference, setPaymentReference] = useState('')
+  const [sellerNotes, setSellerNotes] = useState('')
+  const [slotSubmitting, setSlotSubmitting] = useState(false)
 
   const isSeller = isAuthenticated && user && SELLER_ROLES.includes(user.role)
   // Parts catalog is house-only (GAP Valenzuela Main). Everyone else
@@ -79,7 +106,10 @@ export default function MyListings() {
     setLoading(true)
     setError(null)
     try {
-      if (tab === 'requests') {
+      if (tab === 'showroom') {
+        const data = await showroomApi.getSellerStatus()
+        setShowroomData(data)
+      } else if (tab === 'requests') {
         const res = await sellerOrdersApi.incoming({
           verification_status: requestFilter === 'all' ? undefined : requestFilter,
           per_page: 50,
@@ -142,6 +172,30 @@ export default function MyListings() {
     }
   }
 
+  const runOrderStatusChange = async (order, status) => {
+    if (!status || status === order.status) {
+      await load()
+      return
+    }
+    if (!window.confirm(`Move order ${order.order_number || `#${order.id}`} to "${status}"?`)) {
+      await load()
+      return
+    }
+    setActingId(`status-${order.id}`)
+    setError(null)
+    setNotice(null)
+    try {
+      await sellerOrdersApi.updateStatus(order.id, { status })
+      setNotice(`Order moved to ${status}.`)
+      await load()
+    } catch (err) {
+      setError(extractError(err, 'Failed to update order status.'))
+      await load()
+    } finally {
+      setActingId(null)
+    }
+  }
+
   const runRequestAction = async (order, action) => {
     const note =
       action === 'reject'
@@ -163,6 +217,25 @@ export default function MyListings() {
     }
   }
 
+  const runRefund = async (order) => {
+    const note = window.prompt('Refund note for the buyer (optional):', 'Refunded after inspection dispute.')
+    if (note === null) return
+    if (!window.confirm(`Refund the held payment for order ${order.order_number || `#${order.id}`} back to the buyer?`)) return
+    setActingId(`refund-${order.id}`)
+    setError(null)
+    setNotice(null)
+    try {
+      await sellerOrdersApi.refund(order.id, note || undefined)
+      setNotice('Held payment refunded to the buyer. Order closed as refunded.')
+      await load()
+    } catch (err) {
+      setError(extractError(err, 'Failed to refund order.'))
+      await load()
+    } finally {
+      setActingId(null)
+    }
+  }
+
   const canPublish = (status) =>
     tab === 'cars'
       ? ['draft', 'archived', 'rejected', 'pending_inspection'].includes(status)
@@ -172,6 +245,43 @@ export default function MyListings() {
     tab === 'cars'
       ? `/marketplace/${item.uuid || item.id}`
       : `/parts/${item.uuid || item.id}`
+
+  const handleOpenSlotModal = (carId = '') => {
+    setSelectedCarId(carId ? String(carId) : (showroomData?.cars?.[0]?.id ? String(showroomData.cars[0].id) : ''))
+    setPaymentMethod('gcash')
+    setPaymentReference('')
+    setSellerNotes('')
+    setSlotModalOpen(true)
+  }
+
+  const handleApplySlot = async (e) => {
+    e.preventDefault()
+    if (!selectedCarId) {
+      alert('Please select a vehicle listing.')
+      return
+    }
+    setSlotSubmitting(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const res = await showroomApi.applySlot({
+        car_id: parseInt(selectedCarId, 10),
+        payment_method: paymentMethod,
+        payment_reference: paymentReference,
+        seller_notes: sellerNotes,
+      })
+      setNotice(res.message || 'Showroom parking application submitted successfully!')
+      setSlotModalOpen(false)
+      await load()
+    } catch (err) {
+      setError(extractError(err, 'Failed to submit showroom application.'))
+    } finally {
+      setSlotSubmitting(false)
+    }
+  }
+
+  const selectedCarObj = showroomData?.cars?.find((c) => String(c.id) === String(selectedCarId))
+  const selectedCarFee = selectedCarObj?.calculated_fee || (selectedCarObj?.price ? selectedCarObj.price * 0.05 : 0)
 
   if (!loading && !isSeller) {
     return (
@@ -221,20 +331,192 @@ export default function MyListings() {
         </div>
 
         <div className="my-listings-tabs">
-          <button type="button" className={tab === 'cars' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => { setTab('cars'); setStatusFilter('all') }}>
+          <button type="button" className={tab === 'cars' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => { switchTab('cars'); setStatusFilter('all') }}>
             <Car size={15} /> Vehicles {(summary?.cars?.total ?? 0) > 0 && <span className="my-listings-count">{summary.cars.total}</span>}
           </button>
           {canSellParts && (
-          <button type="button" className={tab === 'parts' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => { setTab('parts'); setStatusFilter('all') }}>
+          <button type="button" className={tab === 'parts' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => { switchTab('parts'); setStatusFilter('all') }}>
             <Package size={15} /> Parts {(summary?.parts?.total ?? 0) > 0 && <span className="my-listings-count">{summary.parts.total}</span>}
           </button>
           )}
-          <button type="button" className={tab === 'requests' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => setTab('requests')}>
+          <button type="button" className={tab === 'requests' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => switchTab('requests')}>
             <Inbox size={15} /> Requests {pendingRequests > 0 && <span className="my-listings-count">{pendingRequests}</span>}
+          </button>
+          <button type="button" className={tab === 'showroom' ? 'my-listings-tab my-listings-tab--active' : 'my-listings-tab'} onClick={() => switchTab('showroom')}>
+            <Building2 size={15} /> Showroom & Parking
+            {showroomData?.is_showroom_active && (
+              <span className="my-listings-count" style={{ background: '#10b981', color: '#fff' }}>Active</span>
+            )}
           </button>
         </div>
 
-        {tab === 'requests' ? (
+        {tab === 'showroom' ? (
+          <div>
+            {/* Showroom Status Banner */}
+            <div
+              className="my-listings-card"
+              style={{
+                marginBottom: 20,
+                borderLeft: showroomData?.is_showroom_active ? '4px solid #10b981' : '4px solid var(--color-rust)',
+                background: showroomData?.is_showroom_active ? 'rgba(16, 185, 129, 0.05)' : 'rgba(146, 68, 36, 0.05)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Building2 size={20} color={showroomData?.is_showroom_active ? '#10b981' : 'var(--color-rust)'} />
+                    <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                      {showroomData?.is_showroom_active ? 'Showroom Access: ACTIVE' : 'Showroom Access: NOT ACTIVATED'}
+                    </h2>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13.5, color: 'var(--color-text-muted)', maxWidth: 640 }}>
+                    {showroomData?.is_showroom_active
+                      ? `Your garage showroom is verified and open to all marketplace buyers. You currently have ${showroomData.cars?.filter(c => c.is_in_showroom).length || 0} vehicle build(s) displayed on the showroom floor.`
+                      : `By default, sellers do not have showroom access until activated. Avail a Showroom Parking slot for your marketplace car below. Our standard parking fee is ${showroomData?.fee_config?.parking_fee_percentage ?? 5}% of the listing price. Once approved by admin, your showroom will be activated!`}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  {showroomData?.is_showroom_active && (
+                    <Link
+                      to={`/showroom?seller=${user.username}`}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <ExternalLink size={14} />
+                      <span>View Live Showroom</span>
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleOpenSlotModal()}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <Plus size={14} />
+                    <span>Avail Showroom Parking Slot</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Cars & Showroom Floor Status */}
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: '24px 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Car size={18} />
+              <span>Your Vehicle Builds & Showroom Status</span>
+            </h3>
+
+            {loading ? (
+              <div className="my-listings-card"><p className="muted">Loading showroom vehicles...</p></div>
+            ) : !showroomData?.cars || showroomData.cars.length === 0 ? (
+              <div className="my-listings-card my-listings-card--center">
+                <Car size={32} className="my-listings-accent" />
+                <h2>No active vehicle builds found</h2>
+                <p className="muted">Create an active car listing on the marketplace first to avail showroom parking.</p>
+                <Link to="/sell" className="btn btn-primary">+ New Car Listing</Link>
+              </div>
+            ) : (
+              <ul className="my-listings-list" style={{ marginBottom: 32 }}>
+                {showroomData.cars.map((car) => {
+                  return (
+                    <li key={car.id} className="my-listings-row">
+                      <div className="my-listings-row-main">
+                        <span className="my-listings-title">{car.title}</span>
+                        <div className="my-listings-meta">
+                          <span className="my-listings-price">{formatPrice(car.price)}</span>
+                          <span
+                            className={`listing-badge ${
+                              car.is_in_showroom
+                                ? 'listing-badge--live'
+                                : car.showroom_status === 'pending'
+                                ? 'listing-badge--pending'
+                                : 'listing-badge--draft'
+                            }`}
+                          >
+                            {car.is_in_showroom
+                              ? '✓ ON SHOWROOM FLOOR'
+                              : car.showroom_status === 'pending'
+                              ? '⌛ PARKING FEE PENDING'
+                              : 'NOT IN SHOWROOM'}
+                          </span>
+                          <span className="muted">
+                            Showroom Fee ({car.fee_percentage}%): <strong>{formatPrice(car.calculated_fee)}</strong>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="my-listings-row-actions">
+                        <Link to={`/marketplace/${car.uuid || car.id}`} className="btn btn-ghost btn-sm" title="View Listing">
+                          <Eye size={14} />
+                        </Link>
+                        {!car.is_in_showroom && car.showroom_status !== 'pending' && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleOpenSlotModal(car.id)}
+                            style={{ fontSize: 12.5 }}
+                          >
+                            <DollarSign size={14} /> Avail Parking Slot ({formatPrice(car.calculated_fee)})
+                          </button>
+                        )}
+                        {car.is_in_showroom && (
+                          <Link
+                            to={`/showroom?seller=${user.username}`}
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: '#10b981', fontWeight: 700 }}
+                          >
+                            Live on Floor →
+                          </Link>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+
+            {/* Application History */}
+            {showroomData?.applications && showroomData.applications.length > 0 && (
+              <>
+                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '24px 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Building2 size={18} />
+                  <span>Showroom Slot Application History</span>
+                </h3>
+                <ul className="my-listings-list">
+                  {showroomData.applications.map((app) => (
+                    <li key={app.id} className="my-listings-row">
+                      <div className="my-listings-row-main">
+                        <span className="my-listings-title">
+                          #{app.id} · {app.car?.title || `Car #${app.car_id}`}
+                        </span>
+                        <div className="my-listings-meta">
+                          <span className="my-listings-price">{formatPrice(app.calculated_fee)}</span>
+                          <span
+                            className={`listing-badge ${
+                              app.status === 'approved'
+                                ? 'listing-badge--live'
+                                : app.status === 'pending'
+                                ? 'listing-badge--pending'
+                                : 'listing-badge--rejected'
+                            }`}
+                          >
+                            {app.status.toUpperCase()}
+                          </span>
+                          <span className="muted">Method: {app.payment_method?.toUpperCase()}</span>
+                          {app.payment_reference && <span className="muted">Ref: {app.payment_reference}</span>}
+                        </div>
+                      </div>
+                      <div className="my-listings-row-actions">
+                        <span className="muted" style={{ fontSize: 12 }}>
+                          {app.created_at ? new Date(app.created_at).toLocaleDateString() : ''}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        ) : tab === 'requests' ? (
           <>
             <div className="my-listings-filters">
               {['pending', 'accepted', 'rejected', 'all'].map((s) => (
@@ -256,6 +538,7 @@ export default function MyListings() {
               <ul className="my-listings-list">
                 {requests.map((order) => {
                   const verification = order.verification_status || 'pending'
+                  const payStatus = order.financials?.payment_status || 'pending'
                   return (
                     <li key={order.id} className="my-listings-row">
                       <div className="my-listings-row-main">
@@ -265,12 +548,51 @@ export default function MyListings() {
                           <span className={`listing-badge ${verification === 'accepted' ? 'listing-badge--live' : verification === 'rejected' ? 'listing-badge--rejected' : 'listing-badge--pending'}`}>
                             {order.verification_label || verification}
                           </span>
+                          <span className="muted">{order.status ? `Order: ${order.status}` : ''}</span>
                           <span className="muted">{order.buyer?.name || order.buyer_name || ''}</span>
                           {order.vehicle?.chassis_number && <span className="muted">Chassis: {order.vehicle.chassis_number}</span>}
                         </div>
+                        {verification === 'accepted' && (
+                          <div className="my-listings-meta" style={{ marginTop: 4 }}>
+                            <span className="muted">
+                              Payment: {(order.financials?.payment_method || '').replace('_', ' ') || '—'}
+                              {' · '}{order.financials?.payment_label || payStatus}
+                            </span>
+                            {order.financials?.payment_reference && (
+                              <span className="muted" style={{ fontFamily: 'monospace' }}>Ref: {order.financials.payment_reference}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="my-listings-row-actions">
                         <Link to={`/sales-order/${order.order_number || order.id}`} className="btn btn-ghost btn-sm" title="View sales order"><Eye size={14} /></Link>
+                        {verification === 'accepted' && !['completed', 'refunded', 'cancelled'].includes(order.status) && (
+                          <select
+                            className="btn btn-secondary btn-sm"
+                            value={order.status || 'processing'}
+                            disabled={actingId === `status-${order.id}`}
+                            onChange={(e) => runOrderStatusChange(order, e.target.value)}
+                            title="Advance this order (processing → negotiating → sold → shipped → delivered)"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {SELLER_ORDER_STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {s.charAt(0).toUpperCase() + s.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {verification === 'accepted' && order.status === 'disputed' && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            disabled={actingId === `refund-${order.id}`}
+                            onClick={() => runRefund(order)}
+                            title="Resolve the dispute by refunding the held payment to the buyer"
+                          >
+                            Refund Buyer
+                          </button>
+                        )}
                         {verification === 'pending' && (
                           <>
                             <button type="button" className="btn btn-secondary btn-sm" disabled={actingId === `accept-${order.id}`} onClick={() => runRequestAction(order, 'accept')} title="Verify & accept this buyer">
@@ -322,26 +644,25 @@ export default function MyListings() {
                     <div className="my-listings-meta">
                       <span className="my-listings-price">{formatPrice(item.price)}</span>
                       <span className={`listing-badge ${STATUS_CLASS[status] || ''}`}>{STATUS_LABELS[status] || status}</span>
+                      {item.payment_secured && status !== 'sold' && (
+                        <span className="listing-badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }} title="A buyer already secured this listing with payment held in escrow">
+                          Paid · Secured
+                        </span>
+                      )}
                       {item.city && <span className="muted">{item.city}</span>}
                     </div>
                   </div>
                   <div className="my-listings-row-actions">
                     <Link to={detailPath(item)} className="btn btn-ghost btn-sm" title="View listing"><Eye size={14} /></Link>
-                    {canPublish(status) && (
-                      <button type="button" className="btn btn-secondary btn-sm" disabled={actingId === `publish-${item.id}`} onClick={() => runAction(item.id, 'publish', 'Listing published to the marketplace.')} title="Publish">
-                        <Rocket size={14} /> Publish
-                      </button>
-                    )}
-                    {status === 'active' && (
-                      <>
-                        <button type="button" className="btn btn-ghost btn-sm" disabled={actingId === `unpublish-${item.id}`} onClick={() => runAction(item.id, 'unpublish', 'Listing unpublished back to draft.')} title="Unpublish">
-                          <PauseCircle size={14} /> Unpublish
-                        </button>
-                        <button type="button" className="btn btn-ghost btn-sm" disabled={actingId === `markSold-${item.id}`} onClick={() => runAction(item.id, 'markSold', 'Listing marked as sold.')} title="Mark sold">
-                          <BadgeCheck size={14} /> Sold
-                        </button>
-                      </>
-                    )}
+                    <ListingStatusPicker
+                      listingType={tab === 'cars' ? 'car' : 'part'}
+                      listingId={item.id}
+                      value={normalizeListingStatus(status)}
+                      onChanged={() => load()}
+                      onError={(err) => setError(extractError(err, 'Failed to update listing status.'))}
+                      className="btn btn-secondary btn-sm"
+                      style={{ cursor: 'pointer' }}
+                    />
                     <button type="button" className="btn btn-ghost btn-sm btn-danger-ghost" disabled={actingId === `destroy-${item.id}`} onClick={() => runAction(item.id, 'destroy', 'Listing deleted.', 'Delete this listing permanently?')} title="Delete">
                       <Trash2 size={14} />
                     </button>
@@ -354,6 +675,168 @@ export default function MyListings() {
         </>
         )}
       </div>
+
+      {/* Avail Showroom Parking Slot Modal */}
+      {slotModalOpen && (
+        <div
+          className="admin-modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() => setSlotModalOpen(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 540,
+              padding: 24,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+              position: 'relative',
+              color: 'var(--color-heading)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Building2 size={20} color="var(--color-rust)" />
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Avail Showroom Parking Slot</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSlotModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-muted)' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleApplySlot}>
+              {/* Select Car */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                  Choose Vehicle Build to Place in Showroom:
+                </label>
+                <select
+                  className="admin-input"
+                  value={selectedCarId}
+                  onChange={(e) => setSelectedCarId(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--color-border)', fontSize: 14 }}
+                  required
+                >
+                  <option value="">-- Select a Car Listing --</option>
+                  {showroomData?.cars
+                    ?.filter((c) => !c.is_in_showroom)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title} — {formatPrice(c.price)}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Fee Breakdown Box */}
+              {selectedCarObj && (
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: 10,
+                    background: 'var(--color-surface-subtle)',
+                    border: '1.5px solid var(--color-border)',
+                    marginBottom: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 8 }}>
+                    Showroom Parking Fee Calculation
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}>
+                    <span>Vehicle Listing Price:</span>
+                    <strong>{formatPrice(selectedCarObj.price)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 6 }}>
+                    <span>Standard Parking Fee ({showroomData?.fee_config?.parking_fee_percentage ?? 5}%):</span>
+                    <strong style={{ color: 'var(--color-rust)', fontSize: 15 }}>{formatPrice(selectedCarFee)}</strong>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', borderTop: '1px dashed var(--color-border)', paddingTop: 6 }}>
+                    Once payment is confirmed and admin approves, your showroom profile will activate and this car will be showcased on the Showroom floor!
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Method */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                  Payment Method:
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--color-border)', fontSize: 14 }}
+                >
+                  <option value="gcash">GCash (QR / Mobile Transfer)</option>
+                  <option value="bank_transfer">BDO / BPI Bank Transfer</option>
+                  <option value="maya">Maya Digital Wallet</option>
+                  <option value="cash_dropoff">Cash on Garage Drop-off</option>
+                </select>
+              </div>
+
+              {/* Reference Code */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                  Transaction Reference Code / Note:
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. GCASH Ref #123456789 or Bank Deposit Ref"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--color-border)', fontSize: 14 }}
+                />
+              </div>
+
+              {/* Optional Seller Notes */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                  Special Garage / Bay Request Note (Optional):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Preferred Bay, Track Spec Specs to Highlight"
+                  value={sellerNotes}
+                  onChange={(e) => setSellerNotes(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--color-border)', fontSize: 14 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setSlotModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={slotSubmitting || !selectedCarId}
+                  className="btn btn-primary"
+                >
+                  {slotSubmitting ? 'Submitting Application...' : `Pay ${formatPrice(selectedCarFee)} & Avail Slot`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

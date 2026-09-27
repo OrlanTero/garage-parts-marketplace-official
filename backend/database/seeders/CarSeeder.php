@@ -468,11 +468,19 @@ class CarSeeder extends Seeder
             $mediaItems = $data['media'] ?? [];
             unset($data['media']);
 
+            $isMainGarage = ($data['seller_id'] === $makatiSeller->id);
+
             if (!isset($data['is_approved']) && ($data['status'] === CarStatus::Active || ($data['status'] instanceof CarStatus && $data['status']->value === 'active'))) {
                 $data['is_approved'] = true;
                 $data['inspection_type'] = $data['inspection_type'] ?? 'garage_dropoff';
                 $data['inspection_status'] = $data['inspection_status'] ?? 'passed';
                 $data['approved_at'] = now()->subDays(1);
+            }
+
+            // All active cars from main garage seed account (and verified partners) are automatically placed in showroom without fee
+            if ($data['is_approved'] && ($data['status'] === CarStatus::Active || ($data['status'] instanceof CarStatus && $data['status']->value === 'active'))) {
+                $data['is_in_showroom'] = true;
+                $data['showroom_status'] = 'approved';
             }
 
             $car = Car::updateOrCreate(

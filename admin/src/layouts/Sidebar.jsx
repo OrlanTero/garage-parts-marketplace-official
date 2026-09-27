@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
+  Wallet,
   Users,
   UserCheck,
   UserPlus,
@@ -9,6 +10,7 @@ import {
   Building2,
   Boxes,
   Car,
+  Gavel,
   ShieldCheck,
   Tag,
   Layers,
@@ -33,6 +35,7 @@ import {
   Server,
   Activity,
   Search,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 
@@ -57,8 +60,11 @@ const NAV_GROUPS = [
       { to: '/dealers', label: 'Dealer Management', icon: Building2 },
       { to: '/garages', label: 'Partner Garages', icon: Building2 },
       { to: '/cars', label: 'Vehicle Management', icon: Car, badge: 'Builds' },
-      { to: '/parts', label: 'Parts & Product Management', icon: Layers },
-      { to: '/inventory', label: 'Inventory & Stock Control', icon: Boxes },
+      { to: '/auctions', label: 'Auctions', icon: Gavel, badge: { label: 'Live', variant: 'warning' } },
+      { to: '/showroom', label: 'Showroom', icon: Building2, badge: { label: 'Showroom', variant: 'info' } },
+      { to: '/funds', label: 'Treasury & Funds', icon: Wallet, badge: { label: 'Ledger', variant: 'success' } },
+      { to: '/parts', label: 'Product Management', icon: Layers },
+      { to: '/inventory', label: 'Inventory', icon: Boxes },
       { to: '/orders', label: 'Order Management', icon: ShoppingBag, badge: 'Orders' },
     ],
   },
@@ -70,10 +76,10 @@ const NAV_GROUPS = [
       { to: '/kyc', label: 'KYC & Seller Verification', icon: UserCheck, badge: { label: 'KYC', variant: 'info' } },
       { to: '/seller-applications', label: 'Seller Upgrade Requests', icon: UserPlus, badge: { label: 'Apply', variant: 'warning' } },
       { to: '/moderation', label: 'Listing Approval & Moderation', icon: ShieldCheck, badge: { label: 'Inspect', variant: 'warning' } },
-      { to: '/taxonomy', label: 'Brand, Model & Category', icon: Tag },
+      { to: '/configurations', label: 'Configurations', icon: SlidersHorizontal },
       { to: '/verifications', label: 'Seller KYC & Trust', icon: FileCheck },
       { to: '/reviews', label: 'Customer Reviews', icon: Star },
-      { to: '/chat-moderation', label: 'Basic Chat Moderation', icon: MessageSquare, badge: 'PII Alert' },
+      { to: '/chat-moderation', label: 'Basic Chat Moderation', icon: MessageSquare, badge: 'PII' },
       { to: '/disputes', label: 'Disputes & Returns', icon: AlertTriangle },
     ],
   },

@@ -83,11 +83,12 @@ class SellerOrderVerificationTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $orderA->id, 'verification_status' => 'accepted']);
         $this->assertDatabaseHas('orders', ['id' => $orderB->id, 'verification_status' => 'rejected']);
 
-        // Stock decremented by one unit.
-        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 1, 'status' => 'active']);
+        // Acceptance unlocks payment but never consumes car stock —
+        // the car stays listed until the seller marks the order sold.
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 2, 'status' => 'active']);
     }
 
-    public function test_accepting_last_unit_marks_car_sold(): void
+    public function test_sold_step_flips_status_while_payment_reserves_stock(): void
     {
         $seller = User::factory()->create(['role' => 'seller']);
         $buyer = User::factory()->create(['role' => 'buyer']);
@@ -99,7 +100,206 @@ class SellerOrderVerificationTest extends TestCase
 
         $this->postJson("/api/v1/seller/orders/{$order->id}/accept")->assertStatus(200);
 
-        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 0, 'status' => 'sold']);
+        // Accepted, payment unlocked — still listed, stock intact.
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 1, 'status' => 'active']);
+
+        $this->patchJson("/api/v1/seller/orders/{$order->id}/status", ['status' => 'negotiating'])
+            ->assertOk();
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 1, 'status' => 'active']);
+
+        // The seller committing the unit flips status only — stock was
+        // already reserved (or is untouched when unpaid); never double.
+        $this->patchJson("/api/v1/seller/orders/{$order->id}/status", ['status' => 'sold'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'sold');
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 1, 'status' => 'sold']);
+    }
+
+    public function test_prepaid_car_checkout_reserves_stock_and_flags_paid(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $car = $this->makeCar($seller, ['quantity' => 1]);
+
+        $orderNumber = $this->postJson('/api/v1/orders', [
+            'buyer_name' => 'Deal Buyer',
+            'buyer_email' => 'deal@garage.test',
+            'shipping_address' => 'Makati',
+            'car_id' => $car->id,
+            'item_type' => 'car',
+            'quantity' => 1,
+            'payment_method' => 'bank_transfer',
+            'payment_reference' => 'HELD-REF-9',
+            'mock_paid' => true,
+        ])->assertCreated()->json('data.order_number');
+
+        // Funds held, order open — unit reserved, car NOT sold.
+        $this->assertDatabaseHas('orders', [
+            'order_number' => $orderNumber,
+            'payment_status' => 'paid',
+            'verification_status' => 'accepted',
+            'status' => 'processing',
+        ]);
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 0, 'status' => 'active']);
+
+        // Listing reads as payment-secured…
+        $this->getJson("/api/v1/marketplace/cars/{$car->id}")
+            ->assertOk()
+            ->assertJsonPath('data.payment_secured', true);
+
+        // …and with no stock left it leaves the public marketplace…
+        $this->assertDatabaseMissing('cars', ['id' => $car->id, 'status' => 'sold']);
+        $grid = $this->getJson('/api/v1/marketplace/cars')->assertOk()->json('data');
+        $this->assertNotContains($car->id, collect($grid)->pluck('id')->all());
+
+        // …while the seller still sees the paid order in incoming requests.
+        $incoming = $this->getJson('/api/v1/seller/orders', $this->sellerToken($seller))->assertOk();
+        $numbers = collect($incoming->json('data'))->pluck('order_number')->all();
+        $this->assertContains($orderNumber, $numbers);
+    }
+
+    public function test_confirm_payment_reserves_once_and_refund_restores(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'pay@garage.test']);
+        $car = $this->makeCar($seller, ['quantity' => 2]);
+
+        $order = $this->makeRequest($car, $buyer, 'pay@garage.test');
+        $this->postJson("/api/v1/seller/orders/{$order->id}/accept", [], $this->sellerToken($seller))->assertOk();
+
+        // First payment secures one unit…
+        $this->postJson("/api/v1/orders/{$order->order_number}/confirm-payment", [
+            'payment_reference' => 'PAY-1',
+        ], $this->sellerToken($buyer))
+            ->assertOk()
+            ->assertJsonPath('data.financials.payment_status', 'paid');
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 1, 'status' => 'active']);
+
+        // …re-posting the reference never consumes twice…
+        $this->postJson("/api/v1/orders/{$order->order_number}/confirm-payment", [
+            'payment_reference' => 'PAY-1-DUP',
+        ], $this->sellerToken($buyer))->assertOk();
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 1, 'status' => 'active']);
+
+        // …and a dispute refund returns the unit.
+        $this->patchJson("/api/v1/seller/orders/{$order->id}/status", ['status' => 'delivered'], $this->sellerToken($seller))->assertOk();
+        $this->postJson("/api/v1/orders/{$order->order_number}/reject-inspection", ['reason' => 'scratch'], $this->sellerToken($buyer))->assertOk();
+        $this->postJson("/api/v1/seller/orders/{$order->id}/refund", [], $this->sellerToken($seller))
+            ->assertOk()
+            ->assertJsonPath('data.financials.payment_status', 'refunded');
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 2, 'status' => 'active']);
+    }
+
+    private function sellerToken(User $seller): array
+    {
+        return ['Authorization' => 'Bearer ' . $seller->createToken('t2')->plainTextToken];
+    }
+
+    public function test_second_buyer_blocked_once_car_stock_reserved(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $car = $this->makeCar($seller, ['quantity' => 1]);
+
+        // First buyer pays → unit reserved.
+        $this->postJson('/api/v1/orders', [
+            'buyer_name' => 'First Buyer',
+            'buyer_email' => 'first@garage.test',
+            'shipping_address' => 'Makati',
+            'car_id' => $car->id,
+            'item_type' => 'car',
+            'quantity' => 1,
+            'payment_method' => 'bank_transfer',
+            'payment_reference' => 'FIRST-1',
+            'mock_paid' => true,
+        ])->assertCreated();
+
+        // Second buyer cannot even start a transaction on it.
+        $this->postJson('/api/v1/orders', [
+            'buyer_name' => 'Second Buyer',
+            'buyer_email' => 'second@garage.test',
+            'shipping_address' => 'Makati',
+            'car_id' => $car->id,
+            'item_type' => 'car',
+            'quantity' => 1,
+            'payment_method' => 'bank_transfer',
+            'payment_reference' => 'SECOND-1',
+            'mock_paid' => true,
+        ])->assertStatus(422);
+    }
+
+    public function test_late_payment_refused_when_stock_reserved_by_other(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $buyerA = User::factory()->create(['role' => 'buyer', 'email' => 'a@garage.test']);
+        $buyerB = User::factory()->create(['role' => 'buyer', 'email' => 'b@garage.test']);
+        $car = $this->makeCar($seller, ['quantity' => 1]);
+
+        // B requests first (unpaid — stock untouched).
+        $orderB = $this->makeRequest($car, $buyerB, 'b@garage.test');
+
+        // A pays → reserves the last unit.
+        $this->postJson('/api/v1/orders', [
+            'buyer_name' => 'A Buyer',
+            'buyer_email' => 'a@garage.test',
+            'shipping_address' => 'Makati',
+            'car_id' => $car->id,
+            'item_type' => 'car',
+            'quantity' => 1,
+            'payment_method' => 'bank_transfer',
+            'payment_reference' => 'A-PAID-1',
+            'mock_paid' => true,
+        ])->assertCreated();
+
+        // B's late payment is refused — nothing left to secure.
+        $this->postJson("/api/v1/orders/{$orderB->order_number}/confirm-payment", [
+            'payment_reference' => 'B-LATE-1',
+        ], $this->sellerToken($buyerB))->assertStatus(422);
+    }
+
+    public function test_paid_order_posts_receipt_to_seller_chat(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'chatbuyer@garage.test']);
+        $car = $this->makeCar($seller, ['quantity' => 1]);
+
+        $orderNumber = $this->postJson('/api/v1/orders', [
+            'buyer_name' => $buyer->name,
+            'buyer_email' => 'chatbuyer@garage.test',
+            'shipping_address' => 'Makati',
+            'car_id' => $car->id,
+            'item_type' => 'car',
+            'quantity' => 1,
+            'payment_method' => 'bank_transfer',
+            'payment_reference' => 'CHAT-1',
+            'mock_paid' => true,
+        ], $this->sellerToken($buyer))->assertCreated()->json('data.order_number');
+
+        $key = "car:{$car->id}";
+        $this->assertDatabaseHas('conversations', [
+            'listing_key' => $key,
+        ]);
+        $convId = \App\Models\Conversation::where('listing_key', $key)->firstOrFail()->id;
+        $this->assertDatabaseHas('messages', [
+            'conversation_id' => $convId,
+            'sender_id' => $buyer->id,
+        ]);
+        $msg = \App\Models\Message::where('conversation_id', $convId)->firstOrFail();
+        $this->assertStringContainsString($orderNumber, $msg->body);
+        $this->assertEquals($orderNumber, $msg->metadata['sales_order_number'] ?? null);
+    }
+
+    public function test_seller_can_filter_incoming_orders_by_listing(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $carA = $this->makeCar($seller);
+        $carB = $this->makeCar($seller);
+        $buyer = User::factory()->create(['role' => 'buyer']);
+
+        $orderA = $this->makeRequest($carA, $buyer, 'a@garage.test');
+        $this->makeRequest($carB, $buyer, 'b@garage.test');
+
+        $res = $this->getJson("/api/v1/seller/orders?car_id={$carA->id}", $this->sellerToken($seller))->assertOk();
+        $ids = collect($res->json('data'))->pluck('id')->all();
+        $this->assertEquals([$orderA->id], $ids);
     }
 
     public function test_seller_can_reject_with_note(): void

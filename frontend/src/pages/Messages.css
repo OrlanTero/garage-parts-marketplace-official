@@ -177,6 +177,13 @@
   border-radius: 50%;
 }
 
+.sk-listing-thumb {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 10px;
+}
+
 .sk-line {
   height: 12px;
   margin: 6px 0;
@@ -297,6 +304,292 @@
   display: grid;
   place-items: center;
   padding: 0 4px;
+}
+
+.messages-hub-role-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.messages-hub-role-filter {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.messages-hub-role-filter.is-active {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #f8fafc;
+}
+
+.messages-hub-listing-thumb {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.messages-hub-listing-thumb img {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #1e2430;
+}
+
+.messages-hub-listing-thumb--header {
+  width: 44px;
+  height: 44px;
+}
+
+.messages-hub-listing-type-icon {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #0f1117;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fb923c;
+  display: grid;
+  place-items: center;
+}
+
+.messages-hub-thread-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.messages-hub-role-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.messages-hub-role-pill--selling {
+  background: rgba(251, 146, 60, 0.16);
+  color: #fb923c;
+}
+
+.messages-hub-role-pill--buying {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+}
+
+.messages-hub-inquiry-count {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.messages-hub-chat-header--listing {
+  height: auto;
+  min-height: 68px;
+  padding: 12px 20px;
+}
+
+.messages-hub-listing-header-copy {
+  min-width: 0;
+}
+
+.messages-hub-listing-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.messages-hub-listing-link {
+  color: #94a3b8;
+  display: inline-flex;
+}
+
+.messages-hub-listing-link:hover {
+  color: #f8fafc;
+}
+
+.messages-hub-listing-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.messages-hub-listing-price {
+  color: #fb923c;
+  font-weight: 700;
+}
+
+.messages-hub-listing-with {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.messages-hub-counterparty-strip {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 17, 23, 0.9);
+}
+
+.messages-hub-counterparty-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.messages-hub-counterparty-chip img {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.messages-hub-counterparty-chip.is-active {
+  border-color: #d8622c;
+  background: rgba(216, 98, 44, 0.16);
+  color: #f8fafc;
+}
+
+.messages-hub-counterparty-chip em {
+  font-style: normal;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.messages-hub-deal-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-top: 1px solid #1e293b;
+  background: #0f1117;
+}
+
+.messages-hub-deal-btn {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid #d8622c;
+  background: transparent;
+  color: #fb923c;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.messages-hub-deal-btn.is-active {
+  background: rgba(216, 98, 44, 0.15);
+}
+
+.messages-hub-deal-btn--reserve {
+  border-color: #eab308;
+  color: #eab308;
+}
+
+.messages-hub-deal-btn--reserve.is-active {
+  background: rgba(234, 179, 8, 0.12);
+}
+
+.messages-hub-deal-error {
+  font-size: 12px;
+  color: #ef4444;
+  align-self: center;
+}
+
+.messages-hub-deal-notice {
+  font-size: 12px;
+  color: #10b981;
+  align-self: center;
+}
+
+.messages-hub-deal-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid #1e293b;
+  background: #0f1117;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.messages-hub-deal-currency {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fb923c;
+}
+
+.messages-hub-deal-currency--reserve {
+  color: #eab308;
+}
+
+.messages-hub-deal-input {
+  flex: 1 1 140px;
+  background: #161922;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #f8fafc;
+  font-size: 13px;
+  outline: none;
+}
+
+.messages-hub-deal-input--wide {
+  flex: 2 1 180px;
+}
+
+.messages-hub-deal-submit {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  background: #d8622c;
+  color: #fff;
+}
+
+.messages-hub-deal-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.messages-hub-deal-submit--reserve {
+  background: #eab308;
+  color: #0f1117;
 }
 
 /* Right Chat Pane */
@@ -473,4 +766,68 @@
     align-items: center;
     justify-content: center;
   }
+}
+
+/* Listing status control (seller, chat header top-right) + sale order chips */
+.messages-hub-chat-header--listing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12;
+}
+
+.messages-hub-listing-status-ctl {
+  display: flex;
+  align-items: center;
+  gap: 8;
+  flex-shrink: 0;
+  padding-right: 4px;
+}
+
+.messages-hub-listing-status-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.messages-hub-listing-status-select {
+  background: #0f1117;
+  border: 1px solid #2d3748;
+  border-radius: 8px;
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+  cursor: pointer;
+  outline: none;
+}
+
+.messages-hub-listing-status-select:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.messages-hub-orders-strip {
+  align-items: center;
+  border-top: 1px solid #1e293b;
+}
+
+.messages-hub-orders-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.messages-hub-order-chip {
+  text-decoration: none;
+}
+
+.messages-hub-order-chip em {
+  font-style: normal;
+  text-transform: capitalize;
 }

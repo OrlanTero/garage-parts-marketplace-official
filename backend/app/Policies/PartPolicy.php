@@ -3,6 +3,8 @@
 namespace App\Policies;
 
 use App\Enums\PartStatus;
+use App\Models\Conversation;
+use App\Models\Order;
 use App\Models\Part;
 use App\Models\User;
 
@@ -22,7 +24,37 @@ class PartPolicy
             return true;
         }
 
-        return $user !== null && ($this->owns($user, $part) || $user->hasRole('admin'));
+        if ($user !== null && ($this->owns($user, $part) || $user->hasRole('admin'))) {
+            return true;
+        }
+
+        if ($user === null) {
+            return false;
+        }
+
+        // Same read access as cars: buyers with a thread — or an order
+        // (direct checkout creates no thread) — on this listing keep
+        // seeing it after it leaves the public catalog.
+        $hasThread = Conversation::query()
+            ->where('listing_key', "part:{$part->id}")
+            ->where(function ($q) use ($user) {
+                $q->where('user_one_id', $user->id)->orWhere('user_two_id', $user->id);
+            })
+            ->exists();
+
+        if ($hasThread) {
+            return true;
+        }
+
+        return Order::query()
+            ->where('part_id', $part->id)
+            ->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+                if ($user->email) {
+                    $q->orWhere('buyer_email', $user->email);
+                }
+            })
+            ->exists();
     }
 
     public function create(User $user): bool

@@ -29,6 +29,9 @@ class CarResource extends JsonResource
             'transmission' => $enum($this->transmission),
             'condition' => $enum($this->condition),
             'quantity' => (int) ($this->quantity ?? 1),
+            // "Paid" display state: a buyer already secured this listing
+            // with payment held in escrow on an open order.
+            'payment_secured' => (bool) $this->payment_secured,
             'tag' => $this->tag,
             'color' => $this->color,
             'vin' => $this->vin,

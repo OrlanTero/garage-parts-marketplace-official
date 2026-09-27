@@ -18,13 +18,16 @@ export const offersApi = {
     client.post(`/seller/offers/${id}/reject`, seller_note ? { seller_note } : {}).then((r) => r.data?.data ?? r.data),
 }
 
-export const OFFER_STATUSES = ['pending', 'accepted', 'rejected', 'withdrawn']
+export const OFFER_STATUSES = ['pending', 'accepted', 'confirmed', 'ordered', 'rejected', 'withdrawn', 'superseded']
 
 export const OFFER_STATUS_LABELS = {
-  pending: 'Awaiting Seller',
-  accepted: 'Accepted',
+  pending: 'Awaiting Counterparty',
+  accepted: 'Accepted — Confirm Deal',
+  confirmed: 'Deal Locked',
+  ordered: 'Checked Out',
   rejected: 'Declined',
   withdrawn: 'Withdrawn',
+  superseded: 'Superseded',
 }
 
 export default offersApi

@@ -17,6 +17,9 @@ class ConversationResource extends JsonResource
             'id' => $this->id,
             'user_one_id' => $this->user_one_id,
             'user_two_id' => $this->user_two_id,
+            'listing_type' => $this->listing_type,
+            'listing_id' => $this->listing_id,
+            'listing_key' => $this->listing_key,
             'other_user' => $otherUser ? [
                 'id' => $otherUser->id,
                 'username' => $otherUser->username,

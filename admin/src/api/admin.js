@@ -35,6 +35,7 @@ export const adminApi = {
 
   // Orders Management
   getOrders: (params = {}) => client.get('/admin/orders', { params }).then((r) => r.data),
+  getOrder: (idOrNumber) => client.get(`/orders/${idOrNumber}`).then((r) => r.data?.data ?? r.data),
   updateOrderStatus: (orderId, data) => client.patch(`/admin/orders/${orderId}/status`, data).then((r) => r.data),
 
   // Seller Verification Queue (admins share the seller accept/reject endpoints)
@@ -42,4 +43,12 @@ export const adminApi = {
     client.post(`/seller/orders/${orderId}/accept`, verification_note ? { verification_note } : {}).then((r) => r.data?.data ?? r.data),
   rejectSellerOrder: (orderId, verification_note) =>
     client.post(`/seller/orders/${orderId}/reject`, verification_note ? { verification_note } : {}).then((r) => r.data?.data ?? r.data),
+
+  // Configurations → Variables (delivery services, freight rules)
+  getConfig: (params = {}) => client.get('/admin/config', { params }).then((r) => r.data?.data ?? r.data),
+  updateConfig: (settings) => client.put('/admin/config', { settings }).then((r) => r.data?.data ?? r.data),
+
+  // Fund acceptance: house/admin verifies the buyer's submitted payment
+  confirmOrderFunds: (orderId) =>
+    client.post(`/seller/orders/${orderId}/confirm-funds`, {}).then((r) => r.data?.data ?? r.data),
 }

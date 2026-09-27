@@ -1,12 +1,19 @@
 import { AlertCircle, Check, CheckCheck, Clock, ShieldAlert, ShieldCheck, User } from 'lucide-react'
 import ListingContextCard from './ListingContextCard.jsx'
+import ChatDealCard from './ChatDealCard.jsx'
 
 export default function ChatMessageItem({
   message,
   isOwnMessage,
   position = 'single',
   showSenderHeader = true,
+  // Listing-focused threads already show the listing in the thread
+  // header (top only) — per-message listing cards are redundant noise.
+  hideListingCard = false,
   onRetry,
+  viewerId,
+  onDealAction,
+  dealActing,
 }) {
   if (!message) return null
 
@@ -66,11 +73,26 @@ export default function ChatMessageItem({
           </div>
         )}
 
-        {/* Polymorphic Listing Attachment Card */}
-        {message.listing && (
+        {/* Listing card renders only when the thread has no listing
+            header (legacy single-conversation views). Listing threads
+            show it once on top instead of on every message. */}
+        {message.listing && !hideListingCard && (
           <div className="chat-message-item__listing">
             <ListingContextCard listing={message.listing} compact />
           </div>
+        )}
+
+        {/* Deal cards: offers, reservations, checkout links, sales orders */}
+        {(message.offer ||
+          message.reservation ||
+          message.metadata?.checkout_token ||
+          message.metadata?.sales_order_number) && (
+          <ChatDealCard
+            message={message}
+            viewerId={viewerId}
+            onAction={onDealAction}
+            acting={dealActing}
+          />
         )}
 
         {/* Message Bubble with Dynamic Position-Aware Border Radius */}

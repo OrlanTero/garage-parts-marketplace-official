@@ -24,6 +24,8 @@ class MarketplaceCarController extends Controller
             'transmission' => ['sometimes', 'string', 'max:30'],
             'condition' => ['sometimes', 'string', 'max:30'],
             'city' => ['sometimes', 'string', 'max:120'],
+            'seller_id' => ['sometimes', 'integer'],
+            'seller_username' => ['sometimes', 'string', 'max:80'],
             'min_price' => ['sometimes', 'numeric', 'min:0'],
             'max_price' => ['sometimes', 'numeric', 'min:0'],
             'min_year' => ['sometimes', 'integer', 'min:1900'],
@@ -43,6 +45,6 @@ class MarketplaceCarController extends Controller
     {
         $this->authorize('view', $car);
 
-        return new CarResource($car->loadMissing(['seller:id,name,username,avatar_url,is_kyc_verified,kyc_status,role', 'media']));
+        return new CarResource($car->loadMissing(['seller:id,name,username,avatar_url,is_kyc_verified,kyc_status,role', 'media'])->loadCount('heldOrders'));
     }
 }

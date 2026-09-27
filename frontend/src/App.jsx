@@ -25,11 +25,14 @@ import PartsMarketplace from './pages/PartsMarketplace.jsx'
 import PartDetail from './pages/PartDetail.jsx'
 import Checkout from './pages/Checkout.jsx'
 import SalesOrder from './pages/SalesOrder.jsx'
+import VerifyTransaction from './pages/VerifyTransaction.jsx'
 import AgentPortal from './pages/AgentPortal.jsx'
 import CreateListing from './pages/CreateListing.jsx'
 import BecomeSeller from './pages/BecomeSeller.jsx'
 import MyListings from './pages/MyListings.jsx'
+import Showroom from './pages/Showroom.jsx'
 import Offers from './pages/Offers.jsx'
+import MyOrders from './pages/MyOrders.jsx'
 import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
 import Messages from './pages/Messages.jsx'
@@ -481,6 +484,9 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/sales-order/:orderNumber" element={<SalesOrder />} />
           <Route path="/orders/:orderNumber" element={<SalesOrder />} />
+          <Route path="/verify/:hash" element={<VerifyTransaction />} />
+          <Route path="/my-orders" element={<MyOrders />} />
+          <Route path="/orders" element={<MyOrders />} />
           <Route path="/agent" element={<AgentPortal />} />
           <Route path="/agents" element={<AgentPortal />} />
           <Route path="/agent-portal" element={<AgentPortal />} />
@@ -499,7 +505,8 @@ export default function App() {
           <Route path="/become-seller" element={<BecomeSeller />} />
           <Route path="/my-listings" element={<MyListings />} />
           <Route path="/seller-dashboard" element={<MyListings />} />
-          <Route path="/showroom" element={<Placeholder title="Showroom & Café" />} />
+          <Route path="/showroom" element={<Showroom />} />
+          <Route path="/showroom/:username" element={<Showroom />} />
           <Route path="/services" element={<Placeholder title="Garage Inspection Services" />} />
           <Route path="/about" element={<Placeholder title="About Garage Marketplace" />} />
           <Route path="/login" element={<Login />} />

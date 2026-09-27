@@ -47,6 +47,11 @@ class StoreOrderRequest extends FormRequest
             'item_sku' => ['nullable', 'string', 'max:100'],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:100'],
             'payment_method' => ['nullable', 'string', 'max:50'],
+            'payment_reference' => ['nullable', 'string', 'max:100'],
+            // Pay-first checkout: mock settlement now, real gateway later.
+            'mock_paid' => ['nullable', 'boolean'],
+            // Deal checkout: single-use token from a confirmed chat offer.
+            'offer_token' => ['nullable', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

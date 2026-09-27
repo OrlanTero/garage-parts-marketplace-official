@@ -26,6 +26,7 @@ export const sellerCars = {
   publish: (id) => client.post(`/seller/cars/${id}/publish`).then((r) => r.data?.data ?? r.data),
   unpublish: (id) => client.post(`/seller/cars/${id}/unpublish`).then((r) => r.data?.data ?? r.data),
   markSold: (id) => client.post(`/seller/cars/${id}/sold`).then((r) => r.data?.data ?? r.data),
+  setStatus: (id, status) => client.post(`/seller/cars/${id}/status`, { status }).then((r) => r.data?.data ?? r.data),
 }
 
 export const CAR_FILTER_META = {

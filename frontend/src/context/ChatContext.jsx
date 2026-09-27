@@ -5,15 +5,25 @@ import { getEcho } from '../realtime/echo.js'
 
 const ChatContext = createContext(null)
 
+function listingKeyOf(type, id) {
+  if (!type || !id) return null
+  return `${type}:${id}`
+}
+
 export function ChatProvider({ children }) {
   const { user, isAuthenticated, openLoginModal } = useAuth()
   const [unreadCount, setUnreadCount] = useState(0)
   const [conversations, setConversations] = useState([])
   const [isLoadingConversations, setIsLoadingConversations] = useState(false)
 
-  // Floating Drawer State
+  // Listing-focused floating drawer state.
+  // The drawer is always scoped to ONE listing: header shows the listing,
+  // body shows every buyer/seller message on that listing, offers included.
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isDrawerMinimized, setIsDrawerMinimized] = useState(false)
+  const [activeListing, setActiveListing] = useState(null) // { type, id, card }
+  const [listingRole, setListingRole] = useState(null) // 'selling' | 'buying'
+  const [listingConversations, setListingConversations] = useState([])
   const [activeConversation, setActiveConversation] = useState(null)
   const [recipientUser, setRecipientUser] = useState(null)
   const [attachedListing, setAttachedListing] = useState(null)
@@ -21,8 +31,10 @@ export function ChatProvider({ children }) {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [isSending, setIsSending] = useState(false)
 
+  const activeListingKeyRef = useRef(null)
+  activeListingKeyRef.current = activeListing ? listingKeyOf(activeListing.type, activeListing.id) : null
   const activeConvIdRef = useRef(null)
-  activeConvIdRef.current = activeConversation?.id
+  activeConvIdRef.current = activeConversation?.id ?? null
 
   // Refresh total unread count
   const refreshUnreadCount = useCallback(async () => {
@@ -38,7 +50,7 @@ export function ChatProvider({ children }) {
     }
   }, [isAuthenticated, user?.id])
 
-  // Fetch conversations list
+  // Fetch conversation previews (listing-scoped on the backend — no user-only threads)
   const fetchConversations = useCallback(async () => {
     if (!isAuthenticated) return []
     setIsLoadingConversations(true)
@@ -54,26 +66,108 @@ export function ChatProvider({ children }) {
     }
   }, [isAuthenticated])
 
-  // Load messages for a given conversation
-  const loadMessages = useCallback(async (conversationId) => {
-    if (!conversationId) return
-    setIsLoadingMessages(true)
-    try {
-      const res = await chatApi.getMessages(conversationId)
-      setMessages(res.data || [])
-      // Mark as read
-      await chatApi.markAsRead(conversationId)
-      refreshUnreadCount()
-    } catch (err) {
-      console.error('Failed to load messages:', err)
-    } finally {
-      setIsLoadingMessages(false)
+  const applyListingThread = useCallback((thread, preferredConvId = null) => {
+    const convs = thread?.conversations || []
+    const list = thread?.data || []
+    setActiveListing(
+      thread?.listing
+        ? {
+            type: thread.listing.type,
+            id: thread.listing.id,
+            card: thread.listing,
+          }
+        : null,
+    )
+    setAttachedListing(
+      thread?.listing
+        ? {
+            type: thread.listing.type,
+            id: thread.listing.id,
+            uuid: thread.listing.uuid || null,
+            title: thread.listing.title,
+            price: thread.listing.price,
+            primary_image_url: thread.listing.primary_image_url,
+            condition: thread.listing.condition,
+            inspection_score: thread.listing.inspection_score,
+            url: thread.listing.url,
+          }
+        : null,
+    )
+    setListingRole(thread?.role || null)
+    setListingConversations(convs)
+    setMessages(list)
+    let picked = null
+    if (preferredConvId) {
+      picked = convs.find((c) => String(c.id) === String(preferredConvId)) || null
     }
-  }, [refreshUnreadCount])
+    picked = picked || convs[0] || null
+    setActiveConversation(picked)
+    setRecipientUser(picked?.other_user || null)
+    return picked
+  }, [])
 
-  // Open drawer with a listing context (from car or part detail page)
+  // Load the full listing thread (all conversations + merged messages on that listing)
+  const loadListingThread = useCallback(
+    async (listingType, listingId, preferredConvId = null) => {
+      if (!listingType || !listingId) return null
+      setIsLoadingMessages(true)
+      try {
+        const thread = await chatApi.getListingThread(listingType, listingId)
+        const picked = applyListingThread(thread, preferredConvId)
+        try {
+          await chatApi.markListingRead(listingType, listingId)
+        } catch {
+          // ignore
+        }
+        refreshUnreadCount()
+        return picked
+      } catch (err) {
+        console.error('Failed to load listing thread:', err)
+        return null
+      } finally {
+        setIsLoadingMessages(false)
+      }
+    },
+    [applyListingThread, refreshUnreadCount],
+  )
+
+  // Legacy name kept for compat: loads messages for one conversation,
+  // then expands to its full listing thread when the conversation is listing-scoped.
+  const loadMessages = useCallback(
+    async (conversationId) => {
+      if (!conversationId) return
+      setIsLoadingMessages(true)
+      try {
+        const res = await chatApi.getConversation(conversationId)
+        const conv = res.data || res
+        if (conv?.listing_type && conv?.listing_id) {
+          await loadListingThread(conv.listing_type, conv.listing_id, conv.id)
+        } else {
+          const msgRes = await chatApi.getMessages(conversationId)
+          setMessages(msgRes.data || [])
+          await chatApi.markAsRead(conversationId)
+          refreshUnreadCount()
+        }
+      } catch (err) {
+        console.error('Failed to load messages:', err)
+      } finally {
+        setIsLoadingMessages(false)
+      }
+    },
+    [loadListingThread, refreshUnreadCount],
+  )
+
+  // Request flag: when a listing page's "Make an Offer" button opens the
+  // drawer, the offer box auto-opens once the listing thread is ready.
+  const [offerAutoOpenKey, setOfferAutoOpenKey] = useState(null)
+
+  // Open drawer scoped to a listing (from car or part detail page).
+  // Creates/finds the buyer↔seller thread on that listing, then loads
+  // every conversation + message visible on the listing.
+  // Pass { openOffer: true } to auto-open the Make Offer box (used by
+  // the listing "Make an Offer" button).
   const openDrawerWithListing = useCallback(
-    async ({ seller, listing, listingType }) => {
+    async ({ seller, listing, listingType, openOffer = false }) => {
       if (!isAuthenticated) {
         openLoginModal()
         return
@@ -87,8 +181,11 @@ export function ChatProvider({ children }) {
       setIsDrawerOpen(true)
       setIsDrawerMinimized(false)
       setRecipientUser(seller)
+      if (openOffer && listing?.id && listingType) {
+        setOfferAutoOpenKey(`${listingType}:${listing.id}`)
+      }
       const listingIdentifier = listing.uuid || listing.id
-      setAttachedListing({
+      const card = {
         type: listingType,
         id: listing.id,
         uuid: listing.uuid || null,
@@ -98,24 +195,38 @@ export function ChatProvider({ children }) {
         inspection_score: listing.inspection_score || listing.score,
         condition: listing.condition,
         url: listingType === 'car' ? `/marketplace/${listingIdentifier}` : `/parts/${listingIdentifier}`,
-      })
+      }
+      setAttachedListing(card)
+      setActiveListing({ type: listingType, id: listing.id, card })
+      setIsLoadingMessages(true)
 
       try {
-        // Start or get conversation
         const res = await chatApi.startConversation({
           recipient_id: seller.id,
+          listing_type: listingType,
+          listing_id: listing.id,
         })
-        const conv = res.data
-        setActiveConversation(conv)
-        await loadMessages(conv.id)
+        const conv = res.data || res
+        await loadListingThread(listingType, listing.id, conv?.id)
+        fetchConversations()
       } catch (err) {
-        console.error('Failed to initiate conversation:', err)
+        console.error('Failed to initiate listing conversation:', err)
+        setIsLoadingMessages(false)
       }
     },
-    [isAuthenticated, openLoginModal, user, loadMessages],
+    [isAuthenticated, openLoginModal, user, loadListingThread, fetchConversations],
   )
 
-  // Open drawer with an existing conversation
+  // User-only threads are retired: every conversation belongs to a listing.
+  // Kept as a deprecated no-op so old call sites fail loudly instead of
+  // silently creating orphan threads. Use openDrawerWithListing instead.
+  const openDrawerWithUser = useCallback(async () => {
+    console.warn(
+      '[chat] openDrawerWithUser is retired — messages are listing-focused. Use openDrawerWithListing({ seller, listing, listingType }).',
+    )
+  }, [])
+
+  // Open drawer with an existing conversation — expands to its listing thread.
   const openDrawerWithConversation = useCallback(
     async (conv) => {
       if (!isAuthenticated) {
@@ -125,28 +236,54 @@ export function ChatProvider({ children }) {
 
       setIsDrawerOpen(true)
       setIsDrawerMinimized(false)
+
+      if (conv?.listing_type && conv?.listing_id) {
+        setActiveConversation(conv)
+        setRecipientUser(conv.other_user || null)
+        await loadListingThread(conv.listing_type, conv.listing_id, conv.id)
+        return
+      }
+
+      // Legacy user-only thread: surface it read-only instead of hiding it.
       setActiveConversation(conv)
-      setRecipientUser(conv.other_user)
+      setRecipientUser(conv.other_user || null)
+      setActiveListing(null)
       setAttachedListing(null)
+      setListingConversations([])
       await loadMessages(conv.id)
     },
-    [isAuthenticated, openLoginModal, loadMessages],
+    [isAuthenticated, openLoginModal, loadListingThread, loadMessages],
   )
+
+  // Switch the reply target (which buyer/seller thread) inside the open listing.
+  const selectListingConversation = useCallback((conv) => {
+    if (!conv) return
+    setActiveConversation(conv)
+    setRecipientUser(conv.other_user || null)
+  }, [])
 
   const closeDrawer = useCallback(() => {
     setIsDrawerOpen(false)
     setIsDrawerMinimized(false)
+    setActiveListing(null)
+    setListingRole(null)
+    setListingConversations([])
     setActiveConversation(null)
     setRecipientUser(null)
     setAttachedListing(null)
     setMessages([])
+    setOfferAutoOpenKey(null)
   }, [])
+
+  // Drawer clears the flag once it has auto-opened the offer box.
+  const clearOfferAutoOpen = useCallback(() => setOfferAutoOpenKey(null), [])
 
   const toggleMinimize = useCallback(() => {
     setIsDrawerMinimized((prev) => !prev)
   }, [])
 
-  // Send message in active conversation (optimistic instant dispatch)
+  // Send message in the active listing thread (optimistic instant dispatch).
+  // Replies go to the selected buyer/seller conversation on this listing.
   const sendMessage = useCallback(
     async (bodyText, customListing = undefined, customConvId = undefined) => {
       const convId = customConvId || activeConversation?.id
@@ -170,43 +307,25 @@ export function ChatProvider({ children }) {
         },
         body: text,
         is_redacted: false,
-        listing_type: listingToAttach?.type || null,
-        listing_id: listingToAttach?.id || null,
-        listing: listingToAttach || null,
+        listing_type: listingToAttach?.type || activeListing?.type || null,
+        listing_id: listingToAttach?.id || activeListing?.id || null,
+        listing: listingToAttach || activeListing?.card || null,
         read_at: null,
         is_read: false,
         status: 'sending',
         created_at: new Date().toISOString(),
       }
 
-      // 1. Immediately append optimistic message to active message stream
       setMessages((prev) => [...prev, optimisticMsg])
+      setIsSending(true)
 
-      // 2. Immediately clear attached listing
-      if (customListing === undefined) {
-        setAttachedListing(null)
-      }
-
-      // 3. Immediately update conversations list preview
-      setConversations((prev) => {
-        const index = prev.findIndex((c) => c.id === convId)
-        if (index > -1) {
-          const updated = [...prev]
-          const target = { ...updated[index], last_message: optimisticMsg, last_message_at: optimisticMsg.created_at }
-          updated.splice(index, 1)
-          return [target, ...updated]
-        }
-        return prev
-      })
-
-      // 4. Background queue send via API
       try {
-        const payload = {
-          body: text,
-        }
-        if (listingToAttach) {
-          payload.listing_type = listingToAttach.type
-          payload.listing_id = listingToAttach.id
+        const payload = { body: text }
+        const lt = listingToAttach?.type || activeListing?.type
+        const lid = listingToAttach?.id || activeListing?.id
+        if (lt && lid) {
+          payload.listing_type = lt
+          payload.listing_id = lid
         }
 
         const res = await chatApi.sendMessage(convId, payload)
@@ -215,12 +334,10 @@ export function ChatProvider({ children }) {
           status: res.data.is_read || res.data.read_at ? 'seen' : 'sent',
         }
 
-        // Replace optimistic message with confirmed server message
         setMessages((prev) =>
           prev.map((m) => (m.id === tempId || m.temp_id === tempId ? confirmedMsg : m)),
         )
 
-        // Update conversation list preview with confirmed message
         setConversations((prev) =>
           prev.map((c) =>
             c.id === convId
@@ -232,71 +349,67 @@ export function ChatProvider({ children }) {
         return confirmedMsg
       } catch (err) {
         console.error('Failed to send message:', err)
-        // Mark optimistic message as failed
         setMessages((prev) =>
           prev.map((m) =>
             m.id === tempId || m.temp_id === tempId ? { ...m, status: 'failed' } : m,
           ),
         )
         throw err
+      } finally {
+        setIsSending(false)
       }
     },
-    [activeConversation, attachedListing, user],
+    [activeConversation, attachedListing, activeListing, user],
   )
 
   // Retry sending a failed message
-  const retryMessage = useCallback(
-    async (failedMsg) => {
-      if (!failedMsg || !failedMsg.conversation_id) return
-      const targetId = failedMsg.temp_id || failedMsg.id
+  const retryMessage = useCallback(async (failedMsg) => {
+    if (!failedMsg || !failedMsg.conversation_id) return
+    const targetId = failedMsg.temp_id || failedMsg.id
 
-      // Set back to sending status
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === targetId || m.temp_id === targetId ? { ...m, status: 'sending' } : m,
+      ),
+    )
+
+    try {
+      const payload = { body: failedMsg.body }
+      if (failedMsg.listing_type && failedMsg.listing_id) {
+        payload.listing_type = failedMsg.listing_type
+        payload.listing_id = failedMsg.listing_id
+      }
+
+      const res = await chatApi.sendMessage(failedMsg.conversation_id, payload)
+      const confirmedMsg = {
+        ...res.data,
+        status: res.data.is_read || res.data.read_at ? 'seen' : 'sent',
+      }
+
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === targetId || m.temp_id === targetId ? { ...m, status: 'sending' } : m,
+          m.id === targetId || m.temp_id === targetId ? confirmedMsg : m,
         ),
       )
 
-      try {
-        const payload = {
-          body: failedMsg.body,
-        }
-        if (failedMsg.listing_type && failedMsg.listing_id) {
-          payload.listing_type = failedMsg.listing_type
-          payload.listing_id = failedMsg.listing_id
-        }
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === failedMsg.conversation_id
+            ? { ...c, last_message: confirmedMsg, last_message_at: confirmedMsg.created_at }
+            : c,
+        ),
+      )
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === targetId || m.temp_id === targetId ? { ...m, status: 'failed' } : m,
+        ),
+      )
+    }
+  }, [])
 
-        const res = await chatApi.sendMessage(failedMsg.conversation_id, payload)
-        const confirmedMsg = {
-          ...res.data,
-          status: res.data.is_read || res.data.read_at ? 'seen' : 'sent',
-        }
-
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === targetId || m.temp_id === targetId ? confirmedMsg : m,
-          ),
-        )
-
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === failedMsg.conversation_id
-              ? { ...c, last_message: confirmedMsg, last_message_at: confirmedMsg.created_at }
-              : c,
-          ),
-        )
-      } catch (err) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === targetId || m.temp_id === targetId ? { ...m, status: 'failed' } : m,
-          ),
-        )
-      }
-    },
-    [],
-  )
-
-  // Realtime Echo Listener for user-level notifications & active conversation messages
+  // Realtime Echo listener: listing-key aware so the open listing thread
+  // updates live while other listings only bump the unread badge.
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return
 
@@ -309,57 +422,71 @@ export function ChatProvider({ children }) {
       if (echo) {
         userChannel = echo.private(`user.${user.id}`)
 
-      userChannel.listen('.message.sent', (event) => {
-        const incomingMsg = event.message
-        const convId = event.conversation_id
+        userChannel.listen('.message.sent', (event) => {
+          const incomingMsg = event.message
+          const convId = event.conversation_id
+          const listingKey =
+            event.listing_key ||
+            (event.listing_type && event.listing_id
+              ? `${event.listing_type}:${event.listing_id}`
+              : incomingMsg?.listing_type && incomingMsg?.listing_id
+                ? `${incomingMsg.listing_type}:${incomingMsg.listing_id}`
+                : null)
 
-        // If active conversation is currently open, append and mark read
-        if (activeConvIdRef.current === convId) {
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === incomingMsg.id)) return prev
-            return [...prev, incomingMsg]
-          })
-          chatApi.markAsRead(convId).catch(() => {})
-        } else {
-          // Increment unread count
-          setUnreadCount((prev) => prev + 1)
-        }
+          const isOpenListing =
+            listingKey && activeListingKeyRef.current && listingKey === activeListingKeyRef.current
 
-        // Update conversations preview list
-        setConversations((prev) => {
-          const index = prev.findIndex((c) => c.id === convId)
-          if (index > -1) {
-            const updated = [...prev]
-            const target = { ...updated[index], last_message: incomingMsg, last_message_at: incomingMsg.created_at }
-            if (activeConvIdRef.current !== convId) {
-              target.unread_count = (target.unread_count || 0) + 1
+          if (isOpenListing) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === incomingMsg.id)) return prev
+              return [...prev, incomingMsg]
+            })
+            if (event.listing_type && event.listing_id) {
+              chatApi.markListingRead(event.listing_type, event.listing_id).catch(() => {})
+            } else if (convId) {
+              chatApi.markAsRead(convId).catch(() => {})
             }
-            updated.splice(index, 1)
-            return [target, ...updated]
+          } else if (activeConvIdRef.current === convId) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === incomingMsg.id)) return prev
+              return [...prev, incomingMsg]
+            })
+            chatApi.markAsRead(convId).catch(() => {})
           } else {
-            // New conversation arrived, refresh conversations
+            setUnreadCount((prev) => prev + 1)
+          }
+
+          setConversations((prev) => {
+            const index = prev.findIndex((c) => c.id === convId)
+            if (index > -1) {
+              const updated = [...prev]
+              const target = { ...updated[index], last_message: incomingMsg, last_message_at: incomingMsg.created_at }
+              if (!isOpenListing && activeConvIdRef.current !== convId) {
+                target.unread_count = (target.unread_count || 0) + 1
+              }
+              updated.splice(index, 1)
+              return [target, ...updated]
+            }
             fetchConversations()
             return prev
+          })
+        })
+
+        userChannel.listen('.message.read', (event) => {
+          const { conversation_id, reader_id } = event
+          if (activeConvIdRef.current === conversation_id) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.sender_id !== reader_id ? { ...m, is_read: true, read_at: event.read_at } : m,
+              ),
+            )
           }
         })
-      })
-
-      userChannel.listen('.message.read', (event) => {
-        const { conversation_id, reader_id } = event
-        if (activeConvIdRef.current === conversation_id) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.sender_id !== reader_id ? { ...m, is_read: true, read_at: event.read_at } : m,
-            ),
-          )
-        }
-      })
-      } // end if (echo) — skipped when realtime is disabled via VITE_REALTIME_ENABLED=false
+      }
     } catch (err) {
       console.warn('Realtime chat echo connection error:', err)
     }
 
-    // Window focus refresh fallback
     const onFocus = () => {
       refreshUnreadCount()
     }
@@ -387,14 +514,21 @@ export function ChatProvider({ children }) {
       isLoadingConversations,
       isDrawerOpen,
       isDrawerMinimized,
+      activeListing,
+      listingRole,
+      listingConversations,
       activeConversation,
       recipientUser,
       attachedListing,
       messages,
       isLoadingMessages,
       isSending,
+      offerAutoOpenKey,
+      clearOfferAutoOpen,
       openDrawerWithListing,
+      openDrawerWithUser,
       openDrawerWithConversation,
+      selectListingConversation,
       closeDrawer,
       toggleMinimize,
       setAttachedListing,
@@ -403,6 +537,7 @@ export function ChatProvider({ children }) {
       refreshUnreadCount,
       fetchConversations,
       loadMessages,
+      loadListingThread,
     }),
     [
       unreadCount,
@@ -410,14 +545,21 @@ export function ChatProvider({ children }) {
       isLoadingConversations,
       isDrawerOpen,
       isDrawerMinimized,
+      activeListing,
+      listingRole,
+      listingConversations,
       activeConversation,
       recipientUser,
       attachedListing,
       messages,
       isLoadingMessages,
       isSending,
+      offerAutoOpenKey,
+      clearOfferAutoOpen,
       openDrawerWithListing,
+      openDrawerWithUser,
       openDrawerWithConversation,
+      selectListingConversation,
       closeDrawer,
       toggleMinimize,
       sendMessage,
@@ -425,6 +567,7 @@ export function ChatProvider({ children }) {
       refreshUnreadCount,
       fetchConversations,
       loadMessages,
+      loadListingThread,
     ],
   )
 

@@ -45,6 +45,8 @@ class GeneratePostmanCollection extends Command
                 ['key' => 'partId', 'value' => '1', 'type' => 'string'],
                 ['key' => 'mediaId', 'value' => '1', 'type' => 'string'],
                 ['key' => 'conversationId', 'value' => '1', 'type' => 'string'],
+                ['key' => 'listingType', 'value' => 'car', 'type' => 'string'],
+                ['key' => 'listingId', 'value' => '1', 'type' => 'string'],
                 ['key' => 'applicationId', 'value' => '1', 'type' => 'string'],
                 ['key' => 'recipientId', 'value' => '2', 'type' => 'string'],
                 ['key' => 'orderNumber', 'value' => 'ORD-20260922-0001', 'type' => 'string'],
@@ -1484,7 +1486,7 @@ class GeneratePostmanCollection extends Command
         ];
 
         return [
-            'name' => '13. Chat & Direct Messaging (1:1 + PII Safety Engine)',
+            'name' => '13. Chat & Listing Inbox (Listing threads + PII Safety Engine)',
             'item' => [
                 [
                     'name' => 'GET Unread Messages Total Count',
@@ -1497,7 +1499,37 @@ class GeneratePostmanCollection extends Command
                     ],
                 ],
                 [
-                    'name' => 'GET List Inbox Conversations',
+                    'name' => 'GET Listing Inbox (Buying & Selling)',
+                    'event' => [$this->testStatus200('pm.test("Listing inbox array present", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an("array"); if (d.data.length) { pm.expect(d.data[0].listing).to.be.an("object"); pm.expect(d.data[0].listing.title).to.be.a("string"); pm.expect(["buying","selling"]).to.include(d.data[0].role); } });')],
+                    'request' => [
+                        'method' => 'GET',
+                        'header' => [['key' => 'Accept', 'value' => 'application/json']],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/chat/inbox', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'chat', 'inbox']],
+                        'description' => 'Listing-focused inbox. Each row is a car or part the user is selling or buying, with listing name, last message, unread count, and inquiry count.',
+                    ],
+                ],
+                [
+                    'name' => 'GET Listing Thread (All Conversations On Listing)',
+                    'event' => [$this->testStatus200('pm.test("Listing thread returned", function () { const d = pm.response.json(); pm.expect(d.listing).to.be.an("object"); pm.expect(d.listing.title).to.be.a("string"); pm.expect(d.conversations).to.be.an("array"); pm.expect(d.data).to.be.an("array"); });')],
+                    'request' => [
+                        'method' => 'GET',
+                        'header' => [['key' => 'Accept', 'value' => 'application/json']],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/chat/listings/{{listingType}}/{{listingId}}', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'chat', 'listings', '{{listingType}}', '{{listingId}}']],
+                        'description' => 'Opens one listing. Sellers see every buyer thread and all messages on that listing. Buyers see only their conversation with the seller.',
+                    ],
+                ],
+                [
+                    'name' => 'POST Mark Listing Thread as Read',
+                    'event' => [$this->testStatus200('pm.test("Listing marked read", function () { const d = pm.response.json(); pm.expect(d.marked_count).to.be.a("number"); });')],
+                    'request' => [
+                        'method' => 'POST',
+                        'header' => [['key' => 'Accept', 'value' => 'application/json']],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/chat/listings/{{listingType}}/{{listingId}}/read', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'chat', 'listings', '{{listingType}}', '{{listingId}}', 'read']],
+                        'description' => 'Marks all unread messages the current user can see on this listing as read.',
+                    ],
+                ],
+                [
+                    'name' => 'GET List 1:1 Conversations (Legacy)',
                     'event' => [$this->testStatus200('pm.test("Inbox list array present", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an("array"); });')],
                     'request' => [
                         'method' => 'GET',
@@ -1508,11 +1540,11 @@ class GeneratePostmanCollection extends Command
                             'path' => ['api', 'v1', 'chat', 'conversations'],
                             'query' => [['key' => 'per_page', 'value' => '15']],
                         ],
-                        'description' => 'Retrieves user inbox conversations with latest message preview, unread status, and recipient profile.',
+                        'description' => 'Retrieves user 1:1 conversations with latest message preview, unread status, recipient profile, and listing scope.',
                     ],
                 ],
                 [
-                    'name' => 'POST Start / Resolve 1:1 Conversation (With Listing Context)',
+                    'name' => 'POST Start / Resolve Listing Conversation',
                     'event' => [$saveConversationIdScript],
                     'request' => [
                         'method' => 'POST',
@@ -1530,7 +1562,7 @@ class GeneratePostmanCollection extends Command
                             ], JSON_PRETTY_PRINT),
                         ],
                         'url' => ['raw' => '{{baseUrl}}/api/v1/chat/conversations', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'chat', 'conversations']],
-                        'description' => 'Finds existing or creates a new strictly 1:1 conversation thread between two users. Attaches listing context card and sets {{conversationId}} variable.',
+                        'description' => 'Finds existing or creates a 1:1 conversation scoped to a listing (unique per buyer + seller + listing). Sets {{conversationId}} variable.',
                     ],
                 ],
                 [

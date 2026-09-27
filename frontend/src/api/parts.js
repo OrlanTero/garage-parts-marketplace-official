@@ -23,6 +23,7 @@ export const sellerParts = {
   publish: (id) => client.post(`/seller/parts/${id}/publish`).then((r) => r.data?.data ?? r.data),
   unpublish: (id) => client.post(`/seller/parts/${id}/unpublish`).then((r) => r.data?.data ?? r.data),
   markSold: (id) => client.post(`/seller/parts/${id}/sold`).then((r) => r.data?.data ?? r.data),
+  setStatus: (id, status) => client.post(`/seller/parts/${id}/status`, { status }).then((r) => r.data?.data ?? r.data),
 }
 
 export const PART_FILTER_META = {

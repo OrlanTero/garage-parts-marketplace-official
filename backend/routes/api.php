@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AdminAppointmentController;
+use App\Http\Controllers\Api\AdminAuctionController;
 use App\Http\Controllers\Api\AdminCarModerationController;
 use App\Http\Controllers\Api\AdminChatModerationController;
+use App\Http\Controllers\Api\AdminConfigController;
+use App\Http\Controllers\Api\AdminFundsController;
 use App\Http\Controllers\Api\AdminKycController;
 use App\Http\Controllers\Api\AdminSellerApplicationController;
 use App\Http\Controllers\Api\AdminUserController;
@@ -10,9 +13,12 @@ use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\DealOfferController;
+use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\KycController;
+use App\Http\Controllers\Api\MarketplaceAuctionController;
 use App\Http\Controllers\Api\MarketplaceCarController;
 use App\Http\Controllers\Api\MarketplacePartController;
 use App\Http\Controllers\Api\MediaController;
@@ -25,6 +31,9 @@ use App\Http\Controllers\Api\SellerCarController;
 use App\Http\Controllers\Api\SellerDashboardController;
 use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerPartController;
+use App\Http\Controllers\Api\SellerShowroomController;
+use App\Http\Controllers\Api\AdminShowroomController;
+use App\Http\Controllers\Api\ShowroomController;
 use App\Http\Controllers\Api\SystemMaintenanceController;
 use App\Http\Controllers\Api\TaxonomyController;
 use App\Http\Controllers\Api\AdminTaxonomyController;
@@ -89,12 +98,34 @@ Route::prefix('v1')->group(function () {
         // Chat & 1:1 Direct Messaging
         Route::prefix('chat')->name('api.chat.')->group(function () {
             Route::get('/unread-count', [ChatController::class, 'unreadCount'])->name('unreadCount');
+            Route::get('/inbox', [ChatController::class, 'inbox'])->name('inbox');
+            Route::get('/listings/{listingType}/{listingId}', [ChatController::class, 'listingThread'])
+                ->where(['listingType' => 'car|part', 'listingId' => '[0-9]+'])
+                ->name('listings.show');
+            Route::post('/listings/{listingType}/{listingId}/read', [ChatController::class, 'markListingRead'])
+                ->where(['listingType' => 'car|part', 'listingId' => '[0-9]+'])
+                ->name('listings.markRead');
             Route::get('/conversations', [ChatController::class, 'index'])->name('conversations.index');
             Route::post('/conversations', [ChatController::class, 'store'])->name('conversations.store');
             Route::get('/conversations/{conversation}', [ChatController::class, 'show'])->name('conversations.show');
             Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('conversations.messages');
             Route::post('/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('conversations.sendMessage');
             Route::post('/conversations/{conversation}/read', [ChatController::class, 'markRead'])->name('conversations.markRead');
+
+            // In-chat deal offers (negotiate → confirm → checkout link)
+            Route::get('/conversations/{conversation}/offers', [DealOfferController::class, 'index'])->name('deals.index');
+            Route::post('/conversations/{conversation}/offers', [DealOfferController::class, 'store'])->name('deals.store');
+            Route::post('/offers/{offer}/accept', [DealOfferController::class, 'accept'])->name('deals.accept');
+            Route::post('/offers/{offer}/reject', [DealOfferController::class, 'reject'])->name('deals.reject');
+            Route::post('/offers/{offer}/withdraw', [DealOfferController::class, 'withdraw'])->name('deals.withdraw');
+            Route::post('/offers/{offer}/confirm', [DealOfferController::class, 'confirm'])->name('deals.confirm');
+            Route::post('/offers/{offer}/checkout-link', [DealOfferController::class, 'checkoutLink'])->name('deals.checkoutLink');
+
+            // Reservation payments (parameterized % fee; scheduled needs seller accept)
+            Route::post('/conversations/{conversation}/reservations', [ReservationController::class, 'store'])->name('reservations.store');
+            Route::post('/reservations/{reservation}/pay', [ReservationController::class, 'pay'])->name('reservations.pay');
+            Route::post('/reservations/{reservation}/accept', [ReservationController::class, 'accept'])->name('reservations.accept');
+            Route::post('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('reservations.cancel');
         });
 
         // WebSocket / Reverb Channel Authorization
@@ -123,6 +154,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
         Route::patch('/orders/{identifier}/payment-method', [OrderController::class, 'updatePaymentMethod'])->name('api.orders.paymentMethod');
         Route::patch('/orders/{identifier}/delivery-location', [OrderController::class, 'updateDeliveryLocation'])->name('api.orders.deliveryLocation');
+        Route::post('/orders/{identifier}/confirm-payment', [OrderController::class, 'confirmPayment'])->name('api.orders.confirmPayment');
+        Route::post('/orders/{identifier}/accept-inspection', [OrderController::class, 'acceptInspection'])->name('api.orders.acceptInspection');
+        Route::post('/orders/{identifier}/reject-inspection', [OrderController::class, 'rejectInspection'])->name('api.orders.rejectInspection');
 
         // Buyer Price Offers (amount + comment on listings)
         Route::get('/offers', [OfferController::class, 'mine'])->name('api.offers.mine');
@@ -178,6 +212,22 @@ Route::prefix('v1')->group(function () {
         Route::get('/parts/{part}', [MarketplacePartController::class, 'show'])->name('parts.show');
     });
 
+    // --- Live Car Bidding & Auctions ---
+    Route::prefix('auctions')->name('api.auctions.')->group(function () {
+        Route::get('/', [MarketplaceAuctionController::class, 'index'])->name('index');
+        Route::get('/winners', [MarketplaceAuctionController::class, 'winners'])->name('winners');
+        Route::get('/{auction}', [MarketplaceAuctionController::class, 'show'])->name('show');
+        Route::post('/{auction}/bid', [MarketplaceAuctionController::class, 'bid'])->name('bid');
+    });
+
+    // --- Showroom & Verified Builders / Sellers Hub ---
+    Route::prefix('showroom')->name('api.showroom.')->group(function () {
+        Route::get('/', [ShowroomController::class, 'index'])->name('index');
+        Route::get('/stats', [ShowroomController::class, 'stats'])->name('stats');
+        Route::get('/sellers', [ShowroomController::class, 'index'])->name('sellers.index');
+        Route::get('/sellers/{username}', [ShowroomController::class, 'show'])->name('sellers.show');
+    });
+
     // --- Public taxonomy (Brand / Model / Category — replaces hardcoded frontend) ---
     Route::prefix('taxonomy')->name('api.taxonomy.')->group(function () {
         Route::get('/brands', [TaxonomyController::class, 'brands'])->name('brands');
@@ -189,6 +239,10 @@ Route::prefix('v1')->group(function () {
     });
 
     // --- Checkout & Sales Orders (Public / Customer) ---
+    Route::get('/delivery-quote', [OrderController::class, 'deliveryQuote'])->name('api.delivery.quote');
+    Route::get('/offer-quote', [OrderController::class, 'offerQuote'])->name('api.offer.quote');
+    // Registered before /orders/{identifier} so `verify` is not captured as an identifier.
+    Route::get('/orders/verify/{hash}', [OrderController::class, 'verify'])->name('api.orders.verify');
     Route::post('/orders', [OrderController::class, 'store'])->name('api.orders.store');
     Route::get('/orders/{identifier}', [OrderController::class, 'show'])->name('api.orders.show');
 
@@ -211,6 +265,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/cars/{car}/publish', [SellerCarController::class, 'publish'])->name('cars.publish');
             Route::post('/cars/{car}/unpublish', [SellerCarController::class, 'unpublish'])->name('cars.unpublish');
             Route::post('/cars/{car}/sold', [SellerCarController::class, 'markSold'])->name('cars.sold');
+            Route::post('/cars/{car}/status', [SellerCarController::class, 'setStatus'])->name('cars.setStatus');
 
             Route::get('/parts', [SellerPartController::class, 'index'])->name('parts.index');
             Route::post('/parts', [SellerPartController::class, 'store'])->name('parts.store');
@@ -220,16 +275,27 @@ Route::prefix('v1')->group(function () {
             Route::post('/parts/{part}/publish', [SellerPartController::class, 'publish'])->name('parts.publish');
             Route::post('/parts/{part}/unpublish', [SellerPartController::class, 'unpublish'])->name('parts.unpublish');
             Route::post('/parts/{part}/sold', [SellerPartController::class, 'markSold'])->name('parts.sold');
+            Route::post('/parts/{part}/status', [SellerPartController::class, 'setStatus'])->name('parts.setStatus');
 
             // Incoming sales-order requests (verify one, auto-reject the rest)
             Route::get('/orders', [SellerOrderController::class, 'index'])->name('orders.index');
             Route::post('/orders/{order}/accept', [SellerOrderController::class, 'accept'])->name('orders.accept');
             Route::post('/orders/{order}/reject', [SellerOrderController::class, 'reject'])->name('orders.reject');
+            Route::post('/orders/{order}/confirm-funds', [SellerOrderController::class, 'confirmFunds'])->name('orders.confirmFunds');
+            Route::patch('/orders/{order}/status', [SellerOrderController::class, 'updateStatus'])->name('orders.updateStatus');
+            Route::post('/orders/{order}/refund', [SellerOrderController::class, 'refund'])->name('orders.refund');
 
             // Incoming buyer offers (accept one, auto-reject the rest)
             Route::get('/offers', [OfferController::class, 'incoming'])->name('offers.incoming');
             Route::post('/offers/{offer}/accept', [OfferController::class, 'accept'])->name('offers.accept');
             Route::post('/offers/{offer}/reject', [OfferController::class, 'reject'])->name('offers.reject');
+
+            // Showroom Parking Slots & Activation
+            Route::prefix('showroom')->name('showroom.')->group(function () {
+                Route::get('/status', [SellerShowroomController::class, 'status'])->name('status');
+                Route::post('/calculate-fee', [SellerShowroomController::class, 'calculateFee'])->name('calculate-fee');
+                Route::post('/apply', [SellerShowroomController::class, 'apply'])->name('apply');
+            });
 
             // --- Parts & Catalog Inventory (§1–§11) ---
             // Suppliers & warehouses
@@ -306,6 +372,10 @@ Route::prefix('v1')->group(function () {
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
             Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
 
+            // Configurations → Variables (delivery services, freight rules)
+            Route::get('/config', [AdminConfigController::class, 'index'])->name('config.index');
+            Route::put('/config', [AdminConfigController::class, 'update'])->name('config.update');
+
             // Listing Review Moderation (hide spam / restore)
             Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
             Route::post('/reviews/{review}/visibility', [AdminReviewController::class, 'setVisibility'])->name('reviews.visibility');
@@ -323,6 +393,37 @@ Route::prefix('v1')->group(function () {
             Route::delete('/taxonomy/categories/{category}', [AdminTaxonomyController::class, 'destroyCategory'])->name('taxonomy.categories.destroy');
             Route::post('/taxonomy/categories/{category}/subcategories', [AdminTaxonomyController::class, 'storeSubcategory'])->name('taxonomy.subcategories.store');
             Route::delete('/taxonomy/subcategories/{subcategory}', [AdminTaxonomyController::class, 'destroySubcategory'])->name('taxonomy.subcategories.destroy');
+
+            // Car Bidding & Auctions Management
+            Route::prefix('auctions')->name('auctions.')->group(function () {
+                Route::get('/', [AdminAuctionController::class, 'index'])->name('index');
+                Route::post('/', [AdminAuctionController::class, 'store'])->name('store');
+                Route::get('/{auction}', [AdminAuctionController::class, 'show'])->name('show');
+                Route::match(['put', 'patch'], '/{auction}', [AdminAuctionController::class, 'update'])->name('update');
+                Route::delete('/{auction}', [AdminAuctionController::class, 'destroy'])->name('destroy');
+                Route::post('/{auction}/end', [AdminAuctionController::class, 'endAuction'])->name('end');
+                Route::post('/{auction}/extend', [AdminAuctionController::class, 'extendTime'])->name('extend');
+            });
+
+            // Showroom Parking Slots & Fee Parameters
+            Route::prefix('showroom')->name('showroom.')->group(function () {
+                Route::get('/', [AdminShowroomController::class, 'index'])->name('index');
+                Route::get('/settings', [AdminShowroomController::class, 'getSettings'])->name('settings');
+                Route::put('/settings', [AdminShowroomController::class, 'updateSettings'])->name('settings.update');
+                Route::post('/slots/{slot}/approve', [AdminShowroomController::class, 'approve'])->name('slots.approve');
+                Route::post('/slots/{slot}/reject', [AdminShowroomController::class, 'reject'])->name('slots.reject');
+                Route::post('/slots/{slot}/revoke', [AdminShowroomController::class, 'revoke'])->name('slots.revoke');
+                Route::post('/sellers/{seller}/toggle', [AdminShowroomController::class, 'toggleSellerShowroom'])->name('sellers.toggle');
+                Route::post('/cars/{car}/toggle', [AdminShowroomController::class, 'toggleCarShowroom'])->name('cars.toggle');
+            });
+
+            // Platform Treasury, Wallet & Funds Ledger (5% Commissions & Parking Fees)
+            Route::prefix('funds')->name('funds.')->group(function () {
+                Route::get('/overview', [AdminFundsController::class, 'overview'])->name('overview');
+                Route::get('/transactions', [AdminFundsController::class, 'transactions'])->name('transactions');
+                Route::get('/transactions/{transaction}', [AdminFundsController::class, 'show'])->name('show');
+                Route::get('/report', [AdminFundsController::class, 'generateReport'])->name('report');
+            });
             }); // end admin-only subgroup
         });
 });

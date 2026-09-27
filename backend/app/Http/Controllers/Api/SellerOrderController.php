@@ -16,7 +16,9 @@ use Illuminate\Validation\ValidationException;
 /**
  * Seller incoming sales-order requests.
  * Many buyers may request the same listing; the seller accepts exactly one —
- * the rest are auto-rejected and stock is decremented on acceptance.
+ * the rest are auto-rejected. Parts reserve stock on acceptance; cars
+ * consume a unit only when the seller marks the order `sold` — checkout,
+ * payment, and acceptance never mark a car sold by themselves.
  */
 class SellerOrderController extends Controller
 {
@@ -27,13 +29,18 @@ class SellerOrderController extends Controller
     {
         $validated = $request->validate([
             'verification_status' => ['sometimes', 'in:pending,accepted,rejected'],
+            'car_id' => ['sometimes', 'integer'],
+            'part_id' => ['sometimes', 'integer'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ]);
 
         $query = Order::query()
             ->where('seller_id', $request->user()->id)
-            ->with(['part:id,title,price', 'car:id,title,price'])
+            ->with(['part:id,title,price', 'car:id,title,price', 'warehouse:id,name,city'])
             ->when($validated['verification_status'] ?? null, fn ($q, $s) => $q->where('verification_status', $s))
+            // Powers the chat "sale orders on this listing" shortcut.
+            ->when($validated['car_id'] ?? null, fn ($q, $id) => $q->where('car_id', $id))
+            ->when($validated['part_id'] ?? null, fn ($q, $id) => $q->where('part_id', $id))
             ->orderByDesc('created_at');
 
         return OrderResource::collection($query->paginate((int) ($validated['per_page'] ?? 15)));
@@ -60,7 +67,12 @@ class SellerOrderController extends Controller
         ])->save();
 
         $this->rejectCompetingRequests($order, $data['verification_note'] ?? null);
-        $this->decrementStock($order);
+        // Parts reserve units on acceptance. Cars do NOT consume here —
+        // acceptance only unlocks payment; the unit is consumed when the
+        // seller marks the order `sold`.
+        if ($order->item_type !== 'car') {
+            $this->decrementStock($order);
+        }
 
         return new OrderResource($order->refresh());
     }
@@ -86,6 +98,154 @@ class SellerOrderController extends Controller
         ])->save();
 
         return new OrderResource($order->refresh());
+    }
+
+    /** POST /seller/orders/{order}/confirm-funds — verify the buyer's payment. */
+    public function confirmFunds(Request $request, Order $order): OrderResource
+    {
+        $this->ensureOwner($request, $order);
+
+        if ($order->verification_status !== 'accepted') {
+            throw ValidationException::withMessages([
+                'verification_status' => ['Only accepted orders can have funds confirmed.'],
+            ]);
+        }
+
+        if ($order->payment_status !== 'paid') {
+            throw ValidationException::withMessages([
+                'payment_status' => ['Funds cannot be confirmed before the buyer submits payment.'],
+            ]);
+        }
+
+        $order->forceFill(['payment_status' => 'confirmed'])->save();
+
+        return new OrderResource($order->refresh());
+    }
+
+    /**
+     * POST /seller/orders/{order}/status — seller advances their own order.
+     *
+     * Escrow lifecycle: processing → negotiating → sold → shipped →
+     * delivered → (buyer accepts → completed + payout) or (buyer rejects
+     * → disputed → refunded). Payment info is visible to the seller from
+     * acceptance; funds release only on buyer inspection acceptance.
+     */
+    public function updateStatus(Request $request, Order $order): OrderResource
+    {
+        $this->ensureOwner($request, $order);
+
+        $validated = $request->validate([
+            'status' => ['required', 'string', 'in:processing,negotiating,reserved,preparing,sold,shipped,delivered,completed,disputed'],
+            'tracking_number' => ['nullable', 'string', 'max:100'],
+            'tracking_url' => ['nullable', 'url', 'max:500'],
+            'carrier' => ['nullable', 'string', 'max:100'],
+            'estimated_arrival' => ['nullable', 'date'],
+        ]);
+
+        if (in_array($order->status, ['completed', 'refunded', 'cancelled'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['This order is already closed.'],
+            ]);
+        }
+
+        if (in_array($validated['status'], ['negotiating', 'sold', 'shipped', 'delivered', 'completed'], true)
+            && $order->verification_status !== 'accepted') {
+            throw ValidationException::withMessages([
+                'status' => ['Only accepted orders can move into fulfillment.'],
+            ]);
+        }
+
+        if ($validated['status'] === 'completed'
+            && !in_array($order->payment_status, ['paid', 'confirmed', 'released'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Funds must be submitted before an order can be completed.'],
+            ]);
+        }
+
+        // Marking sold is the seller committing the unit: flip the
+        // listing so no new buyer can start checkout on it. Stock was
+        // already reserved when payment was secured, so this flips
+        // status only — it never consumes twice. Nothing before this
+        // step marks the car sold.
+        if ($validated['status'] === 'sold' && $order->item_type === 'car' && $order->car_id) {
+            $this->markListingSold($order);
+        }
+
+        $order->update($validated);
+
+        return new OrderResource($order->refresh());
+    }
+
+    /**
+     * POST /seller/orders/{order}/refund — resolve a dispute by refunding
+     * the buyer. The held payment is returned, the order closes as
+     * refunded, and car stock is restored.
+     */
+    public function refund(Request $request, Order $order): OrderResource
+    {
+        $this->ensureOwner($request, $order);
+
+        if ($order->status !== 'disputed') {
+            throw ValidationException::withMessages([
+                'status' => ['Only disputed orders can be refunded.'],
+            ]);
+        }
+
+        if (in_array($order->payment_status, ['refunded', 'released'], true)) {
+            throw ValidationException::withMessages([
+                'payment_status' => ['Funds are no longer held for this order.'],
+            ]);
+        }
+
+        $data = $request->validate([
+            'verification_note' => ['sometimes', 'nullable', 'string', 'max:500'],
+        ]);
+
+        $order->forceFill([
+            'status' => 'refunded',
+            'payment_status' => 'refunded',
+            'verification_note' => $data['verification_note'] ?? 'Refunded after inspection dispute.',
+        ])->save();
+
+        $this->restoreStock($order);
+
+        try {
+            \App\Models\PlatformTransaction::recordOrderRefund($order);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return new OrderResource($order->refresh());
+    }
+
+    private function carStatusValue(?Car $car): ?string
+    {
+        if (!$car || $car->status === null) {
+            return null;
+        }
+
+        return $car->status instanceof CarStatus ? $car->status->value : (string) $car->status;
+    }
+
+    /** Flip the purchased car listing to sold once the seller commits it. */
+    private function markListingSold(Order $order): void
+    {
+        if (($car = Car::find($order->car_id)) && $this->carStatusValue($car) !== CarStatus::Sold->value) {
+            $car->forceFill(['status' => CarStatus::Sold->value])->save();
+        }
+    }
+
+    /** Return refunded car units to sellable stock (NULL-safe). */
+    private function restoreStock(Order $order): void
+    {
+        if ($order->item_type === 'car' && $order->car_id && ($car = Car::find($order->car_id))) {
+            $onHand = $car->quantity === null ? 0 : (int) $car->quantity;
+            $car->forceFill(['quantity' => $onHand + max(1, (int) $order->quantity)])->save();
+            $car->refresh();
+            if ((int) $car->quantity > 0 && $this->carStatusValue($car) === CarStatus::Sold->value) {
+                $car->forceFill(['status' => CarStatus::Active->value])->save();
+            }
+        }
     }
 
     private function ensureOwner(Request $request, Order $order): void

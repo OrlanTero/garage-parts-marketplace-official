@@ -36,11 +36,18 @@ class MessageSent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $conversation = $this->message->relationLoaded('conversation')
+            ? $this->message->conversation
+            : $this->message->conversation()->first();
+
         return [
             'message' => (new MessageResource($this->message))->resolve(),
             'conversation_id' => $this->message->conversation_id,
             'sender_id' => $this->message->sender_id,
             'recipient_id' => $this->recipientId,
+            'listing_type' => $conversation?->listing_type ?? $this->message->listing_type,
+            'listing_id' => $conversation?->listing_id ?? $this->message->listing_id,
+            'listing_key' => $conversation?->listing_key,
         ];
     }
 }

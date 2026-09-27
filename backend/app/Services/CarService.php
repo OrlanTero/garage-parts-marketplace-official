@@ -235,6 +235,7 @@ class CarService
         return Car::query()
             ->listed()
             ->with(['seller:id,name,username,avatar_url,is_kyc_verified,kyc_status,role', 'media'])
+            ->withCount('heldOrders')
             ->filter($filters)
             ->paginate(min(max($perPage, 1), 50));
     }

@@ -76,6 +76,17 @@ function OfferCard({ offer, mode, onAction, acting }) {
         </button>
       )}
 
+      {mode === 'mine' && offer.status === 'accepted' && !offer.checkout_used && offer.checkout_url && (
+        <div style={{ marginTop: 8, background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: 8, padding: '10px 14px' }}>
+          <div style={{ fontSize: 12, color: '#10b981', fontWeight: 700, marginBottom: 8 }}>
+            Accepted — this price is pinned to you. Check out before the seller changes their mind.
+          </div>
+          <Link to={offer.checkout_url} className="btn btn-primary btn-sm">
+            Check Out at {formatPrice(offer.amount)}
+          </Link>
+        </div>
+      )}
+
       {mode === 'received' && offer.status === 'pending' && confirming === null && (
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="btn btn-primary btn-sm" disabled={acting} onClick={() => setConfirming('accept')}>

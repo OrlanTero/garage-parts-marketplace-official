@@ -597,6 +597,14 @@ input, select, textarea {
 /* ==========================================================================
    Modals, Drawers & Popups
    ========================================================================== */
+@keyframes gpmSpin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: gpmSpin 0.9s linear infinite;
+}
+
 .modal-backdrop, .auth-modal-overlay, .admin-drawer-backdrop {
   position: fixed;
   inset: 0;

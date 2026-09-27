@@ -14,6 +14,9 @@ class Conversation extends Model
     protected $fillable = [
         'user_one_id',
         'user_two_id',
+        'listing_type',
+        'listing_id',
+        'listing_key',
         'last_message_id',
         'last_message_at',
     ];
@@ -45,16 +48,34 @@ class Conversation extends Model
         return $this->hasMany(Message::class);
     }
 
+    public static function makeListingKey(?string $listingType, ?int $listingId): string
+    {
+        if ($listingType && $listingId) {
+            return $listingType . ':' . $listingId;
+        }
+
+        return 'none';
+    }
+
     /**
-     * Get or create a 1:1 conversation between two users with ordered IDs.
+     * Get or create a 1:1 conversation between two users, optionally scoped to a listing.
      */
-    public static function findOrCreateBetween(int $userAId, int $userBId): self
+    public static function findOrCreateBetween(int $userAId, int $userBId, ?string $listingType = null, ?int $listingId = null): self
     {
         $userOneId = min($userAId, $userBId);
         $userTwoId = max($userAId, $userBId);
+        $listingKey = static::makeListingKey($listingType, $listingId);
 
         return static::firstOrCreate(
-            ['user_one_id' => $userOneId, 'user_two_id' => $userTwoId]
+            [
+                'user_one_id' => $userOneId,
+                'user_two_id' => $userTwoId,
+                'listing_key' => $listingKey,
+            ],
+            [
+                'listing_type' => $listingType,
+                'listing_id' => $listingId,
+            ]
         );
     }
 

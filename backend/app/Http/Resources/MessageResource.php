@@ -40,10 +40,19 @@ class MessageResource extends JsonResource
                 'role' => is_object($this->sender->role) ? $this->sender->role->value : $this->sender->role,
             ] : null,
             'body' => $this->body,
-            'is_redacted' => (bool) $this->is_redacted,
+            'is_redacted' => (bool) ($this->is_redacted),
             'listing_type' => $this->listing_type,
             'listing_id' => $this->listing_id,
             'listing' => $listingData,
+            'offer_id' => $this->offer_id,
+            'offer' => $this->relationLoaded('offer') && $this->offer
+                ? (new OfferResource($this->offer))->toArray($request)
+                : null,
+            'reservation_id' => $this->reservation_id,
+            'reservation' => $this->relationLoaded('reservation') && $this->reservation
+                ? (new ReservationResource($this->reservation))->toArray($request)
+                : null,
+            'metadata' => $this->metadata,
             'read_at' => $this->read_at?->toISOString(),
             'is_read' => $this->read_at !== null,
             'created_at' => $this->created_at?->toISOString(),

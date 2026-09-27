@@ -35,6 +35,8 @@ class InventorySeeder extends Seeder
                 'name' => 'GAP Valenzuela Main Depot',
                 'city' => 'Valenzuela',
                 'address' => 'GAP Valenzuela Main, Valenzuela City, Metro Manila',
+                'latitude' => 14.7008,
+                'longitude' => 120.9830,
                 'is_default' => true,
                 'is_active' => true,
             ]

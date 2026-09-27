@@ -27,6 +27,7 @@ import { useTaxonomy, groupBrandsByRegion, categoryDisplay, formatCount } from '
 import CarCard from '../components/CarCard.jsx'
 import PartCard from '../components/PartCard.jsx'
 import CategoryCard from '../components/CategoryCard.jsx'
+import CarBiddingSection from '../components/CarBiddingSection.jsx'
 import './Home.css'
 
 /* ——— FAQ Data ——— */
@@ -464,6 +465,11 @@ export default function Home() {
       </section>
 
       {/* ===================================================================
+          LIVE CAR BIDDING & WINNER ARENA (Ours Garage Live Auctions)
+          =================================================================== */}
+      <CarBiddingSection />
+
+      {/* ===================================================================
           4. FEATURED VERIFIED VEHICLES (Modern Card Deck)
           =================================================================== */}
       <section className="section-modern section--vehicles">
@@ -691,7 +697,7 @@ export default function Home() {
 
               <div className="showroom-actions">
                 <Link to="/showroom" className="btn btn-primary">
-                  <span>Plan Your Visit</span>
+                  <span>Explore Builders Showroom</span>
                   <ArrowRight size={16} />
                 </Link>
                 <button 

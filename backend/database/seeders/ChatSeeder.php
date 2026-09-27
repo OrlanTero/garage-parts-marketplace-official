@@ -23,7 +23,7 @@ class ChatSeeder extends Seeder
 
         // 1. Conversation: Buyer <-> Makati Showroom (Seller) about Celica GT
         if ($buyer && $seller) {
-            $conv1 = Conversation::findOrCreateBetween($buyer->id, $seller->id);
+            $conv1 = Conversation::findOrCreateBetween($buyer->id, $seller->id, 'car', $celicaCar?->id);
 
             // Message 1 from Buyer with listing context
             $msg1 = Message::create([
@@ -69,7 +69,7 @@ class ChatSeeder extends Seeder
 
         // 2. Conversation: Buyer <-> Apex Performance (Parts Seller) about Brembo Kit
         if ($buyer && $partsSeller) {
-            $conv2 = Conversation::findOrCreateBetween($buyer->id, $partsSeller->id);
+            $conv2 = Conversation::findOrCreateBetween($buyer->id, $partsSeller->id, 'part', $bremboPart?->id);
 
             $msg4 = Message::create([
                 'conversation_id' => $conv2->id,

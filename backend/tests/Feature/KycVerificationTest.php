@@ -138,9 +138,13 @@ class KycVerificationTest extends TestCase
             'email' => 'seller_private@example.com',
         ]);
 
+        $car = Car::factory()->create(['seller_id' => $seller->id]);
         $conv = Conversation::create([
             'user_one_id' => min($buyer->id, $seller->id),
             'user_two_id' => max($buyer->id, $seller->id),
+            'listing_type' => 'car',
+            'listing_id' => $car->id,
+            'listing_key' => "car:{$car->id}",
             'last_message_at' => now(),
         ]);
 

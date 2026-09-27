@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Car;
+use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -120,6 +121,86 @@ class CarTest extends TestCase
             ->assertOk()->assertJsonPath('data.status', 'sold');
 
         $this->getJson("/api/v1/marketplace/cars/{$car->id}")->assertForbidden();
+    }
+
+    public function test_seller_set_status_covers_full_manageable_list(): void
+    {
+        $seller = User::factory()->kycVerified()->create(['role' => 'seller']);
+        $headers = $this->sellerToken($seller);
+        $car = Car::factory()->for($seller, 'seller')->create(['status' => 'draft']);
+
+        // draft → active routes through publish.
+        $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'active'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'active');
+
+        // active → archived is a direct set.
+        $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'archived'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'archived');
+
+        // archived → draft is a direct set.
+        $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'draft'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'draft');
+
+        // System/moderation states are not seller-settable.
+        $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'rejected'], $headers)
+            ->assertStatus(422);
+
+        // House-managed inspection states cannot be escaped by the seller.
+        $car->forceFill(['status' => 'pending_inspection'])->save();
+        $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'draft'], $headers)
+            ->assertStatus(422);
+
+        // Strangers cannot change another seller's listing (ownership enforced).
+        $other = User::factory()->create(['role' => 'seller']);
+        $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'draft'], $this->sellerToken($other))
+            ->assertForbidden();
+    }
+
+    public function test_buyer_with_listing_thread_keeps_access_to_sold_car(): void
+    {
+        $owner = User::factory()->create(['role' => 'seller']);
+        $buyer = User::factory()->create(['role' => 'buyer']);
+        $stranger = User::factory()->create(['role' => 'buyer']);
+        $car = Car::factory()->for($owner, 'seller')->active()->create();
+
+        Conversation::findOrCreateBetween($buyer->id, $owner->id, 'car', $car->id);
+
+        $this->postJson("/api/v1/seller/cars/{$car->id}/sold", [], $this->sellerToken($owner))->assertOk();
+
+        // Buyer negotiating this listing can still open it.
+        $this->getJson("/api/v1/marketplace/cars/{$car->id}", $this->sellerToken($buyer))->assertOk();
+
+        // Unrelated users and guests stay locked out.
+        $this->getJson("/api/v1/marketplace/cars/{$car->id}", $this->sellerToken($stranger))->assertForbidden();
+        $this->getJson("/api/v1/marketplace/cars/{$car->id}")->assertForbidden();
+    }
+
+    public function test_buyer_with_order_but_no_thread_keeps_access_to_sold_car(): void
+    {
+        $owner = User::factory()->create(['role' => 'seller']);
+        $buyer = User::factory()->create(['role' => 'buyer']);
+        $car = Car::factory()->for($owner, 'seller')->active()->create();
+
+        \App\Models\Order::create([
+            'user_id' => $buyer->id,
+            'buyer_name' => 'Direct Buyer',
+            'buyer_email' => $buyer->email,
+            'shipping_address' => 'Makati',
+            'item_type' => 'car',
+            'car_id' => $car->id,
+            'seller_id' => $owner->id,
+            'item_name' => $car->title,
+            'quantity' => 1,
+            'unit_price' => $car->price,
+            'total_amount' => $car->price,
+            'payment_status' => 'paid',
+            'status' => 'processing',
+            'verification_status' => 'accepted',
+        ]);
+
+        $this->postJson("/api/v1/seller/cars/{$car->id}/sold", [], $this->sellerToken($owner))->assertOk();
+
+        $this->getJson("/api/v1/marketplace/cars/{$car->id}", $this->sellerToken($buyer))->assertOk();
     }
 
     public function test_car_supports_multiple_images_and_marketplace_serialization(): void

@@ -18,14 +18,26 @@ class OrderResource extends JsonResource
         return [
             'id' => $this->id,
             'order_number' => $this->order_number,
+            // Receipt security: exactly one hash per transaction. The QR
+            // on the official receipt encodes verify_path; scanning it
+            // hits the public verify endpoint, the only validity proof.
+            'security_hash' => $this->security_hash,
+            'verify_path' => $this->security_hash ? '/verify/' . $this->security_hash : null,
             'status' => $this->status,
             'status_label' => ucfirst($this->status),
             'status_variant' => match ($this->status) {
                 'processing' => 'rust',
+                'negotiating' => 'info',
+                'reserved' => 'info',
+                'preparing' => 'info',
                 'confirmed' => 'info',
+                'sold' => 'warning',
                 'shipped' => 'warning',
                 'delivered' => 'success',
+                'completed' => 'success',
                 'cancelled' => 'danger',
+                'disputed' => 'danger',
+                'refunded' => 'danger',
                 default => 'secondary',
             },
 
@@ -75,7 +87,23 @@ class OrderResource extends JsonResource
                 'longitude' => $this->delivery_longitude !== null ? (float) $this->delivery_longitude : null,
                 'label' => $this->delivery_label,
                 'has_pin' => $this->delivery_latitude !== null && $this->delivery_longitude !== null,
+                'distance_km' => $this->delivery_distance_km !== null ? (float) $this->delivery_distance_km : null,
+                'zone' => $this->delivery_zone,
+                'origin' => $this->warehouse?->name
+                    ?? \App\Services\DeliveryFeeService::MAIN_BRANCH_NAME,
             ],
+
+            // Dispatch warehouse (fee origin) + courier tracking.
+            // Lists eager-load the relation; single reads lazy-load it
+            // (belongsTo skips the query entirely when warehouse_id is null).
+            'warehouse' => $this->warehouse ? [
+                'id' => $this->warehouse->id,
+                'name' => $this->warehouse->name,
+                'city' => $this->warehouse->city,
+            ] : null,
+            'tracking_url' => app(\App\Services\TrackingUrlService::class)->resolve(
+                $this->tracking_url, $this->carrier, $this->tracking_number,
+            ),
 
             // Sales Agent & Referral Partner Information
             'agent' => $this->agent_code ? [
@@ -109,7 +137,18 @@ class OrderResource extends JsonResource
                 'total_amount' => (float) $this->total_amount,
                 'formatted_total' => '₱ ' . number_format((float) $this->total_amount, 2),
                 'payment_method' => $this->payment_method,
+                'payment_reference' => $this->payment_reference,
                 'payment_status' => $this->payment_status,
+                'payment_label' => match ($this->payment_status ?? 'pending') {
+                    // Escrow: settled funds are HELD and secured — not yet
+                    // the seller's. Release happens on buyer inspection
+                    // acceptance; refund on a resolved dispute.
+                    'paid' => 'Payment Held in Escrow — secured',
+                    'confirmed' => 'Funds Confirmed — held in escrow',
+                    'released' => 'Released to Seller — payout complete',
+                    'refunded' => 'Refunded to Buyer',
+                    default => 'Pending',
+                },
             ],
 
             // Line items array format for admin tables & multi-item compatibility
@@ -126,6 +165,8 @@ class OrderResource extends JsonResource
             'shipping_address' => $this->shipping_address,
             'tracking_number' => $this->tracking_number,
             'carrier' => $this->carrier,
+            'estimated_arrival' => $this->estimated_arrival?->format('Y-m-d'),
+            'estimated_arrival_display' => $this->estimated_arrival?->format('M d, Y'),
             'notes' => $this->notes,
             'placed_at' => $this->created_at?->format('Y-m-d h:i A'),
             'created_at' => $this->created_at?->toIso8601String(),

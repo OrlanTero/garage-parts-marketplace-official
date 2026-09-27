@@ -10,6 +10,9 @@ class Offer extends Model
     protected $fillable = [
         'buyer_id',
         'seller_id',
+        'conversation_id',
+        'sender_id',
+        'parent_id',
         'item_type',
         'part_id',
         'car_id',
@@ -17,11 +20,14 @@ class Offer extends Model
         'message',
         'status',
         'seller_note',
+        'checkout_token',
+        'checkout_used_at',
+        'confirmed_by',
     ];
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2'];
+        return ['amount' => 'decimal:2', 'checkout_used_at' => 'datetime'];
     }
 
     public function buyer(): BelongsTo
@@ -32,6 +38,26 @@ class Offer extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Offer::class, 'parent_id');
+    }
+
+    public function confirmer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    public function sender(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sender_id');
     }
 
     public function part(): BelongsTo

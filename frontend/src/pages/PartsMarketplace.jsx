@@ -39,10 +39,12 @@ export default function PartsMarketplace() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialSearch = searchParams.get('search') || ''
   const initialCategory = searchParams.get('category') || ''
+  const initialSeller = searchParams.get('seller_username') || searchParams.get('seller') || ''
 
   const { parts: apiParts, meta, filters, setFilter, page, setPage, loading, error, reload } = useMarketplaceParts({
     search: initialSearch,
-    category: initialCategory
+    category: initialCategory,
+    seller_username: initialSeller,
   })
 
   const [activeCategoryTab, setActiveCategoryTab] = useState(initialCategory || 'all')
@@ -141,6 +143,7 @@ export default function PartsMarketplace() {
   const activeFilterList = useMemo(() => {
     const list = []
     if (filters.search) list.push({ key: 'search', label: `Search: "${filters.search}"`, clear: () => setFilter('search', '') })
+    if (filters.seller_username) list.push({ key: 'seller_username', label: `Merchant: @${filters.seller_username}`, clear: () => setFilter('seller_username', '') })
     if (filters.category) list.push({ key: 'category', label: `Category: ${filters.category.replace('_', ' ')}`, clear: () => handleCategorySelect('all') })
     if (filters.brand) list.push({ key: 'brand', label: `Brand: ${filters.brand}`, clear: () => setFilter('brand', '') })
     if (filters.condition) list.push({ key: 'condition', label: `Condition: ${filters.condition}`, clear: () => setFilter('condition', '') })

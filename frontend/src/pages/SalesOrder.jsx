@@ -16,7 +16,10 @@ import {
   Package,
   Download
 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { ordersApi } from '../api/orders.js'
+import { marketplaceCars } from '../api/cars.js'
+import { marketplaceParts } from '../api/parts.js'
 import { useMediaQuery } from '../hooks/useMediaQuery.js'
 import DeliveryMapPicker from '../components/DeliveryMapPicker.jsx'
 
@@ -61,13 +64,48 @@ export default function SalesOrder() {
 
   const [payMethod, setPayMethod] = useState('bank_transfer')
   const [paySaving, setPaySaving] = useState(false)
+  const [payRef, setPayRef] = useState('')
+  const [payConfirming, setPayConfirming] = useState(false)
+  const [payError, setPayError] = useState('')
   const [pinEditing, setPinEditing] = useState(false)
   const [pinSaving, setPinSaving] = useState(false)
   const [pinError, setPinError] = useState('')
+  const [inspectActing, setInspectActing] = useState(false)
+  const [inspectError, setInspectError] = useState('')
+  const [rejectBoxOpen, setRejectBoxOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [liveListing, setLiveListing] = useState(null)
 
   useEffect(() => {
     const current = order?.financials?.payment_method || order?.payment_method
     if (current) setPayMethod(current)
+  }, [order?.order_number])
+
+  // Live listing snapshot for the receipt's Listing Information section.
+  // Falls back to the frozen order snapshot when the listing is gone
+  // or the viewer has no access — the receipt never breaks.
+  useEffect(() => {
+    const type = order?.item?.type || order?.item_type
+    const id = type === 'car'
+      ? order?.item?.car_id || order?.car_id
+      : order?.item?.part_id || order?.part_id
+    if (!type || !id) {
+      setLiveListing(null)
+      return
+    }
+    let alive = true
+    const api = type === 'car' ? marketplaceCars : marketplaceParts
+    api
+      .show(id)
+      .then((data) => {
+        if (alive) setLiveListing(data)
+      })
+      .catch(() => {
+        if (alive) setLiveListing(null)
+      })
+    return () => {
+      alive = false
+    }
   }, [order?.order_number])
 
   const handlePayMethodChange = async (method) => {
@@ -81,6 +119,27 @@ export default function SalesOrder() {
       // keep local selection; server state unchanged
     } finally {
       setPaySaving(false)
+    }
+  }
+
+  const handleConfirmPayment = async () => {
+    if (!order || !payRef.trim()) {
+      setPayError('Enter the bank / e-wallet transaction reference first.')
+      return
+    }
+    try {
+      setPayConfirming(true)
+      setPayError('')
+      const updated = await ordersApi.confirmPayment(orderNum, {
+        payment_method: payMethod,
+        payment_reference: payRef.trim(),
+      })
+      setOrder(updated)
+      setPayRef('')
+    } catch (err) {
+      setPayError(err?.response?.data?.message || 'Failed to confirm payment.')
+    } finally {
+      setPayConfirming(false)
     }
   }
 
@@ -135,10 +194,16 @@ export default function SalesOrder() {
   const isCarOrder = (order.item?.type || order.item_type) === 'car'
   const hasChassis = chassisNum !== 'N/A'
 
+  // Seller verification gate — payment unlocks only after acceptance.
+  const verification = order.verification_status || 'pending'
+  const isAccepted = verification === 'accepted'
+  const isRejected = verification === 'rejected'
+  const isCompleted = order.status === 'completed'
+
   // Precise delivery pinpoint (parts freight, pinned after acceptance).
   const delivery = order.delivery || {}
   const hasPin = Boolean(delivery.has_pin)
-  const canEditPin = isAccepted && order.status !== 'delivered' && order.status !== 'cancelled'
+  const canEditPin = isAccepted && !['delivered', 'completed', 'cancelled'].includes(order.status)
 
   const handlePinSave = async (pin) => {
     try {
@@ -154,10 +219,85 @@ export default function SalesOrder() {
     }
   }
 
-  // Seller verification gate — payment unlocks only after acceptance.
-  const verification = order.verification_status || 'pending'
-  const isAccepted = verification === 'accepted'
-  const isRejected = verification === 'rejected'
+  // Escrow lifecycle: settled funds are HELD (paid) → confirmed (house
+  // verifies) → released to seller on buyer inspection acceptance, or
+  // refunded to buyer when a dispute resolves. The order is NOT complete
+  // until inspection acceptance.
+  const paymentStatus = financials.payment_status || order.payment_status || 'pending'
+  const paymentReference = financials.payment_reference || order.payment_reference || ''
+  const paymentLabel = financials.payment_label
+    || (paymentStatus === 'released' ? 'Released to Seller — payout complete'
+      : paymentStatus === 'refunded' ? 'Refunded to Buyer'
+      : paymentStatus === 'confirmed' ? 'Funds Confirmed — held in escrow'
+      : paymentStatus === 'paid' ? 'Payment Held in Escrow — secured'
+      : 'Pending')
+  const isDelivered = order.status === 'delivered'
+  const isDisputed = order.status === 'disputed'
+  const isRefunded = order.status === 'refunded'
+  const isNegotiating = order.status === 'negotiating'
+  const isSold = order.status === 'sold'
+  const escrowHeld = ['paid', 'confirmed'].includes(paymentStatus) && !isCompleted && !isRefunded
+
+  // Listing Information for the receipt: live listing when reachable,
+  // otherwise the frozen order snapshot. Receipt never breaks.
+  const listingType = order.item?.type || order.item_type
+  const listingTitle = liveListing?.title || order.item?.name || order.item_name || 'Listing'
+  const listingImage =
+    liveListing?.primary_image_url || liveListing?.img || liveListing?.image_urls?.[0]?.url ||
+    liveListing?.image_urls?.[0] || order.item?.image_url || order.item_image_url
+  const listingPrice = liveListing?.price ?? financials.unit_price
+  const listingStatus = liveListing?.status
+  const listingSeller = liveListing?.seller?.username || order.item?.seller_name || order.seller_name
+  const listingSpecs =
+    listingType === 'car'
+      ? [
+          ['Make / Brand', liveListing?.brand],
+          ['Model', liveListing?.model],
+          ['Year', liveListing?.year],
+          ['Mileage', liveListing?.mileage_km != null ? `${Number(liveListing.mileage_km).toLocaleString()} km` : null],
+          ['Transmission', liveListing?.transmission],
+          ['VIN', vinNum !== 'N/A' ? vinNum : null],
+        ].filter(([, v]) => v != null && v !== '')
+      : [
+          ['Brand', liveListing?.brand],
+          ['Category', liveListing?.category],
+          ['Part Number', liveListing?.part_number],
+          ['Condition', liveListing?.condition],
+        ].filter(([, v]) => v != null && v !== '')
+
+  const verifyUrl =
+    order.security_hash && typeof window !== 'undefined'
+      ? `${window.location.origin}/verify/${order.security_hash}`
+      : null
+
+  const handleAcceptInspection = async () => {
+    if (!window.confirm('Accept this delivery? The held payment will be released to the seller and the order completes.')) return
+    try {
+      setInspectActing(true)
+      setInspectError('')
+      const updated = await ordersApi.acceptInspection(orderNum)
+      setOrder(updated)
+    } catch (err) {
+      setInspectError(err?.response?.data?.message || 'Failed to accept inspection.')
+    } finally {
+      setInspectActing(false)
+    }
+  }
+
+  const handleRejectInspection = async () => {
+    try {
+      setInspectActing(true)
+      setInspectError('')
+      const updated = await ordersApi.rejectInspection(orderNum, rejectReason.trim() || undefined)
+      setOrder(updated)
+      setRejectBoxOpen(false)
+      setRejectReason('')
+    } catch (err) {
+      setInspectError(err?.response?.data?.message || 'Failed to open dispute.')
+    } finally {
+      setInspectActing(false)
+    }
+  }
 
   return (
     <div className="sales-order-wrapper" style={{ maxWidth: 960, margin: '0 auto', padding: '32px 20px 80px 20px' }}>
@@ -251,9 +391,20 @@ export default function SalesOrder() {
         </div>
       </div>
 
+      {isCompleted && (
+        <div className="no-print" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <CheckCircle2 size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#10b981' }}>Order Complete — Official Transaction Receipt.</strong>{' '}
+            Funds confirmed{paymentReference ? <> (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>)</> : null} and delivery fulfilled.
+            Print / save this page as your proof of transaction.
+          </div>
+        </div>
+      )}
+
       {/* VERIFICATION STATUS — payment unlocks only after seller acceptance */}
       {!isAccepted && !isRejected && (
-        <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid #eab308', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div className="no-print" style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid #eab308', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <AlertCircle size={20} color="#eab308" style={{ flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
             <strong style={{ color: '#eab308' }}>Awaiting Seller Verification.</strong>{' '}
@@ -263,7 +414,7 @@ export default function SalesOrder() {
         </div>
       )}
       {isRejected && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div className="no-print" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
             <strong style={{ color: '#ef4444' }}>Request Declined by Seller.</strong>{' '}
@@ -272,11 +423,127 @@ export default function SalesOrder() {
         </div>
       )}
       {isAccepted && (
-        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div className="no-print" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <CheckCircle2 size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
             <strong style={{ color: '#10b981' }}>Verified & Accepted.</strong>{' '}
             The seller confirmed your request. Settlement details below are now active — please proceed with payment.
+          </div>
+        </div>
+      )}
+
+      {/* ESCROW — payment held & secured, order not yet complete */}
+      {escrowHeld && (
+        <div className="no-print" style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <ShieldCheck size={20} color="#60a5fa" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#60a5fa' }}>Payment Held & Secured — order not complete.</strong>{' '}
+            {paymentReference ? <>Your payment (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>) is </> : 'Your payment is '}
+            frozen in platform escrow. It goes to the seller only after delivery + your inspection acceptance — never before.
+          </div>
+        </div>
+      )}
+
+      {isNegotiating && (
+        <div className="no-print" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid #8b5cf6', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <AlertCircle size={20} color="#a78bfa" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#a78bfa' }}>Negotiation in progress.</strong>{' '}
+            The seller received your order and marked it as negotiating. Keep the conversation in chat while terms are finalized.
+          </div>
+        </div>
+      )}
+
+      {isSold && (
+        <div className="no-print" style={{ background: 'rgba(216, 98, 44, 0.08)', border: '1px solid #d8622c', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <CheckCircle2 size={20} color="#fb923c" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#fb923c' }}>Marked Sold by Seller.</strong>{' '}
+            This unit is now reserved for your order. The seller will arrange delivery next — your payment stays held until you accept the car.
+          </div>
+        </div>
+      )}
+
+      {/* BUYER INSPECTION — delivered, accept releases payout, reject opens dispute */}
+      {isAccepted && isDelivered && !isCompleted && !isDisputed && (
+        <div className="no-print" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <Car size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+              <strong style={{ color: '#10b981' }}>Delivered — inspect the car now.</strong>{' '}
+              Accept to release the held payment to the seller and complete the order, or reject to open a dispute / refund process.
+            </div>
+          </div>
+          {!rejectBoxOpen ? (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleAcceptInspection}
+                disabled={inspectActing}
+                className="btn btn-primary btn-sm"
+              >
+                <CheckCircle2 size={14} /> Accept Car — Release Payment
+              </button>
+              <button
+                type="button"
+                onClick={() => setRejectBoxOpen(true)}
+                disabled={inspectActing}
+                className="btn btn-secondary btn-sm"
+              >
+                Reject — Open Dispute
+              </button>
+            </div>
+          ) : (
+            <div style={{ marginTop: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                Rejection reason (shown to seller & support) *
+              </label>
+              <textarea
+                rows={2}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. Paint mismatch vs listing photos, undeclared accident damage…"
+                style={{ width: '100%', background: '#0f1117', border: '1px solid #2d3748', borderRadius: 8, padding: '10px 12px', color: '#f8fafc', fontSize: 13, outline: 'none', marginBottom: 8 }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={handleRejectInspection}
+                  disabled={inspectActing || !rejectReason.trim()}
+                  className="btn btn-secondary btn-sm"
+                >
+                  {inspectActing ? 'Submitting…' : 'Confirm Rejection'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRejectBoxOpen(false); setRejectReason('') }}
+                  className="btn btn-ghost btn-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {inspectError && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 8 }}>{inspectError}</div>}
+        </div>
+      )}
+
+      {isDisputed && (
+        <div className="no-print" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#ef4444' }}>Disputed — payment frozen.</strong>{' '}
+            The buyer rejected the delivery on inspection. Funds stay held until the dispute resolves: the seller issues a refund, or support rules on release.
+          </div>
+        </div>
+      )}
+
+      {isRefunded && (
+        <div className="no-print" style={{ background: 'rgba(148, 163, 184, 0.08)', border: '1px solid #64748b', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <AlertCircle size={20} color="#94a3b8" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#94a3b8' }}>Refunded.</strong>{' '}
+            The held payment was returned to the buyer and this order is closed.
           </div>
         </div>
       )}
@@ -338,8 +605,8 @@ export default function SalesOrder() {
           </div>
           <div>
             <span style={{ color: '#64748b', display: 'block', marginBottom: 2 }}>Payment Status:</span>
-            <strong style={{ color: '#eab308', textTransform: 'uppercase' }}>
-              {financials.payment_status || order.payment_status || 'Pending Verification'}
+            <strong style={{ color: ['confirmed', 'released'].includes(paymentStatus) ? '#10b981' : paymentStatus === 'refunded' ? '#94a3b8' : '#eab308', textTransform: 'uppercase' }}>
+              {paymentLabel}
             </strong>
           </div>
           <div>
@@ -349,6 +616,67 @@ export default function SalesOrder() {
             <strong style={{ color: '#10b981' }}>
               {isCarOrder ? '✓ VIN Verified' : '✓ Chassis Certified'}
             </strong>
+          </div>
+          {(order.tracking_number || order.trackingNumber) && (
+            <div>
+              <span style={{ color: '#64748b', display: 'block', marginBottom: 2 }}>Courier Tracking:</span>
+              <strong style={{ color: '#f8fafc', fontFamily: 'monospace' }}>
+                {order.carrier ? `${order.carrier} · ` : ''}{order.tracking_number || order.trackingNumber}
+              </strong>
+              {order.tracking_url && (
+                <a
+                  href={order.tracking_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-block', marginTop: 6, background: '#d8622c', color: '#fff',
+                    fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 8, textDecoration: 'none',
+                  }}
+                >
+                  Track My Delivery →
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* SECTION: LISTING INFORMATION (the exact unit this order covers) */}
+        <div style={{ background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: 20, marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#fb923c', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {isCarOrder ? <Car size={15} /> : <Package size={15} />} Listing Information
+            {listingStatus && (
+              <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 12, background: String(listingStatus).toLowerCase() === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: String(listingStatus).toLowerCase() === 'active' ? '#10b981' : '#94a3b8', textTransform: 'uppercase' }}>
+                {String(listingStatus)}
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {listingImage && (
+              <img
+                src={listingImage}
+                alt={listingTitle}
+                style={{ width: 180, height: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid #2d3748', flexShrink: 0 }}
+              />
+            )}
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc', marginBottom: 2 }}>{listingTitle}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#d8622c', fontFamily: 'monospace', marginBottom: 4 }}>
+                ₱ {Number(listingPrice || 0).toLocaleString('en-PH', { maximumFractionDigits: 0 })}
+              </div>
+              {listingSeller && (
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>Seller: <strong style={{ color: '#cbd5e1' }}>@{listingSeller}</strong></div>
+              )}
+              {listingSpecs.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '4px 16px', fontSize: 12 }}>
+                  {listingSpecs.map(([label, val]) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ color: '#64748b' }}>{label}:</span>
+                      <strong style={{ color: '#e2e8f0', textAlign: 'right' }}>{String(val)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -622,6 +950,42 @@ export default function SalesOrder() {
                 Please email payment slip to <em>orders@garageparts.ph</em> with your sales order number.
               </div>
             </div>
+
+            {/* Fund confirmation: buyer submits transfer reference → house verifies */}
+            {paymentStatus === 'confirmed' ? (
+              <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 8, fontSize: 12, color: '#10b981', fontWeight: 600 }}>
+                ✓ Funds confirmed by the house{paymentReference ? <> · Ref: <span style={{ fontFamily: 'monospace' }}>{paymentReference}</span></> : null}
+              </div>
+            ) : paymentStatus === 'paid' ? (
+              <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.35)', borderRadius: 8, fontSize: 12, color: '#cbd5e1', lineHeight: 1.6 }}>
+                <strong style={{ color: '#eab308' }}>Payment submitted — awaiting fund verification.</strong>
+                <div style={{ marginTop: 2 }}>Ref: <span style={{ fontFamily: 'monospace' }}>{paymentReference}</span> · The house confirms receipt before dispatch.</div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 12, borderTop: '1px solid #1e293b', paddingTop: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                  Bank / E-wallet Transaction Reference *
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={payRef}
+                    onChange={(e) => setPayRef(e.target.value)}
+                    placeholder="e.g. BDO-2026-889900"
+                    style={{ flex: 1, background: '#161922', border: '1px solid #2d3748', borderRadius: 8, padding: '10px 12px', color: '#f8fafc', fontSize: 13, fontFamily: 'monospace', outline: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleConfirmPayment}
+                    disabled={payConfirming}
+                    style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: payConfirming ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {payConfirming ? 'Submitting…' : "I've Sent Payment"}
+                  </button>
+                </div>
+                {payError && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{payError}</div>}
+              </div>
+            )}
           </div>
           ) : (
           <div style={{ background: '#0f1117', border: '1px dashed #2d3748', borderRadius: 8, padding: 18 }}>
@@ -646,7 +1010,14 @@ export default function SalesOrder() {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-                <span>Shipping Freight:</span>
+                <span>
+                  Shipping Freight
+                  {delivery.zone && (
+                    <span style={{ display: 'block', fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                      From {delivery.origin || 'GAP Valenzuela Main Depot'} · {delivery.zone}{delivery.distance_km != null ? ` · ${delivery.distance_km} km` : ''}
+                    </span>
+                  )}
+                </span>
                 <span style={{ color: '#10b981', fontWeight: 600 }}>
                   {financials.formatted_shipping_fee || 'FREE'}
                 </span>
@@ -675,6 +1046,28 @@ export default function SalesOrder() {
           </div>
         )}
 
+        {/* RECEIPT SECURITY — unique QR proving this transaction is valid */}
+        {verifyUrl && (
+          <div style={{ background: '#0f1117', border: '1px solid #10b981', borderRadius: 10, padding: 20, marginBottom: 28, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ background: '#ffffff', borderRadius: 8, padding: 8, flexShrink: 0 }}>
+              <QRCodeSVG value={verifyUrl} size={120} level="M" />
+            </div>
+            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: '#10b981', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <ShieldCheck size={15} /> Verified Transaction Receipt
+              </div>
+              <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6, marginBottom: 6 }}>
+                Scan to verify this receipt. Exactly one security code exists for order{' '}
+                <strong style={{ fontFamily: 'monospace', color: '#e2e8f0' }}>{orderNum}</strong> — any other
+                code is invalid.
+              </div>
+              <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                {order.security_hash}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Document Footer & Security Guarantee */}
         <div style={{ borderTop: '2px solid #1e293b', paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, fontSize: 11, color: '#64748b' }}>
           <div>
@@ -690,7 +1083,8 @@ export default function SalesOrder() {
 
       </div>
 
-      {/* Print Stylesheet */}
+      {/* Print Stylesheet — receipt only: the PDF contains the official
+          sales order document and nothing else on the page. */}
       <style>{`
         @media print {
           body {
@@ -705,15 +1099,32 @@ export default function SalesOrder() {
             padding: 0 !important;
             margin: 0 !important;
           }
+          .sales-order-wrapper > div:not(#official-sales-order-doc),
+          .sales-order-wrapper > a:not(#official-sales-order-doc) {
+            display: none !important;
+          }
           #official-sales-order-doc {
             background: #ffffff !important;
             color: #000000 !important;
             border: 1px solid #000000 !important;
             box-shadow: none !important;
             padding: 20px !important;
+            margin: 0 !important;
           }
           #official-sales-order-doc * {
             color: #000000 !important;
+          }
+          #official-sales-order-doc div,
+          #official-sales-order-doc table,
+          #official-sales-order-doc td,
+          #official-sales-order-doc th {
+            background: #ffffff !important;
+            background-image: none !important;
+            border-color: #000000 !important;
+            box-shadow: none !important;
+          }
+          #official-sales-order-doc a {
+            text-decoration: none !important;
           }
         }
       `}</style>

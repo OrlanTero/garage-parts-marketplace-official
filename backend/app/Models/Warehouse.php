@@ -9,12 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Warehouse extends Model
 {
     protected $fillable = [
-        'owner_id', 'name', 'code', 'address', 'city', 'is_default', 'is_active',
+        'owner_id', 'name', 'code', 'address', 'city', 'latitude', 'longitude', 'is_default', 'is_active',
     ];
 
     protected function casts(): array
     {
-        return ['is_default' => 'boolean', 'is_active' => 'boolean'];
+        return [
+            'is_default' => 'boolean',
+            'is_active' => 'boolean',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
+        ];
     }
 
     public function owner(): BelongsTo

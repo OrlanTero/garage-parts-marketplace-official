@@ -156,6 +156,26 @@ class PartTest extends TestCase
         $this->getJson("/api/v1/marketplace/parts/{$part->id}")->assertForbidden();
     }
 
+    public function test_seller_set_status_covers_full_manageable_list(): void
+    {
+        $seller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
+        $headers = $this->sellerToken($seller);
+        $part = Part::factory()->for($seller, 'seller')->create(['status' => 'draft']);
+
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'active'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'active');
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'archived'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'archived');
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'active'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'active');
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'sold'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'sold');
+
+        $other = User::factory()->create(['role' => 'parts_seller']);
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'draft'], $this->sellerToken($other))
+            ->assertForbidden();
+    }
+
     public function test_part_supports_multiple_images_and_marketplace_serialization(): void
     {
         $seller = User::factory()->kycVerified()->create([

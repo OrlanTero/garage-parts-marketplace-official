@@ -27,8 +27,9 @@ class StartConversationRequest extends FormRequest
                 },
             ],
             'initial_message' => ['nullable', 'string', 'max:5000'],
-            'listing_type' => ['nullable', 'string', 'in:car,part'],
-            'listing_id' => ['nullable', 'integer'],
+            // Listing-focused inbox: every conversation must belong to a listing.
+            'listing_type' => ['required', 'string', 'in:car,part'],
+            'listing_id' => ['required', 'integer'],
         ];
     }
 
@@ -37,6 +38,8 @@ class StartConversationRequest extends FormRequest
         return [
             'recipient_id.required' => 'Recipient ID is required to start a conversation.',
             'recipient_id.exists' => 'The selected recipient user does not exist.',
+            'listing_type.required' => 'A listing is required — conversations are per listing.',
+            'listing_id.required' => 'A listing is required — conversations are per listing.',
             'listing_type.in' => 'Listing type must be either car or part.',
         ];
     }

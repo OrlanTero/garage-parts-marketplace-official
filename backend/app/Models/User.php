@@ -47,6 +47,8 @@ class User extends Authenticatable
         'kyc_submitted_at',
         'kyc_verified_at',
         'kyc_verified_by',
+        'is_showroom_active',
+        'showroom_activated_at',
         'last_login_at',
     ];
 
@@ -65,6 +67,8 @@ class User extends Authenticatable
             'commission_rate' => 'decimal:2',
             'is_agent' => 'boolean',
             'is_kyc_verified' => 'boolean',
+            'is_showroom_active' => 'boolean',
+            'showroom_activated_at' => 'datetime',
             'kyc_submitted_at' => 'datetime',
             'kyc_verified_at' => 'datetime',
         ];
@@ -188,6 +192,11 @@ class User extends Authenticatable
     public function sellerApplications(): HasMany
     {
         return $this->hasMany(SellerApplication::class);
+    }
+
+    public function showroomSlots(): HasMany
+    {
+        return $this->hasMany(ShowroomSlot::class, 'seller_id');
     }
 
     /** Cars assigned to this staff member for inspection. */

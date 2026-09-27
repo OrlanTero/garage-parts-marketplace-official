@@ -18,6 +18,10 @@ class DatabaseSeeder extends Seeder
             ChatSeeder::class,
             ReviewSeeder::class,
             InventorySeeder::class,
+            PlatformSettingSeeder::class,
+            CarAuctionSeeder::class,
+            ShowroomSeeder::class,
+            FundsSeeder::class,
         ]);
     }
 }

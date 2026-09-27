@@ -12,6 +12,7 @@ use App\Services\PartService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Seller inventory — auth + role:seller,admin.
@@ -36,6 +37,7 @@ class SellerPartController extends Controller
         $query = Part::query()
             ->ofSeller($ownerId)
             ->with('media')
+            ->withCount('heldOrders')
             ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->orderByDesc('created_at');
 
@@ -76,7 +78,7 @@ class SellerPartController extends Controller
     {
         $this->authorize('view', $part);
 
-        return new PartResource($part->loadMissing(['seller:id,name', 'media']));
+        return new PartResource($part->loadMissing(['seller:id,name', 'media'])->loadCount('heldOrders'));
     }
 
     public function update(UpdatePartRequest $request, Part $part): PartResource
@@ -114,6 +116,45 @@ class SellerPartController extends Controller
         $this->authorize('update', $part);
 
         return new PartResource($this->parts->markSold($part));
+    }
+
+    /**
+     * Set any seller-manageable status: draft/active/archived/sold.
+     * Routes through the guarded transitions (publish/markSold) where
+     * they apply.
+     */
+    public function setStatus(Request $request, Part $part): PartResource
+    {
+        $this->authorize('update', $part);
+
+        $data = $request->validate([
+            'status' => ['required', 'string', 'in:draft,active,archived,sold'],
+        ]);
+
+        $current = $part->status instanceof \App\Enums\PartStatus
+            ? $part->status->value
+            : (string) $part->status;
+
+        if ($data['status'] === $current) {
+            return new PartResource($part->refresh());
+        }
+
+        if ($data['status'] === 'active') {
+            $this->ensureKycVerified($request->user());
+
+            return new PartResource($this->parts->publish($part));
+        }
+
+        if ($data['status'] === 'sold') {
+            return new PartResource($this->parts->markSold($part));
+        }
+
+        $prev = $current;
+        $part->forceFill(['status' => $data['status']])->save();
+        $part = $part->refresh();
+        event(new \App\Events\PartStatusChanged($part, $prev));
+
+        return new PartResource($part);
     }
 
     /**

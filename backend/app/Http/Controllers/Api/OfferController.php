@@ -86,7 +86,7 @@ class OfferController extends Controller
     public function mine(Request $request)
     {
         $validated = $request->validate([
-            'status' => ['sometimes', 'in:pending,accepted,rejected,withdrawn'],
+            'status' => ['sometimes', 'in:pending,accepted,confirmed,ordered,rejected,withdrawn,superseded'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ]);
 
@@ -121,7 +121,7 @@ class OfferController extends Controller
     public function incoming(Request $request)
     {
         $validated = $request->validate([
-            'status' => ['sometimes', 'in:pending,accepted,rejected,withdrawn'],
+            'status' => ['sometimes', 'in:pending,accepted,confirmed,ordered,rejected,withdrawn,superseded'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ]);
 
@@ -149,9 +149,13 @@ class OfferController extends Controller
             'seller_note' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
+        // Accept-first deal lock: buyer proposed, seller accepted — both
+        // parties acted, so mint the single-use checkout token that pins
+        // the agreed price to this buyer (see OrderController@store).
         $offer->forceFill([
             'status' => 'accepted',
             'seller_note' => $data['seller_note'] ?? null,
+            'checkout_token' => $offer->checkout_token ?: (string) \Illuminate\Support\Str::uuid(),
         ])->save();
 
         Offer::query()
