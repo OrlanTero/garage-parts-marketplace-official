@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Car;
 use App\Models\Order;
 use App\Models\Part;
 use App\Models\User;
@@ -47,6 +48,36 @@ class OrderFulfillmentTest extends TestCase
         ], $extra);
     }
 
+    private function makeCar(?User $seller = null): Car
+    {
+        $seller ??= User::factory()->create(['role' => 'seller']);
+        return Car::create([
+            'seller_id' => $seller->id,
+            'title' => '1998 Nissan Silvia S15 Spec-R Aero',
+            'brand' => 'Nissan',
+            'model' => 'Silvia S15 Spec-R',
+            'year' => 1998,
+            'price' => 1240000.00,
+            'quantity' => 1,
+            'status' => 'active',
+            'published_at' => now(),
+        ]);
+    }
+
+    private function carCheckoutPayload(Car $car, array $extra = []): array
+    {
+        return array_merge([
+            'buyer_name' => 'Kenji Takahashi',
+            'buyer_email' => 'kenji@tokyogarage.jp',
+            'shipping_address' => 'Unit 4B Chino Roces Ave',
+            'shipping_city' => 'Makati',
+            'car_id' => $car->id,
+            'item_type' => 'car',
+            'quantity' => 1,
+            'payment_method' => 'bank_transfer',
+        ], $extra);
+    }
+
     private function acceptOrder(Order $order, User $seller): void
     {
         $this->postJson("/api/v1/seller/orders/{$order->id}/accept", [], $this->token($seller))->assertOk();
@@ -56,9 +87,9 @@ class OrderFulfillmentTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller']);
         $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'kenji@tokyogarage.jp']);
-        $part = $this->makePart($seller);
+        $car = $this->makeCar($seller);
 
-        $orderNumber = $this->postJson('/api/v1/orders', $this->checkoutPayload($part, [
+        $orderNumber = $this->postJson('/api/v1/orders', $this->carCheckoutPayload($car, [
             'mock_paid' => true,
             'payment_reference' => 'HELD-REF-1',
         ]))->assertCreated()->json('data.order_number');
@@ -97,9 +128,9 @@ class OrderFulfillmentTest extends TestCase
     {
         $seller = User::factory()->create(['role' => 'seller']);
         $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'kenji@tokyogarage.jp']);
-        $part = $this->makePart($seller);
+        $car = $this->makeCar($seller);
 
-        $orderNumber = $this->postJson('/api/v1/orders', $this->checkoutPayload($part, [
+        $orderNumber = $this->postJson('/api/v1/orders', $this->carCheckoutPayload($car, [
             'mock_paid' => true,
             'payment_reference' => 'HELD-REF-2',
         ]))->assertCreated()->json('data.order_number');
@@ -130,6 +161,83 @@ class OrderFulfillmentTest extends TestCase
             'stream_type' => 'order_refund',
             'order_id' => $order->id,
         ]);
+    }
+
+    public function test_parts_orders_use_direct_capture_labels_not_escrow(): void
+    {
+        $part = $this->makePart();
+
+        $orderNumber = $this->postJson('/api/v1/orders', $this->checkoutPayload($part, [
+            'mock_paid' => true,
+            'payment_reference' => 'PART-DIRECT-1',
+        ]))->assertCreated()->json('data.order_number');
+
+        $this->getJson("/api/v1/orders/{$orderNumber}")
+            ->assertOk()
+            ->assertJsonPath('data.financials.payment_status', 'paid')
+            ->assertJsonPath('data.financials.payment_label', 'Payment Received — order confirmed');
+    }
+
+    public function test_parts_inspection_endpoints_reject_with_422(): void
+    {
+        $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'kenji@tokyogarage.jp']);
+        $part = $this->makePart();
+
+        $orderNumber = $this->postJson('/api/v1/orders', $this->checkoutPayload($part, [
+            'mock_paid' => true,
+            'payment_reference' => 'PART-DIRECT-2',
+        ]))->assertCreated()->json('data.order_number');
+        $order = Order::where('order_number', $orderNumber)->firstOrFail();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->patchJson("/api/v1/admin/orders/{$order->id}/status", [
+            'status' => 'delivered',
+        ], $this->token($admin))->assertOk();
+
+        $this->postJson("/api/v1/orders/{$orderNumber}/accept-inspection", [], $this->token($buyer))
+            ->assertStatus(422);
+        $this->postJson("/api/v1/orders/{$orderNumber}/reject-inspection", [
+            'reason' => 'Changed my mind',
+        ], $this->token($buyer))->assertStatus(422);
+    }
+
+    public function test_parts_completion_records_payout_once(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $part = $this->makePart();
+
+        $orderNumber = $this->postJson('/api/v1/orders', $this->checkoutPayload($part, [
+            'mock_paid' => true,
+            'payment_reference' => 'PART-DIRECT-3',
+        ]))->assertCreated()->json('data.order_number');
+        $order = Order::where('order_number', $orderNumber)->firstOrFail();
+
+        foreach (['preparing', 'shipped', 'delivered'] as $status) {
+            $this->patchJson("/api/v1/admin/orders/{$order->id}/status", [
+                'status' => $status,
+            ], $this->token($admin))->assertOk();
+        }
+
+        $this->patchJson("/api/v1/admin/orders/{$order->id}/status", [
+            'status' => 'completed',
+        ], $this->token($admin))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'completed')
+            ->assertJsonPath('data.financials.payment_status', 'paid');
+
+        $this->assertDatabaseHas('platform_transactions', [
+            'stream_type' => 'seller_payout',
+            'order_id' => $order->id,
+            'status' => 'completed',
+        ]);
+
+        // Completing again never pays twice.
+        $this->patchJson("/api/v1/admin/orders/{$order->id}/status", [
+            'status' => 'completed',
+        ], $this->token($admin))->assertOk();
+        $this->assertEquals(1, \App\Models\PlatformTransaction::where('order_id', $order->id)
+            ->where('stream_type', 'seller_payout')
+            ->count());
     }
 
     public function test_delivery_quote_prices_by_distance_from_main_branch(): void

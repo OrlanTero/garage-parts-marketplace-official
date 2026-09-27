@@ -16,6 +16,7 @@ import {
   CalendarClock,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { TimeAgo, formatDateTime } from '../utils/timeAgo.jsx'
 
 const STAGES = ['processing', 'preparing', 'shipped', 'delivered', 'completed']
 
@@ -172,6 +173,11 @@ export default function OrderDetail() {
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--color-rust)' }}>
               {totalDisplay}
             </span>
+            {(order.placed_at || order.created_at) && (
+              <span style={{ fontSize: 12, color: 'var(--admin-text-muted)' }} title={formatDateTime(order.placed_at || order.created_at)}>
+                Placed <TimeAgo value={order.placed_at || order.created_at} />
+              </span>
+            )}
           </div>
         </div>
         <a

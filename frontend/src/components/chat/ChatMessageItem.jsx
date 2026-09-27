@@ -17,6 +17,7 @@ export default function ChatMessageItem({
 }) {
   if (!message) return null
 
+  const fullDate = message.created_at ? new Date(message.created_at).toLocaleString() : ''
   const formattedTime = message.created_at
     ? new Date(message.created_at).toLocaleTimeString([], {
         hour: '2-digit',
@@ -115,7 +116,7 @@ export default function ChatMessageItem({
 
         {/* Metadata & Real-time Status */}
         <div className="chat-message-item__meta">
-          <span className="chat-message-item__time">{formattedTime}</span>
+          <span className="chat-message-item__time" title={fullDate}>{formattedTime}</span>
 
           {isOwnMessage && (
             <span className="chat-message-item__status">

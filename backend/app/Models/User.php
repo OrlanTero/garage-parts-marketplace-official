@@ -250,4 +250,20 @@ class User extends Authenticatable
         return Conversation::where('user_one_id', $this->id)
             ->orWhere('user_two_id', $this->id);
     }
+
+    public function payoutAccounts(): HasMany
+    {
+        return $this->hasMany(PayoutAccount::class)->orderByDesc('is_default')->orderBy('id');
+    }
+
+    public function payoutWithdrawals(): HasMany
+    {
+        return $this->hasMany(PayoutWithdrawal::class)->latest();
+    }
+
+    public function sellerPayouts(): HasMany
+    {
+        return $this->hasMany(PlatformTransaction::class, 'seller_id')
+            ->where('stream_type', 'seller_payout');
+    }
 }

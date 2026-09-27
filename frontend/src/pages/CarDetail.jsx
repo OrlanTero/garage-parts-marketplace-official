@@ -144,18 +144,16 @@ export default function CarDetail() {
   const isSoldOut = stockCount <= 0
   const carStatusValue = String(car.status?.value || car.status || '').toLowerCase()
   const isMarkedSold = carStatusValue === 'sold'
-  // "Paid" display state: payment already secured in escrow on an open
-  // order. Stock reserved, but the seller has not marked it sold yet.
-  const isPaymentSecured = Boolean(car.payment_secured) && !isMarkedSold
+  // Stock label reflects sellable units only. A paid single-unit car
+  // drops to zero stock and leaves the marketplace; while units remain,
+  // no secured badge is shown.
   const stockLabel = isMarkedSold
     ? 'Sold Out'
-    : isPaymentSecured
-      ? 'Paid · Payment Secured'
-      : isSoldOut
-        ? 'Unavailable'
-        : stockCount === 1
-          ? 'Only 1 unit left'
-          : `${stockCount} units in stock`
+    : isSoldOut
+      ? 'Unavailable'
+      : stockCount === 1
+        ? 'Only 1 unit left'
+        : `${stockCount} units in stock`
 
   return (
     <div className="detail-page">
@@ -237,33 +235,12 @@ export default function CarDetail() {
                   className="detail-meta-item"
                   style={{
                     marginLeft: 12, fontSize: 13, fontWeight: 700,
-                    color: isMarkedSold || (isSoldOut && !isPaymentSecured) ? '#ef4444' : isPaymentSecured ? '#60a5fa' : '#10b981',
+                    color: isMarkedSold || isSoldOut ? '#ef4444' : '#10b981',
                   }}
                 >
                   {stockLabel}
                 </span>
               </div>
-
-              {isPaymentSecured && (
-                <div style={{
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgba(59, 130, 246, 0.4)',
-                  borderRadius: 10,
-                  padding: '10px 14px',
-                  marginBottom: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  fontSize: 13,
-                  color: '#93c5fd',
-                }}>
-                  <ShieldCheck size={16} />
-                  <div>
-                    <strong>Paid — payment already secured.</strong> A buyer settled this unit (funds held in
-                    escrow). The seller marks it sold once the deal is committed.
-                  </div>
-                </div>
-              )}
 
               <div className="detail-trust-strip">
                 <div className="detail-trust-item">

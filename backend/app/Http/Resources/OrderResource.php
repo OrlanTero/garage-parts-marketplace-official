@@ -140,11 +140,17 @@ class OrderResource extends JsonResource
                 'payment_reference' => $this->payment_reference,
                 'payment_status' => $this->payment_status,
                 'payment_label' => match ($this->payment_status ?? 'pending') {
-                    // Escrow: settled funds are HELD and secured — not yet
-                    // the seller's. Release happens on buyer inspection
-                    // acceptance; refund on a resolved dispute.
-                    'paid' => 'Payment Held in Escrow — secured',
-                    'confirmed' => 'Funds Confirmed — held in escrow',
+                    // CARS use escrow: settled funds are HELD and secured —
+                    // not yet the seller's. Release happens on buyer
+                    // inspection acceptance; refund on a resolved dispute.
+                    // PARTS use direct capture: payment confirms the order
+                    // immediately (no hold); payout settles on completion.
+                    'paid' => $this->item_type === 'car'
+                        ? 'Payment Held in Escrow — secured'
+                        : 'Payment Received — order confirmed',
+                    'confirmed' => $this->item_type === 'car'
+                        ? 'Funds Confirmed — held in escrow'
+                        : 'Payment Confirmed',
                     'released' => 'Released to Seller — payout complete',
                     'refunded' => 'Refunded to Buyer',
                     default => 'Pending',

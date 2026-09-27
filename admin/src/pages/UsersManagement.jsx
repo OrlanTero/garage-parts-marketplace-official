@@ -15,6 +15,7 @@ import {
   Key,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 export default function UsersManagement({ initialRole = 'staff_admin', title = 'Admin Users & Permissions' }) {
   const [users, setUsers] = useState([])
@@ -318,7 +319,7 @@ export default function UsersManagement({ initialRole = 'staff_admin', title = '
                     </td>
                     <td>
                       <div style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                        {u.created_at ? <TimeAgo value={u.created_at} /> : 'N/A'}
                       </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>

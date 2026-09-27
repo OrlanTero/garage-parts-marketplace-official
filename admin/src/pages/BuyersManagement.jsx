@@ -21,6 +21,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 export default function BuyersManagement() {
   const [buyers, setBuyers] = useState([])
@@ -322,7 +323,7 @@ export default function BuyersManagement() {
 
                   {/* Member Since */}
                   <td style={{ fontSize: 13, color: 'var(--admin-text-secondary)' }}>
-                    {buyer.created_at ? new Date(buyer.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                    {buyer.created_at ? <TimeAgo value={buyer.created_at} /> : '—'}
                   </td>
 
                   {/* Actions */}
@@ -436,7 +437,7 @@ export default function BuyersManagement() {
                             {o.order_number} · {o.item_name}
                           </div>
                           <div style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginTop: 2 }}>
-                            {o.shipping_city} · {new Date(o.created_at).toLocaleDateString()}
+                            {o.shipping_city} · <TimeAgo value={o.created_at} />
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>

@@ -24,6 +24,7 @@ import {
   ZoomIn,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 const REJECTION_TEMPLATES = [
   'Blurry or unreadable document scan. Please provide a clear, well-lit photo of your government-issued ID.',
@@ -466,7 +467,7 @@ export default function KycManagement() {
 
                       {/* Submitted Date */}
                       <td style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
-                        {user.kyc_submitted_at ? new Date(user.kyc_submitted_at).toLocaleDateString() : '—'}
+                        {user.kyc_submitted_at ? <TimeAgo value={user.kyc_submitted_at} /> : '—'}
                       </td>
 
                       {/* Actions */}

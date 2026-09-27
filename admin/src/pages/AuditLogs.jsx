@@ -12,6 +12,7 @@ import {
   Download,
 } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../components/Accordion.jsx'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 const INITIAL_AUDIT_LOGS = [
   {
@@ -119,7 +120,7 @@ export default function AuditLogs() {
               icon={Shield}
               actions={
                 <span style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--admin-text-muted)', fontWeight: 600 }}>
-                  {log.timestamp}
+                  <TimeAgo value={log.timestamp} />
                 </span>
               }
             />

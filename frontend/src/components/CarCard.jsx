@@ -91,16 +91,8 @@ export default function CarCard({
               <ShieldCheck size={12} /> {score}
             </span>
           )}
-          {car.payment_secured && (
-            <span
-              title="A buyer already secured this listing with payment held in escrow"
-              style={{ position: 'absolute', left: 10, bottom: 10, background: 'rgba(59, 130, 246, 0.92)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 6, letterSpacing: '0.03em' }}
-            >
-              PAID · PAYMENT SECURED
-            </span>
-          )}
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={`car-wishlist-btn ${saved ? 'active' : ''}`}
             onClick={handleWishlist}
             aria-label="Save to Wishlist"
@@ -169,14 +161,7 @@ export default function CarCard({
             <ShieldCheck size={12} /> {score}
           </span>
         )}
-        {car.payment_secured && (
-          <span
-            title="A buyer already secured this listing with payment held in escrow"
-            style={{ position: 'absolute', left: 10, bottom: 10, background: 'rgba(59, 130, 246, 0.92)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 6, letterSpacing: '0.03em' }}
-          >
-            PAID · PAYMENT SECURED
-          </span>
-        )}
+
         <button 
           type="button" 
           className={`car-wishlist-btn ${saved ? 'active' : ''}`}

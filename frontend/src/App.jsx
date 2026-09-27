@@ -16,7 +16,9 @@ import {
   Car,
   Layers,
   Coffee,
-  MessageSquare
+  MessageSquare,
+  Wallet as WalletIcon,
+  BarChart3
 } from 'lucide-react'
 import Home from './pages/Home.jsx'
 import Marketplace from './pages/Marketplace.jsx'
@@ -33,6 +35,8 @@ import MyListings from './pages/MyListings.jsx'
 import Showroom from './pages/Showroom.jsx'
 import Offers from './pages/Offers.jsx'
 import MyOrders from './pages/MyOrders.jsx'
+import Wallet from './pages/Wallet.jsx'
+import SellerAnalytics from './pages/SellerAnalytics.jsx'
 import Settings from './pages/Settings.jsx'
 import Favorites from './pages/Favorites.jsx'
 import Messages from './pages/Messages.jsx'
@@ -395,14 +399,34 @@ export default function App() {
                     <Heart size={15} fill={favoritesCount > 0 ? '#d8622c' : 'none'} color={favoritesCount > 0 ? '#d8622c' : 'currentColor'} />
                     <span>Saved Wishlist & Cars ({favoritesCount})</span>
                   </Link>
-                  <Link 
-                    to="/messages" 
-                    className="mobile-drawer-quicklink" 
+                  <Link
+                    to="/messages"
+                    className="mobile-drawer-quicklink"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <MessageSquare size={15} />
                     <span>Messages & Inquiries {unreadCount > 0 ? `(${unreadCount})` : ''}</span>
                   </Link>
+                  {!isBuyer && (
+                    <>
+                      <Link
+                        to="/wallet"
+                        className="mobile-drawer-quicklink"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <WalletIcon size={15} />
+                        <span>Seller Wallet & Cash-outs</span>
+                      </Link>
+                      <Link
+                        to="/seller-analytics"
+                        className="mobile-drawer-quicklink"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <BarChart3 size={15} />
+                        <span>Sales Analytics</span>
+                      </Link>
+                    </>
+                  )}
                 </div>
 
                 <button 
@@ -487,6 +511,9 @@ export default function App() {
           <Route path="/verify/:hash" element={<VerifyTransaction />} />
           <Route path="/my-orders" element={<MyOrders />} />
           <Route path="/orders" element={<MyOrders />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/seller-analytics" element={<SellerAnalytics />} />
+          <Route path="/analytics" element={<SellerAnalytics />} />
           <Route path="/agent" element={<AgentPortal />} />
           <Route path="/agents" element={<AgentPortal />} />
           <Route path="/agent-portal" element={<AgentPortal />} />

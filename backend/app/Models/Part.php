@@ -208,8 +208,10 @@ class Part extends Model
     }
 
     /**
-     * Orders holding money on this part right now — same escrow rule
-     * as cars (see Car::heldOrders).
+     * Orders with captured payment on this part right now. Unlike cars
+     * (see Car::heldOrders, escrow), parts use direct capture — paid /
+     * confirmed on an open order means the stock is spoken for, with
+     * payout settling on completion instead of inspection release.
      */
     public function heldOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

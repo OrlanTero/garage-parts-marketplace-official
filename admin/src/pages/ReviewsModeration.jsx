@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../components/Accordion.jsx'
 import client from '../api/client.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 const fetchReviews = (params = {}) =>
   client.get('/admin/reviews', { params }).then((r) => r.data)
@@ -180,7 +181,12 @@ export default function ReviewsModeration() {
                 <AccordionHeader
                   id={String(rev.id)}
                   title={`@${username} · ${rev.rating}★ on ${target}`}
-                  subtitle={`Submitted ${rev.created_at ? new Date(rev.created_at).toLocaleString() : ''}${rev.is_verified_purchase ? ' · Verified Purchase' : ''}`}
+                  subtitle={
+                    <span>
+                      Submitted {rev.created_at ? <TimeAgo value={rev.created_at} /> : 'recently'}
+                      {rev.is_verified_purchase ? ' · Verified Purchase' : ''}
+                    </span>
+                  }
                   badge={badgeFor(rev)}
                   icon={Star}
                   actions={

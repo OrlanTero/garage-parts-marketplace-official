@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Tag, Check, X, RefreshCw, Store, User } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { offersApi, OFFER_STATUS_LABELS } from '../api/offers.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 const SELLER_ROLES = ['seller', 'dealer', 'parts_seller', 'admin', 'super_admin']
 
@@ -36,7 +37,7 @@ function OfferCard({ offer, mode, onAction, acting }) {
             {mode === 'received'
               ? <>From <strong style={{ color: '#cbd5e1' }}>{offer.buyer?.name || 'Buyer'}</strong></>
               : <>To <strong style={{ color: '#cbd5e1' }}>{offer.seller?.name || 'Seller'}</strong></>}
-            {' · '}{new Date(offer.created_at).toLocaleString()}
+            {' · '}<TimeAgo value={offer.created_at} />
           </div>
         </div>
         <span style={{

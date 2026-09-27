@@ -23,6 +23,7 @@ import {
   ThumbsDown,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 export default function SellersManagement() {
   const [sellers, setSellers] = useState([])
@@ -380,7 +381,7 @@ export default function SellersManagement() {
 
                       {/* Joined Date */}
                       <td style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
-                        {seller.created_at ? new Date(seller.created_at).toLocaleDateString() : '—'}
+                        {seller.created_at ? <TimeAgo value={seller.created_at} /> : '—'}
                       </td>
 
                       {/* Actions */}

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { ordersApi } from '../api/orders.js'
+import { useOrderStatusListener } from '../realtime/useOrderStatus.js'
 import { marketplaceCars } from '../api/cars.js'
 import { marketplaceParts } from '../api/parts.js'
 import { useMediaQuery } from '../hooks/useMediaQuery.js'
@@ -29,6 +30,18 @@ export default function SalesOrder() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  // Live: the other party moving this order refreshes the receipt.
+  useOrderStatusListener((event) => {
+    if (!event || !orderNumber) return
+    if (
+      String(event.order_number) === String(orderNumber) ||
+      String(event.order_id) === String(orderNumber)
+    ) {
+      setRefreshTick((t) => t + 1)
+    }
+  })
 
   useEffect(() => {
     let isMounted = true
@@ -56,7 +69,7 @@ export default function SalesOrder() {
     }
 
     return () => { isMounted = false }
-  }, [orderNumber])
+  }, [orderNumber, refreshTick])
 
   const handlePrint = () => {
     window.print()
@@ -219,24 +232,26 @@ export default function SalesOrder() {
     }
   }
 
-  // Escrow lifecycle: settled funds are HELD (paid) → confirmed (house
-  // verifies) → released to seller on buyer inspection acceptance, or
-  // refunded to buyer when a dispute resolves. The order is NOT complete
-  // until inspection acceptance.
+  // Money lifecycle splits by item type. CARS use escrow: settled funds
+  // are HELD (paid) → confirmed (house verifies) → released to seller on
+  // buyer inspection acceptance, or refunded when a dispute resolves. The
+  // car order is NOT complete until inspection acceptance. PARTS use
+  // direct capture: paid / confirmed means captured (no hold); the order
+  // completes on delivery and payout settles on completion.
   const paymentStatus = financials.payment_status || order.payment_status || 'pending'
   const paymentReference = financials.payment_reference || order.payment_reference || ''
   const paymentLabel = financials.payment_label
     || (paymentStatus === 'released' ? 'Released to Seller — payout complete'
       : paymentStatus === 'refunded' ? 'Refunded to Buyer'
-      : paymentStatus === 'confirmed' ? 'Funds Confirmed — held in escrow'
-      : paymentStatus === 'paid' ? 'Payment Held in Escrow — secured'
+      : paymentStatus === 'confirmed' ? (isCarOrder ? 'Funds Confirmed — held in escrow' : 'Payment Confirmed')
+      : paymentStatus === 'paid' ? (isCarOrder ? 'Payment Held in Escrow — secured' : 'Payment Received — order confirmed')
       : 'Pending')
   const isDelivered = order.status === 'delivered'
   const isDisputed = order.status === 'disputed'
   const isRefunded = order.status === 'refunded'
   const isNegotiating = order.status === 'negotiating'
   const isSold = order.status === 'sold'
-  const escrowHeld = ['paid', 'confirmed'].includes(paymentStatus) && !isCompleted && !isRefunded
+  const fundsActive = ['paid', 'confirmed'].includes(paymentStatus) && !isCompleted && !isRefunded
 
   // Listing Information for the receipt: live listing when reachable,
   // otherwise the frozen order snapshot. Receipt never breaks.
@@ -432,14 +447,26 @@ export default function SalesOrder() {
         </div>
       )}
 
-      {/* ESCROW — payment held & secured, order not yet complete */}
-      {escrowHeld && (
+      {/* CARS: escrow — payment held & secured, order not yet complete */}
+      {fundsActive && isCarOrder && (
         <div className="no-print" style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <ShieldCheck size={20} color="#60a5fa" style={{ flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
             <strong style={{ color: '#60a5fa' }}>Payment Held & Secured — order not complete.</strong>{' '}
             {paymentReference ? <>Your payment (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>) is </> : 'Your payment is '}
             frozen in platform escrow. It goes to the seller only after delivery + your inspection acceptance — never before.
+          </div>
+        </div>
+      )}
+
+      {/* PARTS: direct capture — payment received, no hold */}
+      {fundsActive && !isCarOrder && (
+        <div className="no-print" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <ShieldCheck size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#10b981' }}>Payment Received — order confirmed.</strong>{' '}
+            {paymentReference ? <>Your payment (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>) is </> : 'Your payment is '}
+            captured (parts are not held in escrow). The seller is preparing dispatch — delivery completes the order.
           </div>
         </div>
       )}
@@ -454,7 +481,7 @@ export default function SalesOrder() {
         </div>
       )}
 
-      {isSold && (
+      {isSold && isCarOrder && (
         <div className="no-print" style={{ background: 'rgba(216, 98, 44, 0.08)', border: '1px solid #d8622c', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <CheckCircle2 size={20} color="#fb923c" style={{ flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
@@ -465,7 +492,7 @@ export default function SalesOrder() {
       )}
 
       {/* BUYER INSPECTION — delivered, accept releases payout, reject opens dispute */}
-      {isAccepted && isDelivered && !isCompleted && !isDisputed && (
+      {isCarOrder && isAccepted && isDelivered && !isCompleted && !isDisputed && (
         <div className="no-print" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
             <Car size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
@@ -533,7 +560,7 @@ export default function SalesOrder() {
           <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
             <strong style={{ color: '#ef4444' }}>Disputed — payment frozen.</strong>{' '}
-            The buyer rejected the delivery on inspection. Funds stay held until the dispute resolves: the seller issues a refund, or support rules on release.
+            The delivery was disputed. Funds stay frozen until the dispute resolves: the seller issues a refund, or support rules on release.
           </div>
         </div>
       )}
@@ -543,7 +570,7 @@ export default function SalesOrder() {
           <AlertCircle size={20} color="#94a3b8" style={{ flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
             <strong style={{ color: '#94a3b8' }}>Refunded.</strong>{' '}
-            The held payment was returned to the buyer and this order is closed.
+            The payment was returned to the buyer and this order is closed.
           </div>
         </div>
       )}

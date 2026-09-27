@@ -48,9 +48,12 @@ class OrderController extends Controller
 
     /**
      * Update order status, delivery info, and tracking (Admin / Staff).
-     * Escrow chain: processing → negotiating → sold → shipped → delivered
-     * → completed (buyer inspection accepted, payout released) or
-     * disputed → refunded. Completion requires submitted (held) funds.
+     * Cars use the escrow chain: processing → negotiating → sold →
+     * shipped → delivered → completed (buyer inspection accepted, payout
+     * released) or disputed → refunded. Completion requires submitted
+     * (held) funds. Parts use direct capture: processing → preparing →
+     * shipped → delivered → completed (payout recorded on completion,
+     * no inspection gate).
      */
     public function updateStatus(Request $request, Order $order): JsonResponse
     {
@@ -80,6 +83,12 @@ class OrderController extends Controller
             && $order->item_type === 'car' && $order->car_id && ($car = Car::find($order->car_id))) {
             $onHand = $car->quantity === null ? 0 : (int) $car->quantity;
             $car->forceFill(['quantity' => $onHand + max(1, (int) $order->quantity)])->save();
+        }
+
+        // Parts use direct capture (no escrow release step): settling the
+        // seller payout when a captured order completes.
+        if (($validated['status'] ?? null) === 'completed' && $order->item_type !== 'car') {
+            $this->settlePartsPayout($order->refresh());
         }
 
         return (new OrderResource($order->refresh()))->response();
@@ -142,13 +151,18 @@ class OrderController extends Controller
      * Place a checkout order and generate an official sales order.
      * Captures vehicle chassis number and VIN for fitment guarantee.
      *
-     * Escrow flow: the buyer settles (currently a mock step on the
-     * storefront; real gateway later) BEFORE the order is created. The
-     * settled payment is HELD and secured by the platform — the order is
-     * NOT complete at this point (status stays `processing`). It only
-     * completes after seller delivery + buyer inspection acceptance, at
-     * which point funds are released to the seller. A rejected
-     * inspection opens a dispute → refund path instead.
+     * Money flow splits by item type. CARS use escrow: the buyer settles
+     * (currently a mock step on the storefront; real gateway later)
+     * BEFORE the order is created. The settled payment is HELD and
+     * secured by the platform — the order is NOT complete at this point
+     * (status stays `processing`). It only completes after seller
+     * delivery + buyer inspection acceptance, at which point funds are
+     * released to the seller. A rejected inspection opens a
+     * dispute → refund path instead.
+     * PARTS use direct capture: the settled payment confirms the order
+     * immediately (no hold, no inspection gate). The seller ships,
+     * delivery completes the order, and the seller payout is recorded
+     * on completion.
      * Prepaid orders skip the seller verification queue — the house
      * auto-accepts and moves to prep.
      */
@@ -405,10 +419,15 @@ class OrderController extends Controller
 
             $conversation = Conversation::findOrCreateBetween((int) $buyer->id, $sellerId, $listingType, (int) $listingId);
 
+            // Cars hold payment in escrow; parts capture it outright —
+            // the chat receipt copy reflects each flow.
+            $flowCopy = $order->item_type === 'car'
+                ? " — sales order {$order->order_number} generated, payment held in escrow."
+                : " — sales order {$order->order_number} generated, payment received, order confirmed.";
             $message = $conversation->messages()->create([
                 'sender_id' => $buyer->id,
                 'body' => 'Paid ₱' . number_format($totalAmount, 2)
-                    . " — sales order {$order->order_number} generated, payment held in escrow."
+                    . $flowCopy
                     . " Receipt: /sales-order/{$order->order_number}",
                 'is_redacted' => false,
                 'listing_type' => $listingType,
@@ -603,6 +622,26 @@ class OrderController extends Controller
     }
 
     /**
+     * Settle the seller payout when a direct-capture (parts) order
+     * completes. Cars never reach here — their payout releases on buyer
+     * inspection acceptance instead. Idempotent: never pays twice.
+     */
+    private function settlePartsPayout(Order $order): void
+    {
+        if ($order->item_type === 'car') {
+            return;
+        }
+        if (!in_array($order->payment_status, ['paid', 'confirmed'], true)) {
+            return;
+        }
+        try {
+            PlatformTransaction::recordPayoutOnce($order);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    /**
      * Reserve car units the moment payment is secured. Quantity floors
      * at zero (NULL legacy stock counts as one implicit unit). Status
      * is intentionally untouched — reserved is not sold.
@@ -614,13 +653,18 @@ class OrderController extends Controller
     }
 
     /**
-     * Buyer accepts the delivered car after inspection.
+     * Buyer accepts the delivered car after inspection (CARS ONLY —
+     * parts use direct capture with no inspection gate).
      * Releases the held payment to the seller and completes the order.
      * POST /orders/{identifier}/accept-inspection (auth, buyer owns order).
      */
     public function acceptInspection(Request $request, string $identifier): JsonResponse
     {
         $order = $this->findBuyerOrder($request, $identifier);
+
+        if ($order->item_type !== 'car') {
+            abort(422, 'Inspection acceptance applies to vehicle orders only.');
+        }
 
         if ($order->status !== 'delivered') {
             abort(422, 'Only a delivered order can be accepted after inspection.');
@@ -644,7 +688,8 @@ class OrderController extends Controller
     }
 
     /**
-     * Buyer rejects the delivered car after inspection.
+     * Buyer rejects the delivered car after inspection (CARS ONLY —
+     * parts use direct capture with no inspection gate).
      * Opens a dispute — the held payment stays frozen until the
      * dispute resolves into a refund (seller/admin) or release.
      * POST /orders/{identifier}/reject-inspection {reason?} (auth, buyer).
@@ -652,6 +697,10 @@ class OrderController extends Controller
     public function rejectInspection(Request $request, string $identifier): JsonResponse
     {
         $order = $this->findBuyerOrder($request, $identifier);
+
+        if ($order->item_type !== 'car') {
+            abort(422, 'Inspection disputes apply to vehicle orders only.');
+        }
 
         if (!in_array($order->status, ['delivered', 'shipped'], true)) {
             abort(422, 'Only a delivered order can be disputed after inspection.');

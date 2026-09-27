@@ -407,6 +407,10 @@
   align-items: flex-end;
 }
 
+.chat-message-item--other .chat-message-item__container {
+  align-items: flex-start;
+}
+
 .chat-message-item__sender-name {
   font-size: 0.72rem;
   color: #94a3b8;
@@ -414,8 +418,11 @@
   padding: 0 4px;
 }
 
-/* Base Message Bubble */
+/* Base Message Bubble — fit content so short texts don't leave
+   extra empty space (bubble was stretching to sender-name width). */
 .chat-message-item__bubble {
+  width: fit-content;
+  max-width: 100%;
   padding: 8px 13px;
   font-size: 0.85rem;
   line-height: 1.45;
@@ -444,7 +451,9 @@
 }
 
 .chat-message-item--own.chat-message-item--last .chat-message-item__bubble {
-  border-radius: 16px 4px 16px 16px;
+  /* Tail stays on the newest bubble: keep the bottom-right corner tight
+     (same as middle) so a realtime arrival doesn't round off the tail. */
+  border-radius: 16px 4px 4px 16px;
 }
 
 /* Other Messages (Aligned to Left) */
@@ -468,7 +477,9 @@
 }
 
 .chat-message-item--other.chat-message-item--last .chat-message-item__bubble {
-  border-radius: 4px 16px 16px 16px;
+  /* Tail stays on the newest bubble: keep the bottom-left corner tight
+     (same as middle) so a realtime arrival doesn't round off the tail. */
+  border-radius: 4px 16px 16px 4px;
 }
 
 /* Sending / Failed / Redacted states */

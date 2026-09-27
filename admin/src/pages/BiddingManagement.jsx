@@ -27,6 +27,7 @@ import {
 import { adminAuctionsApi } from '../api/auctions.js'
 import { carsApi } from '../api/cars.js'
 import MediaUploadField from '../components/MediaUploadField.jsx'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 function formatPeso(num) {
   if (num === null || num === undefined) return '₱ 0'
@@ -1225,7 +1226,7 @@ export default function BiddingManagement() {
                             {formatPeso(bid.bid_amount)}
                           </td>
                           <td style={{ fontSize: 12, color: 'var(--admin-text-secondary)' }}>
-                            {new Date(bid.created_at).toLocaleString()}
+                            <TimeAgo value={bid.created_at} />
                           </td>
                           <td>
                             <span className={`badge ${idx === 0 ? 'badge-success' : 'badge-secondary'}`}>

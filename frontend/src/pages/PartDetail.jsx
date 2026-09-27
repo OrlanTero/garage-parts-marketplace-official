@@ -234,33 +234,7 @@ export default function PartDetail() {
               <div className="detail-meta-row">
                 <span className="detail-meta-item"><MapPin size={14} /> {location}</span>
                 <span className="detail-meta-item"><Package size={14} /> {part.quantity ? `${part.quantity} available` : 'In Stock'}</span>
-                {part.payment_secured && String(part.status || '').toLowerCase() !== 'sold' && (
-                  <span className="detail-meta-item" style={{ fontWeight: 700, color: '#60a5fa' }}>
-                    Paid · Payment Secured
-                  </span>
-                )}
               </div>
-
-              {part.payment_secured && String(part.status || '').toLowerCase() !== 'sold' && (
-                <div style={{
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgba(59, 130, 246, 0.4)',
-                  borderRadius: 10,
-                  padding: '10px 14px',
-                  marginBottom: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  fontSize: 13,
-                  color: '#93c5fd',
-                }}>
-                  <ShieldCheck size={16} />
-                  <div>
-                    <strong>Paid — payment already secured.</strong> Stock on this part is reserved by an open
-                    order (funds held in escrow).
-                  </div>
-                </div>
-              )}
 
               <div className="detail-price-box">
                 <span className="detail-price-main">{priceDisplay}</span>

@@ -4,15 +4,18 @@ import { FileText } from 'lucide-react'
 import { SELLER_ORDER_STATUSES } from '../api/seller.js'
 import { sellerOrdersApi } from '../api/seller.js'
 import { useListingOrders } from '../hooks/useListingOrders.js'
+import { useOrderStatusListener } from '../realtime/useOrderStatus.js'
 
 const CLOSED = ['completed', 'refunded', 'cancelled']
 
 /**
  * Deal pipeline control for a listing thread. Sellers pick which sale
- * order on this listing to advance, flip its escrow status
- * (processing → negotiating → sold → shipped → delivered → completed,
- * or disputed → refunded), and jump to its receipt. Buyers see their
- * own order chips with live statuses instead.
+ * order on this listing to advance, flip its fulfillment status
+ * (cars: processing → negotiating → sold → shipped → delivered →
+ * completed via escrow inspection, or disputed → refunded; parts:
+ * processing → preparing → shipped → delivered → completed via direct
+ * capture), and jump to its receipt. Buyers see their own order chips
+ * with live statuses instead.
  *
  * Used in the inbox chat header and the floating drawer — same control,
  * same statuses, same endpoint everywhere.
@@ -22,6 +25,16 @@ export default function SaleOrderStatusControl({ listingType, listingId, role, c
   const [selectedId, setSelectedId] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
+  // Live: another party (or admin) moving an order on this listing
+  // refreshes this control instantly — no manual reload.
+  useOrderStatusListener((event) => {
+    if (!event || !listingType || !listingId) return
+    const match =
+      (listingType === 'car' && Number(event.car_id) === Number(listingId)) ||
+      (listingType === 'part' && Number(event.part_id) === Number(listingId))
+    if (match) refresh()
+  })
 
   const openOrders = useMemo(() => orders.filter((o) => !CLOSED.includes(o.status)), [orders])
   const selected = orders.find((o) => String(o.id) === String(selectedId) || o.order_number === selectedId)
@@ -76,9 +89,10 @@ export default function SaleOrderStatusControl({ listingType, listingId, role, c
 
   const handleRefund = async () => {
     if (!selected || busy) return
-    const note = window.prompt('Refund note for the buyer (optional):', 'Refunded after inspection dispute.')
+    const isCar = (selected.item?.type || selected.item_type || listingType) === 'car'
+    const note = window.prompt('Refund note for the buyer (optional):', isCar ? 'Refunded after inspection dispute.' : 'Refunded after dispute resolution.')
     if (note === null) return
-    if (!window.confirm(`Refund the held payment for order ${selected.order_number} back to the buyer?`)) return
+    if (!window.confirm(`Refund the payment for order ${selected.order_number} back to the buyer?`)) return
     setBusy(true)
     setError('')
     try {
@@ -148,7 +162,7 @@ export default function SaleOrderStatusControl({ listingType, listingId, role, c
               type="button"
               disabled={busy}
               onClick={handleRefund}
-              title="Resolve the dispute by refunding the held payment"
+              title="Resolve the dispute by refunding the payment"
               style={{ background: 'transparent', border: '1px solid #2d3748', borderRadius: 8, color: '#e2e8f0', fontSize: 12, fontWeight: 700, padding: '7px 12px', cursor: 'pointer' }}
             >
               Refund Buyer

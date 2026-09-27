@@ -19,7 +19,12 @@ import SaleOrderStatusControl from '../components/SaleOrderStatusControl.jsx'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useChat } from '../context/ChatContext.jsx'
 import { getEcho } from '../realtime/echo.js'
-import { getMessagePositionInfo } from '../utils/chatUtils.js'
+import {
+  appendRealtimeMessage,
+  getMessagePositionInfo,
+  isOwnMessage as isOwnMessageOf,
+  sortMessagesByTime,
+} from '../utils/chatUtils.js'
 import {
   getCachedInbox,
   setCachedInbox,
@@ -27,6 +32,7 @@ import {
   setCachedListingMessages,
 } from '../utils/chatCache.js'
 import ChatMessageItem from '../components/chat/ChatMessageItem.jsx'
+import { timeAgo } from '../utils/timeAgo.jsx'
 import './Messages.css'
 
 function listingKeyOf(type, id) {
@@ -294,12 +300,9 @@ export default function Messages() {
         const listingKey = event.listing_key || listingKeyOf(event.listing_type, event.listing_id)
 
         if (listingKey && selectedListingKeyRef.current === listingKey) {
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === incomingMsg.id || m.temp_id === incomingMsg.id)) {
-              return prev
-            }
-            return [...prev, incomingMsg]
-          })
+          // Sorted + deduped insert so grouping/positions (and therefore
+          // bubble border-radius) recompute correctly on live arrivals.
+          setMessages((prev) => appendRealtimeMessage(prev, incomingMsg))
           if (event.listing_type && event.listing_id) {
             chatApi.markListingRead(event.listing_type, event.listing_id).catch(() => {})
           }
@@ -409,7 +412,9 @@ export default function Messages() {
           status: res.data.is_read || res.data.read_at ? 'seen' : 'sent',
         }
         setMessages((prev) =>
-          prev.map((m) => (m.id === tempId || m.temp_id === tempId ? newMsg : m)),
+          sortMessagesByTime(
+            prev.map((m) => (m.id === tempId || m.temp_id === tempId ? newMsg : m)),
+          ),
         )
         setListings((prev) =>
           prev.map((row) =>
@@ -451,7 +456,9 @@ export default function Messages() {
           status: res.data.is_read || res.data.read_at ? 'seen' : 'sent',
         }
         setMessages((prev) =>
-          prev.map((m) => (m.id === targetId || m.temp_id === targetId ? newMsg : m)),
+          sortMessagesByTime(
+            prev.map((m) => (m.id === targetId || m.temp_id === targetId ? newMsg : m)),
+          ),
         )
       })
       .catch(() => {
@@ -681,10 +688,7 @@ export default function Messages() {
                 const listing = item.listing
                 const lastMsg = item.last_message
                 const lastTime = item.last_message_at
-                  ? new Date(item.last_message_at).toLocaleDateString([], {
-                      month: 'short',
-                      day: 'numeric',
-                    })
+                  ? timeAgo(item.last_message_at)
                   : ''
                 const thumb = listing?.primary_image_url || listingFallbackImg(item.listing_type)
 
@@ -855,7 +859,7 @@ export default function Messages() {
                       <ChatMessageItem
                         key={msg.id || msg.temp_id || idx}
                         message={msg}
-                        isOwnMessage={msg.sender_id === user?.id}
+                        isOwnMessage={isOwnMessageOf(msg, user?.id)}
                         position={position}
                         showSenderHeader={showSenderHeader}
                         hideListingCard

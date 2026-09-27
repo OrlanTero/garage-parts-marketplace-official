@@ -254,9 +254,10 @@ function CheckoutLinkCard({ metadata, offer }) {
   )
 }
 
-function SalesOrderCard({ metadata }) {
+function SalesOrderCard({ metadata, itemType }) {
   const num = metadata?.sales_order_number
   if (!num) return null
+  const isCar = (itemType || 'part') === 'car'
   return (
     <div style={{ ...cardStyle, borderColor: '#10b981' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
@@ -270,7 +271,7 @@ function SalesOrderCard({ metadata }) {
       </div>
       {metadata?.total_amount != null && (
         <div style={{ fontSize: 18, fontWeight: 900, color: '#f8fafc', marginBottom: 8 }}>
-          {peso(metadata.total_amount)} <span style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>held in escrow</span>
+          {peso(metadata.total_amount)} <span style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>{isCar ? 'held in escrow' : 'payment received'}</span>
         </div>
       )}
       <Link to={`/sales-order/${num}`} style={{ ...btn(true), textDecoration: 'none' }}>
@@ -285,7 +286,7 @@ export default function ChatDealCard({ message, viewerId, onAction, acting }) {
   return (
     <>
       {message.metadata?.sales_order_number && (
-        <SalesOrderCard metadata={message.metadata} />
+        <SalesOrderCard metadata={message.metadata} itemType={message.listing_type} />
       )}
       {message.offer && (
         <OfferCard offer={message.offer} viewerId={viewerId} onAction={onAction} acting={acting} />

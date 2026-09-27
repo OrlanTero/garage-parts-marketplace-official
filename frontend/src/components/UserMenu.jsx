@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
+  BarChart3,
   LogOut,
   ShoppingBag,
   ChevronDown,
@@ -10,7 +11,8 @@ import {
   Sparkles,
   CheckCircle2,
   Store,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Wallet as WalletIcon
 } from 'lucide-react'
 import { useFavorites } from '../context/FavoritesContext.jsx'
 
@@ -202,6 +204,30 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </Link>
             )}
 
+            {isSeller && (
+              <Link to="/wallet" className="user-dropdown-item" onClick={handleLinkClick}>
+                <div className="user-dropdown-item-icon icon-action">
+                  <WalletIcon size={16} />
+                </div>
+                <div className="user-dropdown-item-text">
+                  <span className="user-dropdown-item-title">Seller Wallet</span>
+                  <span className="user-dropdown-item-desc">Statements, payout accounts & cash-outs</span>
+                </div>
+              </Link>
+            )}
+
+            {isSeller && (
+              <Link to="/seller-analytics" className="user-dropdown-item" onClick={handleLinkClick}>
+                <div className="user-dropdown-item-icon icon-action">
+                  <BarChart3 size={16} />
+                </div>
+                <div className="user-dropdown-item-text">
+                  <span className="user-dropdown-item-title">Sales Analytics</span>
+                  <span className="user-dropdown-item-desc">Revenue, orders & top listings</span>
+                </div>
+              </Link>
+            )}
+
             {!isSeller && (
               <Link to="/become-seller" className="user-dropdown-item" onClick={handleLinkClick}>
                 <div className="user-dropdown-item-icon icon-action">
@@ -220,7 +246,7 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </div>
               <div className="user-dropdown-item-text">
                 <span className="user-dropdown-item-title">My Orders</span>
-                <span className="user-dropdown-item-desc">Purchases, escrow payments & receipts</span>
+                <span className="user-dropdown-item-desc">Purchases, payments & receipts</span>
               </div>
             </Link>
           </div>

@@ -104,16 +104,8 @@ export default function PartCard({
               <Truck size={11} /> Free Freight
             </span>
           )}
-          {part.payment_secured && String(part.status || '').toLowerCase() !== 'sold' && (
-            <span
-              title="Stock on this part is reserved by payment held in escrow"
-              style={{ position: 'absolute', left: 10, bottom: 10, background: 'rgba(59, 130, 246, 0.92)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 6, letterSpacing: '0.03em' }}
-            >
-              PAID · SECURED
-            </span>
-          )}
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={`part-wishlist-btn ${saved ? 'active' : ''}`}
             onClick={handleWishlist}
             aria-label="Save Part"
@@ -183,14 +175,7 @@ export default function PartCard({
             <Truck size={11} /> Free Freight
           </span>
         )}
-        {part.payment_secured && String(part.status || '').toLowerCase() !== 'sold' && (
-          <span
-            title="Stock on this part is reserved by payment held in escrow"
-            style={{ position: 'absolute', left: 10, bottom: 10, background: 'rgba(59, 130, 246, 0.92)', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 6, letterSpacing: '0.03em' }}
-          >
-            PAID · SECURED
-          </span>
-        )}
+
         <button 
           type="button" 
           className={`part-wishlist-btn ${saved ? 'active' : ''}`}

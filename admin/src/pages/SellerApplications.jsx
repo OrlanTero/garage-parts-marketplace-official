@@ -21,6 +21,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { timeAgo, formatDateTime } from '../utils/timeAgo.jsx'
 
 const REJECTION_TEMPLATES = [
   'Business permit / DTI-SEC registration cannot be verified with official registries.',
@@ -39,7 +40,7 @@ const ROLE_LABELS = {
 function formatDate(value) {
   if (!value) return '—'
   try {
-    return new Date(value).toLocaleString()
+    return `${timeAgo(value)} (${formatDateTime(value)})`
   } catch {
     return '—'
   }

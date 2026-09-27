@@ -125,10 +125,13 @@ class SellerOrderController extends Controller
     /**
      * POST /seller/orders/{order}/status — seller advances their own order.
      *
-     * Escrow lifecycle: processing → negotiating → sold → shipped →
-     * delivered → (buyer accepts → completed + payout) or (buyer rejects
-     * → disputed → refunded). Payment info is visible to the seller from
-     * acceptance; funds release only on buyer inspection acceptance.
+     * Cars use the escrow lifecycle: processing → negotiating → sold →
+     * shipped → delivered → (buyer accepts → completed + payout) or
+     * (buyer rejects → disputed → refunded). Payment info is visible to
+     * the seller from acceptance; funds release only on buyer inspection
+     * acceptance. Parts use direct capture: processing → preparing →
+     * shipped → delivered → completed (payout recorded on completion,
+     * no inspection gate).
      */
     public function updateStatus(Request $request, Order $order): OrderResource
     {
@@ -173,13 +176,27 @@ class SellerOrderController extends Controller
 
         $order->update($validated);
 
+        // Parts use direct capture (no escrow release step): settle the
+        // seller payout when a captured order completes.
+        if (($validated['status'] ?? null) === 'completed' && $order->item_type !== 'car') {
+            $fresh = $order->refresh();
+            if (in_array($fresh->payment_status, ['paid', 'confirmed'], true)) {
+                try {
+                    \App\Models\PlatformTransaction::recordPayoutOnce($fresh);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+        }
+
         return new OrderResource($order->refresh());
     }
 
     /**
      * POST /seller/orders/{order}/refund — resolve a dispute by refunding
-     * the buyer. The held payment is returned, the order closes as
-     * refunded, and car stock is restored.
+     * the buyer. The payment (held escrow for cars, captured payment for
+     * parts) is returned, the order closes as refunded, and car stock is
+     * restored.
      */
     public function refund(Request $request, Order $order): OrderResource
     {
@@ -193,7 +210,7 @@ class SellerOrderController extends Controller
 
         if (in_array($order->payment_status, ['refunded', 'released'], true)) {
             throw ValidationException::withMessages([
-                'payment_status' => ['Funds are no longer held for this order.'],
+                'payment_status' => ['Funds are no longer available for refund on this order.'],
             ]);
         }
 
@@ -204,7 +221,8 @@ class SellerOrderController extends Controller
         $order->forceFill([
             'status' => 'refunded',
             'payment_status' => 'refunded',
-            'verification_note' => $data['verification_note'] ?? 'Refunded after inspection dispute.',
+            'verification_note' => $data['verification_note']
+                ?? ($order->item_type === 'car' ? 'Refunded after inspection dispute.' : 'Refunded after dispute resolution.'),
         ])->save();
 
         $this->restoreStock($order);

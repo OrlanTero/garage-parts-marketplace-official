@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import chatApi from '../api/chat.js'
 import { useAuth } from '../auth/AuthContext.jsx'
-import { getEcho } from '../realtime/echo.js'
+import { getConnectionState, getEcho } from '../realtime/echo.js'
+import { appendRealtimeMessage, sortMessagesByTime } from '../utils/chatUtils.js'
 
 const ChatContext = createContext(null)
 
@@ -335,7 +336,9 @@ export function ChatProvider({ children }) {
         }
 
         setMessages((prev) =>
-          prev.map((m) => (m.id === tempId || m.temp_id === tempId ? confirmedMsg : m)),
+          sortMessagesByTime(
+            prev.map((m) => (m.id === tempId || m.temp_id === tempId ? confirmedMsg : m)),
+          ),
         )
 
         setConversations((prev) =>
@@ -387,8 +390,10 @@ export function ChatProvider({ children }) {
       }
 
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === targetId || m.temp_id === targetId ? confirmedMsg : m,
+        sortMessagesByTime(
+          prev.map((m) =>
+            m.id === targetId || m.temp_id === targetId ? confirmedMsg : m,
+          ),
         ),
       )
 
@@ -407,6 +412,30 @@ export function ChatProvider({ children }) {
       )
     }
   }, [])
+
+  // Silent refresh of the open listing thread (no loading spinners).
+  // Used by the polling fallback and window-focus refresh so the open
+  // chat updates even when the WebSocket is disconnected.
+  const silentRefreshOpenThread = useCallback(async () => {
+    const key = activeListingKeyRef.current
+    if (!key) return false
+    const sep = key.lastIndexOf(':')
+    const lt = sep > -1 ? key.slice(0, sep) : null
+    const lid = sep > -1 ? key.slice(sep + 1) : null
+    if (!lt || !lid) return false
+    try {
+      const thread = await chatApi.getListingThread(lt, lid)
+      applyListingThread(thread, activeConvIdRef.current)
+      try {
+        await chatApi.markListingRead(lt, lid)
+      } catch {
+        // ignore
+      }
+      return true
+    } catch {
+      return false
+    }
+  }, [applyListingThread])
 
   // Realtime Echo listener: listing-key aware so the open listing thread
   // updates live while other listings only bump the unread badge.
@@ -437,20 +466,16 @@ export function ChatProvider({ children }) {
             listingKey && activeListingKeyRef.current && listingKey === activeListingKeyRef.current
 
           if (isOpenListing) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === incomingMsg.id)) return prev
-              return [...prev, incomingMsg]
-            })
+            // Sorted + deduped insert so bubble grouping/border-radius
+            // auto-fixes when a live message arrives.
+            setMessages((prev) => appendRealtimeMessage(prev, incomingMsg))
             if (event.listing_type && event.listing_id) {
               chatApi.markListingRead(event.listing_type, event.listing_id).catch(() => {})
             } else if (convId) {
               chatApi.markAsRead(convId).catch(() => {})
             }
           } else if (activeConvIdRef.current === convId) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === incomingMsg.id)) return prev
-              return [...prev, incomingMsg]
-            })
+            setMessages((prev) => appendRealtimeMessage(prev, incomingMsg))
             chatApi.markAsRead(convId).catch(() => {})
           } else {
             setUnreadCount((prev) => prev + 1)
@@ -489,6 +514,8 @@ export function ChatProvider({ children }) {
 
     const onFocus = () => {
       refreshUnreadCount()
+      fetchConversations()
+      silentRefreshOpenThread()
     }
     window.addEventListener('focus', onFocus)
 
@@ -500,12 +527,34 @@ export function ChatProvider({ children }) {
           userChannel.stopListening('.message.read')
         }
         const echo = getEcho()
-        echo?.leave(`private-user.${user.id}`)
+        echo?.leave(`user.${user.id}`)
       } catch {
         // ignore
       }
     }
-  }, [isAuthenticated, user?.id, refreshUnreadCount, fetchConversations])
+  }, [isAuthenticated, user?.id, refreshUnreadCount, fetchConversations, silentRefreshOpenThread])
+
+  // Polling fallback: when the WebSocket isn't connected (Reverb down,
+  // auth failed, realtime disabled), refresh via the API so messages still
+  // arrive within seconds instead of never. Skipped while the socket is
+  // live so realtime stays the single update path.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined
+    const id = setInterval(() => {
+      try {
+        if (getConnectionState() === 'connected') return
+      } catch {
+        // fall through to API refresh
+      }
+      refreshUnreadCount()
+      if (activeListingKeyRef.current) {
+        silentRefreshOpenThread()
+      } else {
+        fetchConversations()
+      }
+    }, 7000)
+    return () => clearInterval(id)
+  }, [isAuthenticated, refreshUnreadCount, fetchConversations, silentRefreshOpenThread])
 
   const value = useMemo(
     () => ({

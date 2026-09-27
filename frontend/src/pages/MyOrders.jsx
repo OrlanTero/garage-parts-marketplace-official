@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { ordersApi } from '../api/orders.js'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { useOrderStatusListener } from '../realtime/useOrderStatus.js'
 
 const peso = (val) =>
   '₱ ' + Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -26,8 +27,13 @@ const stageOf = (o) => {
   if (pay === 'pending') return { key: 'topay', group: 'topay', label: 'To Pay', color: '#fb923c', bg: 'rgba(216, 98, 44, 0.15)' }
   if (st === 'negotiating') return { key: 'negotiating', group: 'transit', label: 'Negotiating with Seller', color: '#a78bfa', bg: 'rgba(139, 92, 246, 0.12)' }
   if (st === 'sold') return { key: 'sold', group: 'transit', label: 'Sold — Awaiting Delivery', color: '#fb923c', bg: 'rgba(216, 98, 44, 0.15)' }
-  if (pay === 'paid') return { key: 'funds', group: 'transit', label: 'Payment Held in Escrow', color: '#eab308', bg: 'rgba(234, 179, 8, 0.12)' }
-  if (st === 'delivered') return { key: 'delivered', group: 'transit', label: 'Delivered — Inspect Now', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' }
+  const isCar = (o.item?.type || o.item_type || 'part') === 'car'
+  if (pay === 'paid') return isCar
+    ? { key: 'funds', group: 'transit', label: 'Payment Held in Escrow', color: '#eab308', bg: 'rgba(234, 179, 8, 0.12)' }
+    : { key: 'funds', group: 'transit', label: 'Payment Received', color: '#eab308', bg: 'rgba(234, 179, 8, 0.12)' }
+  if (st === 'delivered') return isCar
+    ? { key: 'delivered', group: 'transit', label: 'Delivered — Inspect Now', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' }
+    : { key: 'delivered', group: 'transit', label: 'Delivered', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' }
   if (st === 'shipped') return { key: 'shipped', group: 'transit', label: 'In Transit', color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.12)' }
   return { key: 'preparing', group: 'transit', label: 'Preparing Dispatch', color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.12)' }
 }
@@ -48,6 +54,12 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('all')
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  // Live: seller moves (negotiating → sold → delivered…) refresh the list.
+  useOrderStatusListener(() => {
+    setRefreshTick((t) => t + 1)
+  })
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -71,7 +83,7 @@ export default function MyOrders() {
       })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [isAuthenticated, user?.id])
+  }, [isAuthenticated, user?.id, refreshTick])
 
   const filtered = tab === 'all' ? orders : orders.filter((o) => stageOf(o).group === tab)
 

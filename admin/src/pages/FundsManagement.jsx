@@ -25,6 +25,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { adminFundsApi } from '../api/funds.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 function formatPeso(num) {
   if (num === null || num === undefined) return '₱ 0'
@@ -637,7 +638,7 @@ export default function FundsManagement() {
                         {txn.transaction_number}
                       </div>
                       <div style={{ fontSize: 11.5, color: 'var(--admin-text-muted)' }}>
-                        {txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        {txn.created_at ? <TimeAgo value={txn.created_at} /> : '—'}
                       </div>
                     </td>
 

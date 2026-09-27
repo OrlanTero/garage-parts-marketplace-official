@@ -193,6 +193,172 @@ input, select, textarea {
 }
 
 /* ==========================================================================
+   Admin Buttons (`.admin-btn`) — primary action system used across
+   management pages. Pairs with `.btn` but tuned for the admin theme:
+   gradient rust primary, bordered secondary, danger/success/ghost variants.
+   ========================================================================== */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease,
+    box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.admin-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(146, 68, 36, 0.25);
+}
+
+.admin-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+.admin-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.admin-btn svg {
+  flex-shrink: 0;
+}
+
+.admin-btn-primary {
+  background: linear-gradient(135deg, var(--color-rust) 0%, #6d3018 100%);
+  border-color: rgba(109, 48, 24, 0.6);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(146, 68, 36, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a64f2b 0%, var(--color-rust) 100%);
+  box-shadow: 0 5px 14px rgba(146, 68, 36, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.admin-btn-secondary {
+  background: #ffffff;
+  border-color: var(--admin-border);
+  color: var(--admin-text-secondary);
+  box-shadow: var(--shadow-card);
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  background: var(--admin-bg-subtle);
+  border-color: #cbd5e1;
+  color: var(--admin-text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-hover);
+}
+
+.admin-btn-danger {
+  background: var(--admin-danger-bg);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}
+
+.admin-btn-danger:hover:not(:disabled) {
+  background: var(--admin-danger);
+  border-color: var(--admin-danger);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.admin-btn-success {
+  background: var(--admin-success-bg);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+
+.admin-btn-success:hover:not(:disabled) {
+  background: var(--admin-success);
+  border-color: var(--admin-success);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+.admin-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--admin-text-secondary);
+  box-shadow: none;
+}
+
+.admin-btn-ghost:hover:not(:disabled) {
+  background: var(--admin-bg-subtle);
+  color: var(--admin-text-primary);
+}
+
+.admin-btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.admin-btn-lg {
+  padding: 12px 22px;
+  font-size: 14px;
+  border-radius: var(--radius-md);
+}
+
+.admin-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--admin-border);
+  background: #ffffff;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-btn-icon:hover:not(:disabled) {
+  background: var(--admin-bg-subtle);
+  border-color: #cbd5e1;
+  color: var(--admin-text-primary);
+}
+
+.admin-btn-icon:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Form labels used across admin pages */
+.admin-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+/* Loading spinner helper (used as className="spin") */
+.spin {
+  animation: gpmSpin 0.9s linear infinite;
+}
+
+/* ==========================================================================
    Badges & Pills
    ========================================================================== */
 .badge {

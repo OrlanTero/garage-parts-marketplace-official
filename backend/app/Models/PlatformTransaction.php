@@ -236,13 +236,31 @@ class PlatformTransaction extends Model
         ]);
     }
     /**
+     * Record the seller payout for an order exactly once.
+     * Returns the existing payout when one is already recorded.
+     */
+    public static function recordPayoutOnce(Order $order): self
+    {
+        $existing = self::where('order_id', $order->id)
+            ->where('stream_type', 'seller_payout')
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        return self::recordSellerPayout($order);
+    }
+
+    /**
      * Release the held buyer payment to the seller after inspection
-     * acceptance. Net of the platform commission already recorded at
-     * checkout — this is the seller's payout leg of the escrow.
+     * acceptance (cars), or settle the captured payment on completion
+     * (parts direct capture). Net of the platform commission already
+     * recorded at checkout.
      */
     public static function recordSellerPayout(Order $order): self
     {
         $payout = round((float) $order->total_amount - (float) ($order->commission_amount ?? 0), 2);
+        $isCar = ($order->item_type ?? 'part') === 'car';
 
         return self::create([
             'stream_type' => 'seller_payout',
@@ -260,9 +278,13 @@ class PlatformTransaction extends Model
             'car_id' => $order->car_id,
             'order_id' => $order->id,
             'title' => "Seller Payout — {$order->item_name}",
-            'description' => 'Escrow released to seller after buyer inspection acceptance of ₱' . number_format((float) $order->total_amount, 2),
+            'description' => $isCar
+                ? 'Escrow released to seller after buyer inspection acceptance of ₱' . number_format((float) $order->total_amount, 2)
+                : 'Captured payment settled to seller on order completion of ₱' . number_format((float) $order->total_amount, 2),
             'metadata' => [
                 'order_number' => $order->order_number,
+                'item_type' => $order->item_type,
+                'part_id' => $order->part_id,
                 'commission_amount' => (float) ($order->commission_amount ?? 0),
             ],
             'settled_at' => now(),
@@ -270,7 +292,8 @@ class PlatformTransaction extends Model
     }
 
     /**
-     * Return the held buyer payment after a dispute resolves to refund.
+     * Return the buyer payment after a dispute resolves to refund —
+     * the held escrow leg (cars) or the captured payment (parts).
      */
     public static function recordOrderRefund(Order $order): self
     {
@@ -290,7 +313,8 @@ class PlatformTransaction extends Model
             'car_id' => $order->car_id,
             'order_id' => $order->id,
             'title' => "Order Refund — {$order->item_name}",
-            'description' => 'Held payment refunded to buyer after inspection dispute of ₱' . number_format((float) $order->total_amount, 2),
+            'description' => (($order->item_type ?? 'part') === 'car' ? 'Held payment' : 'Captured payment')
+                . ' refunded to buyer after dispute of ₱' . number_format((float) $order->total_amount, 2),
             'metadata' => [
                 'order_number' => $order->order_number,
             ],

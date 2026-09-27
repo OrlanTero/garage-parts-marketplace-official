@@ -14,7 +14,10 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import { useChat } from '../../context/ChatContext.jsx'
-import { getMessagePositionInfo } from '../../utils/chatUtils.js'
+import {
+  getMessagePositionInfo,
+  isOwnMessage as isOwnMessageOf,
+} from '../../utils/chatUtils.js'
 import chatApi from '../../api/chat.js'
 import SaleOrderStatusControl from '../SaleOrderStatusControl.jsx'
 import ChatMessageItem from './ChatMessageItem.jsx'
@@ -310,7 +313,7 @@ export default function FloatingChatDrawer() {
                   <ChatMessageItem
                     key={msg.id || msg.temp_id || idx}
                     message={msg}
-                    isOwnMessage={msg.sender_id === user?.id}
+                    isOwnMessage={isOwnMessageOf(msg, user?.id)}
                     position={position}
                     showSenderHeader={showSenderHeader}
                     hideListingCard

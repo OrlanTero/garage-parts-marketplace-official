@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../components/Accordion.jsx'
 import { adminApi } from '../api/admin.js'
+import { TimeAgo, formatDateTime } from '../utils/timeAgo.jsx'
 
 export default function OrdersManagement() {
   const [orders, setOrders] = useState([])
@@ -298,7 +299,8 @@ export default function OrdersManagement() {
             const buyerEmail = ord.buyer?.email || ord.buyer_email || ''
             const sellerTitle = ord.item?.seller_name || ord.seller_name || ord.seller?.name || 'Verified Merchant'
             const totalDisplay = ord.financials?.formatted_total || `₱ ${Number(ord.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-            const formattedDate = ord.placed_at || (ord.created_at ? new Date(ord.created_at).toLocaleString() : 'Recent')
+            const placedRaw = ord.placed_at || ord.created_at || null
+            const placedTitle = placedRaw ? formatDateTime(placedRaw) : 'Recent'
             const statusLabel = ord.status_label || (ord.status ? ord.status.toUpperCase() : 'PROCESSING')
             const statusVariant = ord.status_variant || (ord.status === 'delivered' ? 'success' : ord.status === 'shipped' ? 'info' : 'rust')
             const lineItems = ord.items && ord.items.length > 0 ? ord.items : [
@@ -317,7 +319,12 @@ export default function OrdersManagement() {
                 <AccordionHeader
                   id={orderKey}
                   title={`${orderKey} · ${buyerName}`}
-                  subtitle={`Placed on ${formattedDate} · Seller: ${sellerTitle}`}
+                  subtitle={
+                    <span>
+                      Placed <TimeAgo value={placedRaw} /> · Seller: {sellerTitle}
+                      <span style={{ color: 'var(--admin-text-muted)', fontSize: 11 }}> ({placedTitle})</span>
+                    </span>
+                  }
                   badge={{ label: statusLabel, variant: statusVariant }}
                   icon={ShoppingBag}
                   actions={
@@ -492,7 +499,7 @@ export default function OrdersManagement() {
                     {/* Administrative Order Actions */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-border)', paddingTop: 14 }}>
                       <div style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
-                        Order Number: <strong>{orderKey}</strong> · Verified Marketplace Order
+                        Order Number: <strong>{orderKey}</strong> · Placed <TimeAgo value={placedRaw} /> · Verified Marketplace Order
                       </div>
 
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

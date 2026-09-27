@@ -27,6 +27,7 @@ import { sellerCars } from '../api/cars.js'
 import { sellerParts } from '../api/parts.js'
 import { sellerApi, sellerOrdersApi, SELLER_ORDER_STATUSES, CAR_STATUSES, PART_STATUSES, STATUS_LABELS } from '../api/seller.js'
 import ListingStatusPicker, { normalizeListingStatus } from '../components/ListingStatusPicker.jsx'
+import { useOrderStatusListener } from '../realtime/useOrderStatus.js'
 import { showroomApi } from '../api/showroom.js'
 import './MyListings.css'
 
@@ -143,6 +144,12 @@ export default function MyListings() {
     load()
   }, [load])
 
+  // Live: buyer payments, inspections, and disputes refresh incoming
+  // requests and inventory without a manual reload.
+  useOrderStatusListener(() => {
+    load()
+  })
+
   const stats = useMemo(() => {
     if (!summary) return []
     const live = (summary.cars?.active || 0) + (summary.parts?.active || 0)
@@ -218,15 +225,16 @@ export default function MyListings() {
   }
 
   const runRefund = async (order) => {
-    const note = window.prompt('Refund note for the buyer (optional):', 'Refunded after inspection dispute.')
+    const isCar = (order.item?.type || order.item_type || tab) === 'car'
+    const note = window.prompt('Refund note for the buyer (optional):', isCar ? 'Refunded after inspection dispute.' : 'Refunded after dispute resolution.')
     if (note === null) return
-    if (!window.confirm(`Refund the held payment for order ${order.order_number || `#${order.id}`} back to the buyer?`)) return
+    if (!window.confirm(`Refund the payment for order ${order.order_number || `#${order.id}`} back to the buyer?`)) return
     setActingId(`refund-${order.id}`)
     setError(null)
     setNotice(null)
     try {
       await sellerOrdersApi.refund(order.id, note || undefined)
-      setNotice('Held payment refunded to the buyer. Order closed as refunded.')
+      setNotice('Payment refunded to the buyer. Order closed as refunded.')
       await load()
     } catch (err) {
       setError(extractError(err, 'Failed to refund order.'))
@@ -588,7 +596,7 @@ export default function MyListings() {
                             className="btn btn-secondary btn-sm"
                             disabled={actingId === `refund-${order.id}`}
                             onClick={() => runRefund(order)}
-                            title="Resolve the dispute by refunding the held payment to the buyer"
+                            title="Resolve the dispute by refunding the payment to the buyer"
                           >
                             Refund Buyer
                           </button>
@@ -644,11 +652,6 @@ export default function MyListings() {
                     <div className="my-listings-meta">
                       <span className="my-listings-price">{formatPrice(item.price)}</span>
                       <span className={`listing-badge ${STATUS_CLASS[status] || ''}`}>{STATUS_LABELS[status] || status}</span>
-                      {item.payment_secured && status !== 'sold' && (
-                        <span className="listing-badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }} title="A buyer already secured this listing with payment held in escrow">
-                          Paid · Secured
-                        </span>
-                      )}
                       {item.city && <span className="muted">{item.city}</span>}
                     </div>
                   </div>

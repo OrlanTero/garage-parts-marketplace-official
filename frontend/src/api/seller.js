@@ -24,8 +24,10 @@ export const sellerOrdersApi = {
     client.post(`/seller/orders/${id}/refund`, verification_note ? { verification_note } : {}).then((r) => r.data?.data ?? r.data),
 }
 
-// Escrow lifecycle: processing → negotiating → sold → shipped →
-// delivered → completed (payout) or disputed → refunded.
+// Order lifecycle — cars via escrow (processing → negotiating → sold →
+// shipped → delivered → completed on inspection payout, or disputed →
+// refunded); parts via direct capture (processing → preparing → shipped
+// → delivered → completed, payout on completion).
 export const SELLER_ORDER_STATUSES = ['processing', 'negotiating', 'reserved', 'preparing', 'sold', 'shipped', 'delivered', 'completed', 'disputed']
 
 export const CAR_STATUSES = [

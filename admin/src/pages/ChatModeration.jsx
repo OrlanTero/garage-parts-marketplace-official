@@ -14,6 +14,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 export default function ChatModeration() {
   const [conversations, setConversations] = useState([])
@@ -152,7 +153,7 @@ export default function ChatModeration() {
                         {conv.user_one?.name || 'User 1'} &amp; {conv.user_two?.name || 'User 2'}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>
-                        {conv.last_message_at ? new Date(conv.last_message_at).toLocaleDateString() : ''}
+                        {conv.last_message_at ? <TimeAgo value={conv.last_message_at} /> : ''}
                       </div>
                     </div>
 
@@ -230,7 +231,7 @@ export default function ChatModeration() {
                           {msg.sender?.name || 'Participant'} <span style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>({msg.sender?.role || 'user'})</span>
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--admin-text-muted)' }}>
-                          {new Date(msg.created_at).toLocaleString()}
+                          <TimeAgo value={msg.created_at} />
                         </div>
                       </div>
 

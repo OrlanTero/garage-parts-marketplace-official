@@ -287,6 +287,26 @@ class SellerOrderVerificationTest extends TestCase
         $this->assertEquals($orderNumber, $msg->metadata['sales_order_number'] ?? null);
     }
 
+    public function test_order_lifecycle_moves_broadcast_to_buyer_and_seller(): void
+    {
+        \Illuminate\Support\Facades\Event::fake([\App\Events\OrderStatusChanged::class]);
+
+        $seller = User::factory()->create(['role' => 'seller']);
+        $buyer = User::factory()->create(['role' => 'buyer']);
+        $car = $this->makeCar($seller);
+        $order = $this->makeRequest($car, $buyer, 'live@garage.test');
+        $order->forceFill(['user_id' => $buyer->id])->save();
+
+        $this->postJson("/api/v1/seller/orders/{$order->id}/accept", [], $this->sellerToken($seller))->assertOk();
+        $this->patchJson("/api/v1/seller/orders/{$order->id}/status", ['status' => 'negotiating'], $this->sellerToken($seller))->assertOk();
+
+        \Illuminate\Support\Facades\Event::assertDispatched(
+            \App\Events\OrderStatusChanged::class,
+            fn (\App\Events\OrderStatusChanged $event) =>
+                (int) $event->order->id === (int) $order->id && $event->order->status === 'negotiating'
+        );
+    }
+
     public function test_seller_can_filter_incoming_orders_by_listing(): void
     {
         $seller = User::factory()->create(['role' => 'seller']);

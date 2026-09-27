@@ -62,8 +62,10 @@ export function getEcho() {
   const wsHost = import.meta.env.VITE_REVERB_HOST || (pusherKey ? undefined : '127.0.0.1')
   const scheme = (import.meta.env.VITE_REVERB_SCHEME || (pusherKey ? 'https' : 'http')).toLowerCase()
   const isHttps = scheme === 'https' || scheme === 'wss'
-  const defaultPort = isHttps ? 443 : 8080
-  const wsPort = Number(import.meta.env.VITE_REVERB_PORT || defaultPort)
+  // Laravel docs standard: same env port for ws/wss, scheme-appropriate
+  // default when unset (80 ws / 443 wss).
+  const wsPort = Number(import.meta.env.VITE_REVERB_PORT || 80)
+  const wssPort = Number(import.meta.env.VITE_REVERB_PORT || 443)
 
   notifyConnectionState('connecting')
 
@@ -111,8 +113,8 @@ export function getEcho() {
       broadcaster: 'reverb',
       key,
       wsHost,
-      wsPort: isHttps ? 80 : wsPort,
-      wssPort: isHttps ? wsPort : 443,
+      wsPort,
+      wssPort,
       forceTLS: isHttps,
       enabledTransports: isHttps ? ['wss'] : ['ws'],
       disableStats: true,

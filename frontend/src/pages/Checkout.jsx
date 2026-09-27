@@ -462,10 +462,17 @@ export default function Checkout() {
             You negotiated this price in chat{dealSeller ? <> with <strong>@{dealSeller}</strong></> : null}; the seller-issued link applies it automatically and can be used once.
           </div>
         )}
-        <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-          <strong style={{ color: '#60a5fa' }}>Payment is held & secured — order not complete yet.</strong>{' '}
-          Your payment goes into platform escrow when you check out. It is released to the seller only after the car is delivered and you accept it on inspection. Rejected delivery opens a dispute → refund path.
-        </div>
+        {isPartOrder ? (
+          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#10b981' }}>Direct payment — order confirmed on checkout.</strong>{' '}
+            Parts are not held in escrow. Your payment confirms the order immediately and the seller prepares dispatch. Delivery completes the order.
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+            <strong style={{ color: '#60a5fa' }}>Payment is held & secured — order not complete yet.</strong>{' '}
+            Your payment goes into platform escrow when you check out. It is released to the seller only after the car is delivered and you accept it on inspection. Rejected delivery opens a dispute → refund path.
+          </div>
+        )}
         <p style={{ color: '#94a3b8', fontSize: 15, margin: 0 }}>
           {isPartOrder
             ? 'Please enter your delivery destination and mandatory vehicle identification details (Chassis Number and VIN) to verify exact mechanical fitment and serialize your official sales order.'

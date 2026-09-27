@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AdminAppointmentController;
 use App\Http\Controllers\Api\AdminAuctionController;
+use App\Http\Controllers\Api\AdminPayoutController;
 use App\Http\Controllers\Api\AdminCarModerationController;
 use App\Http\Controllers\Api\AdminChatModerationController;
 use App\Http\Controllers\Api\AdminConfigController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\Api\SellerDashboardController;
 use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerPartController;
 use App\Http\Controllers\Api\SellerShowroomController;
+use App\Http\Controllers\Api\SellerWalletController;
 use App\Http\Controllers\Api\AdminShowroomController;
 use App\Http\Controllers\Api\ShowroomController;
 use App\Http\Controllers\Api\SystemMaintenanceController;
@@ -277,6 +279,19 @@ Route::prefix('v1')->group(function () {
             Route::post('/parts/{part}/sold', [SellerPartController::class, 'markSold'])->name('parts.sold');
             Route::post('/parts/{part}/status', [SellerPartController::class, 'setStatus'])->name('parts.setStatus');
 
+            // Seller wallet: balance, billing statements, payout accounts, cash-outs
+            Route::get('/wallet', [SellerWalletController::class, 'wallet'])->name('wallet.show');
+            Route::get('/wallet/statements', [SellerWalletController::class, 'statements'])->name('wallet.statements');
+            Route::get('/payout-accounts', [SellerWalletController::class, 'accounts'])->name('payoutAccounts.index');
+            Route::post('/payout-accounts', [SellerWalletController::class, 'storeAccount'])->name('payoutAccounts.store');
+            Route::match(['put', 'patch'], '/payout-accounts/{account}', [SellerWalletController::class, 'updateAccount'])->name('payoutAccounts.update');
+            Route::delete('/payout-accounts/{account}', [SellerWalletController::class, 'destroyAccount'])->name('payoutAccounts.destroy');
+            Route::get('/withdrawals', [SellerWalletController::class, 'withdrawals'])->name('withdrawals.index');
+            Route::post('/withdrawals', [SellerWalletController::class, 'storeWithdrawal'])->name('withdrawals.store');
+
+            // Seller sales analytics dashboard
+            Route::get('/analytics', [SellerWalletController::class, 'analytics'])->name('analytics.show');
+
             // Incoming sales-order requests (verify one, auto-reject the rest)
             Route::get('/orders', [SellerOrderController::class, 'index'])->name('orders.index');
             Route::post('/orders/{order}/accept', [SellerOrderController::class, 'accept'])->name('orders.accept');
@@ -371,6 +386,12 @@ Route::prefix('v1')->group(function () {
             // Sales Orders Management
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
             Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+
+            // Seller cash-out review queue (approve → pay, or reject)
+            Route::get('/payout-withdrawals', [AdminPayoutController::class, 'index'])->name('payouts.index');
+            Route::post('/payout-withdrawals/{withdrawal}/approve', [AdminPayoutController::class, 'approve'])->name('payouts.approve');
+            Route::post('/payout-withdrawals/{withdrawal}/reject', [AdminPayoutController::class, 'reject'])->name('payouts.reject');
+            Route::post('/payout-withdrawals/{withdrawal}/mark-paid', [AdminPayoutController::class, 'markPaid'])->name('payouts.markPaid');
 
             // Configurations → Variables (delivery services, freight rules)
             Route::get('/config', [AdminConfigController::class, 'index'])->name('config.index');

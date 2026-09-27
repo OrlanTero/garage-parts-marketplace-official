@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { inventoryApi, MOVEMENT_TYPES, MOVEMENT_LABELS } from '../api/inventory.js'
 import LocationPicker from '../components/LocationPicker.jsx'
+import { TimeAgo } from '../utils/timeAgo.jsx'
 
 const money = (v) => `₱${Number(v || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
 
@@ -456,7 +457,7 @@ export default function InventoryManagement() {
                 <tbody>
                   {movements.map((m) => (
                     <tr key={m.id}>
-                      <td style={{ fontSize: 12 }}>{m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>
+                      <td style={{ fontSize: 12 }}>{m.created_at ? <TimeAgo value={m.created_at} /> : '—'}</td>
                       <td style={{ fontWeight: 600, fontSize: 13 }}>{m.part?.title || `#${m.part_id}`}</td>
                       <td><span className="badge badge-neutral" style={{ fontSize: 11 }}>{m.type}</span></td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: Number(m.quantity_change) < 0 ? '#b91c1c' : '#047857', fontFamily: 'monospace' }}>
