@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -22,6 +22,7 @@ import { getEcho } from '../realtime/echo.js'
 import {
   appendRealtimeMessage,
   getMessagePositionInfo,
+  isListingClosed,
   isOwnMessage as isOwnMessageOf,
   sortMessagesByTime,
 } from '../utils/chatUtils.js'
@@ -32,6 +33,9 @@ import {
   setCachedListingMessages,
 } from '../utils/chatCache.js'
 import ChatMessageItem from '../components/chat/ChatMessageItem.jsx'
+import ThreadQuickBar from '../components/chat/ThreadQuickBar.jsx'
+import { useListingOrders } from '../hooks/useListingOrders.js'
+import { sellerOrdersApi } from '../api/seller.js'
 import { timeAgo } from '../utils/timeAgo.jsx'
 import './Messages.css'
 
@@ -107,6 +111,9 @@ export default function Messages() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [inputVal, setInputVal] = useState('')
   const [mobileView, setMobileView] = useState('list')
+  // Conversation scope: 'all' shows the merged listing thread; otherwise
+  // the stream filters to one buyer inquiry so each convo reads normally.
+  const [convScope, setConvScope] = useState('all')
 
   const [dealActing, setDealActing] = useState(false)
   const [dealError, setDealError] = useState('')
@@ -122,8 +129,10 @@ export default function Messages() {
   const messagesEndRef = useRef(null)
   const selectedListingKeyRef = useRef(null)
   const selectedConvIdRef = useRef(null)
+  const convScopeRef = useRef('all')
   selectedListingKeyRef.current = selectedListing?.key || null
   selectedConvIdRef.current = selectedConv?.id ?? null
+  convScopeRef.current = convScope
   const targetListingKeyRef = useRef(targetListingKey)
   targetListingKeyRef.current = targetListingKey
   const targetConvIdRef = useRef(targetConvId)
@@ -219,6 +228,9 @@ export default function Messages() {
       setCachedListingMessages(uid, item.key, list)
       const conv = pickConversation(convs, targetConvIdRef.current)
       setSelectedConv(conv)
+      // Multi-inquiry listings open on one conversation; single threads
+      // stay on the merged (identical) view.
+      setConvScope(convs.length > 1 && conv ? String(conv.id) : 'all')
 
       chatApi.markListingRead(item.listing_type, item.listing_id)
         .then(() => refreshUnreadCount())
@@ -260,7 +272,9 @@ export default function Messages() {
     if (cached !== null) {
       setMessages(cached)
       setConversations(item.conversations || [])
-      setSelectedConv(pickConversation(item.conversations || [], targetConvIdRef.current))
+      const cachedPick = pickConversation(item.conversations || [], targetConvIdRef.current)
+      setSelectedConv(cachedPick)
+      setConvScope((item.conversations || []).length > 1 && cachedPick ? String(cachedPick.id) : 'all')
       setIsLoadingMessages(false)
       requestAnimationFrame(() => scrollToBottom(false))
       fetchListingThread(item, myReq, uid)
@@ -269,22 +283,47 @@ export default function Messages() {
 
     setMessages([])
     setConversations(item.conversations || [])
-    setSelectedConv(pickConversation(item.conversations || [], targetConvIdRef.current))
+    const freshPick = pickConversation(item.conversations || [], targetConvIdRef.current)
+    setSelectedConv(freshPick)
+    setConvScope((item.conversations || []).length > 1 && freshPick ? String(freshPick.id) : 'all')
     setIsLoadingMessages(true)
     await fetchListingThread(item, myReq, uid)
+  }
+
+  const applyScope = (scope, convs = conversations) => {
+    setConvScope(scope)
+    if (scope !== 'all') {
+      // Entering a single inquiry clears its local unread badge.
+      setConversations((prev) =>
+        prev.map((c) => (String(c.id) === String(scope) ? { ...c, unread_count: 0 } : c)),
+      )
+    }
+    requestAnimationFrame(() => scrollToBottom(false))
   }
 
   const selectCounterparty = (conv) => {
     if (!conv || !selectedListing) return
     setSelectedConv(conv)
+    applyScope(String(conv.id))
     setSearchParams({ listing: selectedListing.key, conversation: String(conv.id) })
   }
+
+  const selectAllScope = () => {
+    applyScope('all')
+  }
+
+  // Visible stream for the active scope — grouping positions derive from
+  // this filtered list so bubbles cluster correctly per conversation.
+  const visibleMessages = useMemo(() => {
+    if (convScope === 'all') return messages
+    return messages.filter((m) => String(m.conversation_id) === String(convScope))
+  }, [messages, convScope])
 
   useLayoutEffect(() => {
     if (messages.length > 0) {
       scrollToBottom(true)
     }
-  }, [messages])
+  }, [messages, convScope])
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return
@@ -303,6 +342,17 @@ export default function Messages() {
           // Sorted + deduped insert so grouping/positions (and therefore
           // bubble border-radius) recompute correctly on live arrivals.
           setMessages((prev) => appendRealtimeMessage(prev, incomingMsg))
+          // A live message for a hidden inquiry bumps its toggle badge.
+          const scopeRef = convScopeRef.current
+          if (scopeRef !== 'all' && String(incomingMsg?.conversation_id) !== String(scopeRef)) {
+            setConversations((prev) =>
+              prev.map((c) =>
+                String(c.id) === String(incomingMsg?.conversation_id)
+                  ? { ...c, unread_count: (c.unread_count || 0) + 1 }
+                  : c,
+              ),
+            )
+          }
           if (event.listing_type && event.listing_id) {
             chatApi.markListingRead(event.listing_type, event.listing_id).catch(() => {})
           }
@@ -359,10 +409,36 @@ export default function Messages() {
     }
   }, [isAuthenticated, user?.id])
 
-  const handleSend = (e) => {
+  const listingClosed = isListingClosed(selectedListing?.listing)
+  // Winner-aware server flag (falls back to the legacy thread lock).
+  const threadLocked = selectedConv?.locked_for_viewer ?? Boolean(selectedConv?.is_locked)
+
+  // Orders on this listing — matches the open sale order to the active
+  // conversation so deal buttons swap to quick updates once sold.
+  const { orders: listingOrders, refresh: refreshListingOrders } = useListingOrders(
+    selectedListing?.listing_type,
+    selectedListing?.listing_id,
+    selectedListing?.role,
+  )
+
+  const OPEN_PIPELINE = ['negotiating', 'reserved', 'preparing', 'sold', 'shipped', 'delivered']
+  const activeOrderForConv = useMemo(() => {
+    if (!selectedConv) return null
+    const otherId = selectedConv.other_user?.id
+    const open = (listingOrders || []).filter((o) => OPEN_PIPELINE.includes(o.status))
+    if (otherId != null) {
+      const match = open.find((o) => Number(o.buyer?.user_id) === Number(otherId))
+      if (match) return match
+    }
+    return open[0] || null
+  }, [listingOrders, selectedConv]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const showQuickBar = !threadLocked && Boolean(selectedListing) && (listingClosed || activeOrderForConv)
+
+  const handleSend = (e, presetText) => {
     e?.preventDefault()
-    const text = inputVal.trim()
-    if (!text || !selectedConv?.id || !selectedListing) return
+    const text = (presetText ?? inputVal).trim()
+    if (!text || !selectedConv?.id || !selectedListing || threadLocked) return
 
     setInputVal('')
 
@@ -504,6 +580,27 @@ export default function Messages() {
     }
   }
 
+  const handleQuickAdvance = async (order, status) => {
+    if (!order || !selectedListing) return
+    setDealError('')
+    setDealNotice('')
+    setDealActing(true)
+    try {
+      if (isViewerSeller) {
+        await sellerOrdersApi.updateStatus(order.id, { status })
+      } else {
+        throw new Error('Only the seller can advance the sale order.')
+      }
+      await refreshThreadMessages()
+      await refreshListingOrders()
+      setDealNotice(`Order moved to ${status} — buyer messaged automatically.`)
+    } catch (err) {
+      setDealError(err?.response?.data?.message || err.message || 'Could not advance the order.')
+    } finally {
+      setDealActing(false)
+    }
+  }
+
   const handleDealAction = async (action, payload = {}) => {
     const convId = payload.offer?.conversation_id || selectedConvIdRef.current
     if (!convId) return
@@ -543,6 +640,10 @@ export default function Messages() {
 
   const handleSendOffer = async (e) => {
     e?.preventDefault()
+    if (listingClosed) {
+      setDealError('This listing is sold — offers are closed.')
+      return
+    }
     const amount = Number(offerAmount)
     if (!amount || amount < 1) {
       setDealError('Enter a valid offer amount.')
@@ -574,6 +675,10 @@ export default function Messages() {
 
   const handleSendReservation = async (e) => {
     e?.preventDefault()
+    if (listingClosed) {
+      setDealError('This listing is sold — reservations are closed.')
+      return
+    }
     if (!selectedConv?.id) {
       setDealError('Select a buyer on this listing to send a reservation.')
       return
@@ -797,17 +902,26 @@ export default function Messages() {
 
               {conversations.length > 1 && (
                 <div className="messages-hub-counterparty-strip">
+                  <button
+                    type="button"
+                    className={`messages-hub-counterparty-chip ${convScope === 'all' ? 'is-active' : ''}`}
+                    onClick={selectAllScope}
+                    title="Show every inquiry on this listing merged"
+                  >
+                    <span>All inquiries</span>
+                  </button>
                   {conversations.map((conv) => {
                     const name = conv.other_user?.username
                       ? `@${conv.other_user.username}`
                       : conv.other_user?.role || 'Member'
-                    const active = selectedConv?.id === conv.id
+                    const active = convScope !== 'all' && String(selectedConv?.id) === String(conv.id) && String(convScope) === String(conv.id)
                     return (
                       <button
                         key={conv.id}
                         type="button"
                         className={`messages-hub-counterparty-chip ${active ? 'is-active' : ''}`}
                         onClick={() => selectCounterparty(conv)}
+                        title={`Open conversation with ${name}`}
                       >
                         {conv.other_user?.avatar_url ? (
                           <img src={conv.other_user.avatar_url} alt={name} />
@@ -841,20 +955,24 @@ export default function Messages() {
               <div className="messages-hub-chat-stream" ref={chatStreamRef}>
                 {isLoadingMessages && messages.length === 0 ? (
                   <MessageSkeleton />
-                ) : messages.length === 0 ? (
+                ) : visibleMessages.length === 0 ? (
                   <div className="floating-chat-drawer__empty">
                     <p className="floating-chat-drawer__empty-title">
-                      {isViewerSeller ? 'No inquiries yet' : 'Start the conversation'}
+                      {convScope !== 'all'
+                        ? 'No messages in this conversation yet'
+                        : isViewerSeller ? 'No inquiries yet' : 'Start the conversation'}
                     </p>
                     <p className="floating-chat-drawer__empty-sub">
-                      {isViewerSeller
-                        ? 'When a buyer messages or makes an offer on this listing, the thread will appear here.'
-                        : 'Send a message or make an offer on this listing.'}
+                      {convScope !== 'all'
+                        ? 'Switch inquiries above, or say hello below — it stays in this thread.'
+                        : isViewerSeller
+                          ? 'When a buyer messages or makes an offer on this listing, the thread will appear here.'
+                          : 'Send a message or make an offer on this listing.'}
                     </p>
                   </div>
                 ) : (
-                  messages.map((msg, idx) => {
-                    const { position, showSenderHeader } = getMessagePositionInfo(messages, idx)
+                  visibleMessages.map((msg, idx) => {
+                    const { position, showSenderHeader } = getMessagePositionInfo(visibleMessages, idx)
                     return (
                       <ChatMessageItem
                         key={msg.id || msg.temp_id || idx}
@@ -874,7 +992,15 @@ export default function Messages() {
                 <div ref={messagesEndRef} style={{ height: 1, minHeight: 1 }} />
               </div>
 
-              {threadListing && (
+              {showQuickBar ? (
+                <ThreadQuickBar
+                  isSeller={isViewerSeller}
+                  activeOrder={activeOrderForConv}
+                  sending={dealActing}
+                  onSendText={(text) => handleSend(null, text)}
+                  onAdvanceStatus={handleQuickAdvance}
+                />
+              ) : threadListing && !listingClosed && !threadLocked && (
                 <div className="messages-hub-deal-bar">
                   <button
                     type="button"
@@ -897,7 +1023,14 @@ export default function Messages() {
                 </div>
               )}
 
-              {offerBoxOpen && threadListing && (
+              {(dealError || dealNotice) && (showQuickBar || threadLocked) && (
+                <div className="messages-hub-deal-bar">
+                  {dealError && <span className="messages-hub-deal-error">{dealError}</span>}
+                  {dealNotice && <span className="messages-hub-deal-notice">{dealNotice}</span>}
+                </div>
+              )}
+
+              {offerBoxOpen && threadListing && !listingClosed && (
                 <form onSubmit={handleSendOffer} className="messages-hub-deal-form">
                   <span className="messages-hub-deal-currency">₱</span>
                   <input
@@ -922,7 +1055,7 @@ export default function Messages() {
                 </form>
               )}
 
-              {reserveBoxOpen && threadListing && isViewerSeller && (
+              {reserveBoxOpen && threadListing && isViewerSeller && !listingClosed && (
                 <form onSubmit={handleSendReservation} className="messages-hub-deal-form">
                   <span className="messages-hub-deal-currency messages-hub-deal-currency--reserve">Reserve ₱</span>
                   <input
@@ -946,6 +1079,18 @@ export default function Messages() {
                 </form>
               )}
 
+              {threadLocked ? (
+                <div className="messages-hub-chat-footer" style={{ alignItems: 'center' }}>
+                  <span className="messages-hub-deal-notice" style={{ flex: 1 }}>
+                    This thread is locked — the listing was sold. The seller can still reach you here.
+                  </span>
+                  {threadListing?.url && (
+                    <Link to={threadListing.url} className="messages-hub-deal-btn" style={{ textDecoration: 'none' }}>
+                      View Listing
+                    </Link>
+                  )}
+                </div>
+              ) : (
               <form className="messages-hub-chat-footer" onSubmit={handleSend}>
                 <textarea
                   className="messages-hub-chat-input"
@@ -972,6 +1117,7 @@ export default function Messages() {
                   <Send size={18} />
                 </button>
               </form>
+              )}
             </>
           ) : (
             <div className="messages-hub-no-selection">

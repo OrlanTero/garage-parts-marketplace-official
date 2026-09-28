@@ -14,6 +14,15 @@ class ShowroomSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->seedSettings();
+        $this->seedDemoSlots();
+    }
+
+    /**
+     * Core-safe settings seeding for fresh installs (no cars needed).
+     */
+    public function seedSettings(): void
+    {
         // 1. Ensure Showroom Settings are properly seeded
         ShowroomSetting::updateOrCreate(
             ['key' => 'parking_fee_percentage'],
@@ -39,6 +48,11 @@ class ShowroomSeeder extends Seeder
             ]
         );
 
+        // 2. Approved Showroom Slots live in seedDemoSlots() below.
+    }
+
+    private function seedDemoSlots(): void
+    {
         $admin = User::where('email', 'admin@garagemarket.ph')->first() ?? User::where('role', 'admin')->first();
         $makatiSeller = User::where('email', 'seller@garagemarket.ph')->first();
         $cebuSeller = User::where('email', 'cebu.performance@garagemarket.ph')->first();

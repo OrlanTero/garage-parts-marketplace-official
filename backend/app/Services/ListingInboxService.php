@@ -178,6 +178,7 @@ class ListingInboxService
             'price' => (float) $listing->price,
             'primary_image_url' => $listing->primary_image_url ?? ($listing->media?->first()?->url ?? null),
             'status' => $status,
+            'quantity' => $listing->quantity ?? null,
             'seller_id' => $listing->seller_id,
             'condition' => is_object($listing->condition) ? $listing->condition->value : $listing->condition,
             'inspection_score' => $listing->inspection_score ?? null,
@@ -203,7 +204,28 @@ class ListingInboxService
 
     public function serializeConversations(Collection $conversations, Request $request): array
     {
-        return ConversationResource::collection($conversations)->resolve($request);
+        $rows = ConversationResource::collection($conversations)->resolve($request);
+
+        // Per-buyer unread badges for the conversation toggle.
+        $userId = $request->user()?->id;
+        $unreadByConv = collect();
+        if ($userId && $conversations->isNotEmpty()) {
+            $unreadByConv = Message::query()
+                ->selectRaw('conversation_id, COUNT(*) as unread')
+                ->whereIn('conversation_id', $conversations->pluck('id'))
+                ->where('sender_id', '!=', $userId)
+                ->whereNull('read_at')
+                ->groupBy('conversation_id')
+                ->pluck('unread', 'conversation_id');
+        }
+
+        return collect($rows)->map(function ($row) use ($unreadByConv) {
+            $convId = is_array($row) ? ($row['id'] ?? null) : null;
+            if (is_array($row)) {
+                $row['unread_count'] = (int) ($unreadByConv[$convId] ?? 0);
+            }
+            return $row;
+        })->all();
     }
 
     public function serializeMessages(Collection $messages, Request $request): array

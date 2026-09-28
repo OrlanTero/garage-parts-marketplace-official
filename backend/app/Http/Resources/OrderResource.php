@@ -43,6 +43,7 @@ class OrderResource extends JsonResource
 
             // Buyer Information
             'buyer' => [
+                'user_id' => $this->user_id,
                 'name' => $this->buyer_name,
                 'email' => $this->buyer_email,
                 'phone' => $this->buyer_phone,
@@ -166,6 +167,18 @@ class OrderResource extends JsonResource
                     'price' => '₱ ' . number_format((float) $this->unit_price, 2),
                     'total' => '₱ ' . number_format((float) ($this->unit_price * $this->quantity), 2),
                 ]
+            ],
+
+            // Seller handover proof (car builds): submitted on delivery,
+            // approved by admin to release held funds to the seller wallet.
+            'proof' => [
+                'status' => $this->proof_status ?? 'none',
+                'images' => $this->proof_images ?? [],
+                'note' => $this->proof_note,
+                'submitted_at' => $this->proof_submitted_at?->toIso8601String(),
+                'reviewed_by' => $this->proof_reviewed_by,
+                'reviewed_at' => $this->proof_reviewed_at?->toIso8601String(),
+                'rejection_reason' => $this->proof_rejection_reason,
             ],
 
             'shipping_address' => $this->shipping_address,

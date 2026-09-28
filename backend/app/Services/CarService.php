@@ -34,6 +34,11 @@ class CarService
             'is_approved' => $isApproved,
             'status' => $initialStatus,
             'published_at' => ($initialStatus === CarStatus::Active->value && $isApproved) ? now() : null,
+            // Inspection results belong to inspectors, never to the
+            // submit form — a fresh build enters unscored and pending.
+            'inspection_score' => null,
+            'inspection_status' => 'pending',
+            'inspector_id' => null,
         ]);
 
         if (is_array($images)) {
@@ -52,6 +57,8 @@ class CarService
     {
         $images = $data['images'] ?? $data['media'] ?? null;
         unset($data['status'], $data['seller_id'], $data['published_at'], $data['sold_at'], $data['images'], $data['media']);
+        // Inspection results are inspector-only (see recordInspection).
+        unset($data['inspection_score'], $data['inspection_status'], $data['inspector_id']);
 
         $car->fill($data)->save();
 
@@ -94,13 +101,19 @@ class CarService
         }
     }
 
-    /** @throws ValidationException on illegal transition */
+    /**
+     * Seller self-publish: ONLY an inspected (passed) build may go live
+     * by the seller's own hand. Drafts, archived, rejected, and pending
+     * builds must travel the inspection flow first (submitInspection →
+     * schedule → record → approve). This closes the publish bypass.
+     *
+     * @throws ValidationException on illegal transition
+     */
     public function publish(Car $car): Car
     {
-        $allowedStatuses = [CarStatus::Draft, CarStatus::Archived, CarStatus::Rejected, CarStatus::PendingInspection];
-        if (!in_array($car->status, $allowedStatuses)) {
+        if ($car->status !== CarStatus::Inspected || $car->inspection_status === 'failed') {
             throw ValidationException::withMessages([
-                'status' => ['Only draft, archived, rejected, or pending cars can be published/submitted.'],
+                'status' => ['Only an inspected (passed) build can be published. Submit it for inspection first.'],
             ]);
         }
 
@@ -120,8 +133,43 @@ class CarService
         return $car;
     }
 
+    /**
+     * Seller submits a build for inspection (garage drop-off or on-site
+     * visit). The car leaves the marketplace queue into pending_inspection
+     * and waits for admin assignment + inspector verdict.
+     *
+     * @throws ValidationException on illegal transition
+     */
+    public function submitInspection(Car $car, string $inspectionType = 'garage_dropoff'): Car
+    {
+        $allowedFrom = [CarStatus::Draft, CarStatus::Archived, CarStatus::Rejected, CarStatus::PendingInspection];
+        if (!in_array($car->status, $allowedFrom, true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Only draft, archived, rejected, or pending builds can be submitted for inspection.'],
+            ]);
+        }
+
+        $car->forceFill([
+            'inspection_type' => in_array($inspectionType, ['garage_dropoff', 'onsite_visit'], true)
+                ? $inspectionType
+                : 'garage_dropoff',
+            'inspection_status' => 'requested',
+            'rejection_reason' => null,
+            'status' => CarStatus::PendingInspection->value,
+        ])->save();
+
+        return $car->loadMissing(['seller:id,name', 'media'])->refresh();
+    }
+
     public function scheduleInspection(Car $car, array $data, ?User $admin = null): Car
     {
+        $allowedFrom = [CarStatus::Draft, CarStatus::Archived, CarStatus::Rejected, CarStatus::PendingInspection];
+        if (!in_array($car->status, $allowedFrom, true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Only draft, archived, rejected, or pending builds can be scheduled for inspection.'],
+            ]);
+        }
+
         $car->forceFill([
             'inspection_type' => $data['inspection_type'] ?? 'garage_dropoff',
             'inspection_status' => 'scheduled',
@@ -137,6 +185,12 @@ class CarService
 
     public function recordInspection(Car $car, array $data, ?User $inspector = null): Car
     {
+        if (!in_array($car->status, [CarStatus::PendingInspection, CarStatus::Inspected], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Results can only be recorded on a pending (or already inspected) build.'],
+            ]);
+        }
+
         $passed = filter_var($data['passed'] ?? true, FILTER_VALIDATE_BOOLEAN);
 
         $car->forceFill([
@@ -153,6 +207,14 @@ class CarService
 
     public function approveListing(Car $car, User $admin): Car
     {
+        // Approval publishes WITH the inspector's result: only a passed
+        // inspection may go live through this gate.
+        if ($car->status !== CarStatus::Inspected || $car->inspection_status === 'failed') {
+            throw ValidationException::withMessages([
+                'status' => ['Only a build that passed inspection can be approved for the marketplace.'],
+            ]);
+        }
+
         $prev = $car->status->value ?? (string) $car->status;
 
         $car->forceFill([

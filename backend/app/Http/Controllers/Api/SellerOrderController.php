@@ -66,6 +66,12 @@ class SellerOrderController extends Controller
             'verification_note' => $data['verification_note'] ?? null,
         ])->save();
 
+        try {
+            app(\App\Services\OrderStatusMessenger::class)->announceVerification($order->refresh());
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         $this->rejectCompetingRequests($order, $data['verification_note'] ?? null);
         // Parts reserve units on acceptance. Cars do NOT consume here —
         // acceptance only unlocks payment; the unit is consumed when the
@@ -119,6 +125,12 @@ class SellerOrderController extends Controller
 
         $order->forceFill(['payment_status' => 'confirmed'])->save();
 
+        try {
+            app(\App\Services\OrderStatusMessenger::class)->announceFundsConfirmed($order->refresh());
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return new OrderResource($order->refresh());
     }
 
@@ -165,6 +177,8 @@ class SellerOrderController extends Controller
             ]);
         }
 
+        $this->ensureForwardTransition($order, $validated['status']);
+
         // Marking sold is the seller committing the unit: flip the
         // listing so no new buyer can start checkout on it. Stock was
         // already reserved when payment was secured, so this flips
@@ -174,22 +188,61 @@ class SellerOrderController extends Controller
             $this->markListingSold($order);
         }
 
+        $fromStatus = $order->status;
         $order->update($validated);
 
-        // Parts use direct capture (no escrow release step): settle the
-        // seller payout when a captured order completes.
-        if (($validated['status'] ?? null) === 'completed' && $order->item_type !== 'car') {
+        // Every seller move messages the buyer in-thread.
+        try {
+            app(\App\Services\OrderStatusMessenger::class)->announce($order->refresh(), $fromStatus);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        // Completion releases money exactly once, both flows (see admin
+        // path): held escrow or captured payment settles to the seller
+        // wallet so completed orders never leave it empty.
+        if (($validated['status'] ?? null) === 'completed') {
             $fresh = $order->refresh();
-            if (in_array($fresh->payment_status, ['paid', 'confirmed'], true)) {
+            if (in_array($fresh->payment_status, ['paid', 'confirmed', 'released'], true)) {
                 try {
                     \App\Models\PlatformTransaction::recordPayoutOnce($fresh);
                 } catch (\Throwable $e) {
                     report($e);
                 }
             }
+            try {
+                \App\Models\PlatformTransaction::recordAgentCommission($fresh->refresh());
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return new OrderResource($order->refresh());
+    }
+
+    /**
+     * Reject backwards lifecycle moves (same rules as the admin path):
+     * closed orders stay closed; committed orders never rewind into
+     * negotiation or re-sell.
+     */
+    private function ensureForwardTransition(Order $order, string $next): void
+    {
+        $current = $order->status ?? 'processing';
+        if ($next === $current) {
+            return;
+        }
+        if ($next === 'negotiating'
+            && !in_array($current, ['processing', 'negotiating', 'reserved'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Only an open order can move into negotiation — this order is already committed.'],
+            ]);
+        }
+        if ($next === 'sold'
+            && !in_array($current, ['processing', 'negotiating', 'reserved', 'preparing'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['This order has already moved past the sold step.'],
+            ]);
+        }
     }
 
     /**
@@ -229,6 +282,70 @@ class SellerOrderController extends Controller
 
         try {
             \App\Models\PlatformTransaction::recordOrderRefund($order);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        try {
+            app(\App\Services\OrderStatusMessenger::class)->announceRefund($order->refresh());
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return new OrderResource($order->refresh());
+    }
+
+    /**
+     * POST /seller/orders/{order}/proof — seller submits handover proof
+     * (photos + note) on a delivered car build. An admin reviews it;
+     * approval releases the held funds to the seller wallet.
+     */
+    public function submitProof(Request $request, Order $order): OrderResource
+    {
+        $this->ensureOwner($request, $order);
+
+        if (($order->item_type ?? 'part') !== 'car') {
+            throw ValidationException::withMessages([
+                'item_type' => ['Handover proof applies to vehicle orders only.'],
+            ]);
+        }
+        if (($order->verification_status ?? 'pending') !== 'accepted') {
+            throw ValidationException::withMessages([
+                'verification_status' => ['Only accepted orders can submit handover proof.'],
+            ]);
+        }
+        if (!in_array($order->status, ['shipped', 'delivered'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Proof can be submitted once the vehicle is shipped or delivered.'],
+            ]);
+        }
+
+        $data = $request->validate([
+            'images' => ['sometimes', 'array', 'max:10'],
+            'images.*' => ['string', 'max:2000'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ]);
+
+        $order->forceFill([
+            'proof_images' => array_values($data['images'] ?? []),
+            'proof_note' => $data['note'] ?? null,
+            'proof_status' => 'pending',
+            'proof_submitted_at' => now(),
+            'proof_reviewed_by' => null,
+            'proof_reviewed_at' => null,
+            'proof_rejection_reason' => null,
+        ])->save();
+
+        try {
+            $adminIds = \App\Models\User::query()->whereIn('role', ['admin', 'super_admin'])->pluck('id')->all();
+            app(\App\Services\NotificationService::class)->sendMany(
+                $adminIds,
+                'order',
+                "Handover proof: {$order->order_number}",
+                "Seller submitted delivery proof on {$order->item_name} — review to release held funds.",
+                ['order_id' => $order->id, 'order_number' => $order->order_number],
+                '/admin/car-transactions',
+            );
         } catch (\Throwable $e) {
             report($e);
         }

@@ -189,6 +189,14 @@ export default function AgentPortal() {
           </div>
 
           <div className="agent-metric-card">
+            <div className="metric-label">Settled to Wallet</div>
+            <div className="metric-value green">
+              {stats?.performance?.formatted_settled_commission || '₱ 0.00'}
+            </div>
+            <div className="metric-sub"><Link to="/wallet" style={{ color: '#10b981', fontWeight: 700 }}>Open wallet to cash out →</Link></div>
+          </div>
+
+          <div className="agent-metric-card">
             <div className="metric-label">Referred Sales Volume</div>
             <div className="metric-value white">
               {stats?.performance?.formatted_sales_volume || '₱ 0.00'}

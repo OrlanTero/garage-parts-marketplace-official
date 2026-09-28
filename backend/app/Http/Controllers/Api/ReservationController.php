@@ -114,6 +114,9 @@ class ReservationController extends Controller
         if ((int) $reservation->buyer_id !== (int) $user->id) {
             abort(403, 'Only the buyer can pay this reservation.');
         }
+        if ($reservation->conversation) {
+            app(\App\Services\ThreadGate::class)->authorizeSend($reservation->conversation, (int) $user->id);
+        }
         if ($reservation->status !== 'pending') {
             throw ValidationException::withMessages([
                 'status' => ['Only pending reservations can be paid.'],

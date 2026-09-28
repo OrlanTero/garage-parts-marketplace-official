@@ -59,7 +59,7 @@ export default function ReviewSection({ itemType, itemId, listingTitle }) {
       if (isAuthenticated) {
         try {
           const mine = await reviewsApi.mine(params)
-          setMyReview(mine)
+          setMyReview(mine?.id ? mine : null)
         } catch {
           setMyReview(null)
         }
@@ -110,7 +110,8 @@ export default function ReviewSection({ itemType, itemId, listingTitle }) {
       if (err?.response?.status === 409) {
         setError('You already reviewed this listing — edit your existing review below.')
         try {
-          setMyReview(await reviewsApi.mine(params))
+          const mine = await reviewsApi.mine(params)
+          setMyReview(mine?.id ? mine : null)
         } catch { /* ignore */ }
       } else {
         setError(err?.response?.data?.message || 'Failed to save review.')

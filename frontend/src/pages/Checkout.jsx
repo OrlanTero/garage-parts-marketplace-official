@@ -321,10 +321,20 @@ export default function Checkout() {
     })
   }
 
+  // Common sense: sellers cannot buy their own listing.
+  const isOwnListing = Boolean(
+    user?.id && item?.seller?.id && Number(item.seller.id) === Number(user.id),
+  )
+
   const handleSubmitOrder = async (e) => {
     e.preventDefault()
     setGeneralError('')
     setErrors({})
+    if (isOwnListing) {
+      setGeneralError('You cannot purchase your own listing.')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
 
     // Client-side validation
     const newErrors = {}
@@ -1288,10 +1298,29 @@ export default function Checkout() {
                 </div>
               </div>
 
+              {isOwnListing && !loadingItem && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid #ef4444',
+                  color: '#f87171',
+                  padding: '14px 18px',
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}>
+                  <AlertCircle size={20} />
+                  <span>This is your own listing — you cannot check out on it.</span>
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={submitting || loadingItem}
+                disabled={submitting || loadingItem || isOwnListing}
                 style={{
                   width: '100%',
                   background: submitting ? '#9a431c' : '#d8622c',

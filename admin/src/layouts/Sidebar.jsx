@@ -65,7 +65,8 @@ const NAV_GROUPS = [
       { to: '/funds', label: 'Treasury & Funds', icon: Wallet, badge: { label: 'Ledger', variant: 'success' } },
       { to: '/parts', label: 'Product Management', icon: Layers },
       { to: '/inventory', label: 'Inventory', icon: Boxes },
-      { to: '/orders', label: 'Order Management', icon: ShoppingBag, badge: 'Orders' },
+      { to: '/orders', label: 'Parts Orders', icon: ShoppingBag, badge: 'Orders' },
+      { to: '/car-transactions', label: 'Car Transactions', icon: Car, badge: { label: 'Escrow', variant: 'warning' } },
     ],
   },
   {

@@ -65,7 +65,7 @@ class SellerWalletTest extends TestCase
         $this->makePayout($seller, 950.00);
         $this->makePayout($seller, 1900.00);
 
-        $res = $this->getJson('/api/v1/seller/wallet', $this->token($seller))->assertOk();
+        $res = $this->getJson('/api/v1/wallet', $this->token($seller))->assertOk();
 
         $balance = $res->json('data.balance');
         $this->assertEquals(2850.00, $balance['earned']);
@@ -79,7 +79,7 @@ class SellerWalletTest extends TestCase
         $seller = $this->makeSeller();
         $headers = $this->token($seller);
 
-        $first = $this->postJson('/api/v1/seller/payout-accounts', [
+        $first = $this->postJson('/api/v1/payout-accounts', [
             'label' => 'Main GCash',
             'channel' => 'gcash',
             'account_name' => 'Seller Juan',
@@ -87,7 +87,7 @@ class SellerWalletTest extends TestCase
         ], $headers)->assertCreated()->json('data');
         $this->assertTrue($first['is_default']);
 
-        $second = $this->postJson('/api/v1/seller/payout-accounts', [
+        $second = $this->postJson('/api/v1/payout-accounts', [
             'label' => 'BDO Savings',
             'channel' => 'bank',
             'account_name' => 'Seller Juan',
@@ -97,18 +97,18 @@ class SellerWalletTest extends TestCase
         $this->assertFalse($second['is_default']);
 
         // Duplicate account numbers are rejected.
-        $this->postJson('/api/v1/seller/payout-accounts', [
+        $this->postJson('/api/v1/payout-accounts', [
             'channel' => 'gcash',
             'account_name' => 'Seller Juan',
             'account_number' => '09170001111',
         ], $headers)->assertStatus(422);
 
         // Promote the second account to default.
-        $this->patchJson("/api/v1/seller/payout-accounts/{$second['id']}", [
+        $this->patchJson("/api/v1/payout-accounts/{$second['id']}", [
             'is_default' => true,
         ], $headers)->assertOk()->assertJsonPath('data.is_default', true);
 
-        $list = $this->getJson('/api/v1/seller/payout-accounts', $headers)->assertOk()->json('data');
+        $list = $this->getJson('/api/v1/payout-accounts', $headers)->assertOk()->json('data');
         $defaults = collect($list)->where('is_default', true)->values();
         $this->assertCount(1, $defaults);
         $this->assertEquals($second['id'], $defaults->first()['id']);
@@ -122,24 +122,24 @@ class SellerWalletTest extends TestCase
         $this->makePayout($seller, 950.00);
 
         // Below the ₱100 minimum.
-        $this->postJson('/api/v1/seller/withdrawals', [
+        $this->postJson('/api/v1/withdrawals', [
             'payout_account_id' => $account->id,
             'amount' => 50,
         ], $headers)->assertStatus(422);
 
         // Above the available balance.
-        $this->postJson('/api/v1/seller/withdrawals', [
+        $this->postJson('/api/v1/withdrawals', [
             'payout_account_id' => $account->id,
             'amount' => 5000,
         ], $headers)->assertStatus(422)->assertJsonValidationErrors('amount');
 
         // A valid request locks the amount as pending.
-        $this->postJson('/api/v1/seller/withdrawals', [
+        $this->postJson('/api/v1/withdrawals', [
             'payout_account_id' => $account->id,
             'amount' => 500,
         ], $headers)->assertCreated()->assertJsonPath('data.status', 'pending');
 
-        $wallet = $this->getJson('/api/v1/seller/wallet', $headers)->assertOk()->json('data.balance');
+        $wallet = $this->getJson('/api/v1/wallet', $headers)->assertOk()->json('data.balance');
         $this->assertEquals(950.00, (float) $wallet['earned']);
         $this->assertEquals(500.00, (float) $wallet['locked']);
         $this->assertEquals(450.00, (float) $wallet['available']);
@@ -152,17 +152,17 @@ class SellerWalletTest extends TestCase
         $account = $this->makeAccount($seller);
         $this->makePayout($seller, 950.00);
 
-        $this->postJson('/api/v1/seller/withdrawals', [
+        $this->postJson('/api/v1/withdrawals', [
             'payout_account_id' => $account->id,
             'amount' => 200,
         ], $headers)->assertCreated();
 
-        $res = $this->getJson('/api/v1/seller/wallet/statements', $headers)->assertOk();
+        $res = $this->getJson('/api/v1/wallet/statements', $headers)->assertOk();
         $kinds = collect($res->json('data'))->pluck('kind')->all();
         $this->assertContains('payout', $kinds);
         $this->assertContains('withdrawal', $kinds);
 
-        $filtered = $this->getJson('/api/v1/seller/wallet/statements?type=payouts', $headers)->assertOk();
+        $filtered = $this->getJson('/api/v1/wallet/statements?type=payouts', $headers)->assertOk();
         $this->assertTrue(collect($filtered->json('data'))->every(fn ($r) => $r['kind'] === 'payout'));
     }
 
@@ -173,7 +173,7 @@ class SellerWalletTest extends TestCase
         $account = $this->makeAccount($seller);
         $this->makePayout($seller, 950.00);
 
-        $withdrawalId = $this->postJson('/api/v1/seller/withdrawals', [
+        $withdrawalId = $this->postJson('/api/v1/withdrawals', [
             'payout_account_id' => $account->id,
             'amount' => 500,
         ], $this->token($seller))->assertCreated()->json('data.id');
@@ -193,7 +193,7 @@ class SellerWalletTest extends TestCase
         ]);
 
         // Paid money leaves the available balance; paying twice is a no-op.
-        $wallet = $this->getJson('/api/v1/seller/wallet', $this->token($seller))->assertOk()->json('data.balance');
+        $wallet = $this->getJson('/api/v1/wallet', $this->token($seller))->assertOk()->json('data.balance');
         $this->assertEquals(450.00, $wallet['available']);
         $this->postJson("/api/v1/admin/payout-withdrawals/{$withdrawalId}/mark-paid", [], $this->token($admin))->assertOk();
         $this->assertEquals(1, PlatformTransaction::where('stream_type', 'payout_withdrawal')
@@ -207,7 +207,7 @@ class SellerWalletTest extends TestCase
         $account = $this->makeAccount($seller);
         $this->makePayout($seller, 950.00);
 
-        $withdrawalId = $this->postJson('/api/v1/seller/withdrawals', [
+        $withdrawalId = $this->postJson('/api/v1/withdrawals', [
             'payout_account_id' => $account->id,
             'amount' => 500,
         ], $this->token($seller))->assertCreated()->json('data.id');
@@ -216,7 +216,7 @@ class SellerWalletTest extends TestCase
             'admin_note' => 'Unverified account holder name.',
         ], $this->token($admin))->assertOk()->assertJsonPath('data.status', 'rejected');
 
-        $wallet = $this->getJson('/api/v1/seller/wallet', $this->token($seller))->assertOk()->json('data.balance');
+        $wallet = $this->getJson('/api/v1/wallet', $this->token($seller))->assertOk()->json('data.balance');
         $this->assertEquals(950.00, $wallet['available']);
     }
 
@@ -271,11 +271,11 @@ class SellerWalletTest extends TestCase
         $stranger = $this->makeSeller();
         $account = $this->makeAccount($seller);
 
-        $this->postJson('/api/v1/seller/withdrawals', [
+        $this->postJson('/api/v1/withdrawals', [
             'payout_account_id' => $account->id,
             'amount' => 200,
         ], $this->token($stranger))->assertStatus(404);
 
-        $this->deleteJson("/api/v1/seller/payout-accounts/{$account->id}", [], $this->token($stranger))->assertStatus(403);
+        $this->deleteJson("/api/v1/payout-accounts/{$account->id}", [], $this->token($stranger))->assertStatus(403);
     }
 }

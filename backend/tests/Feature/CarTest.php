@@ -34,7 +34,7 @@ class CarTest extends TestCase
         ];
     }
 
-    public function test_seller_can_create_draft_and_publish_to_marketplace(): void
+    public function test_seller_can_create_draft_but_cannot_self_publish(): void
     {
         $seller = User::factory()->kycVerified()->create(['role' => 'seller']);
         $headers = $this->sellerToken($seller);
@@ -48,6 +48,16 @@ class CarTest extends TestCase
         // Draft is NOT on the public marketplace.
         $this->getJson('/api/v1/marketplace/cars')->assertOk()->assertJsonCount(0, 'data');
 
+        // Self-publish is closed — inspection first.
+        $this->postJson("/api/v1/seller/cars/{$carId}/publish", [], $headers)
+            ->assertStatus(422);
+
+        // …but an inspected build may go live by the seller's own hand.
+        Car::findOrFail($carId)->forceFill([
+            'status' => 'inspected',
+            'inspection_status' => 'passed',
+            'inspection_score' => '96/100',
+        ])->save();
         $this->postJson("/api/v1/seller/cars/{$carId}/publish", [], $headers)
             ->assertOk()
             ->assertJsonPath('data.status', 'active');
@@ -57,7 +67,7 @@ class CarTest extends TestCase
         $this->getJson("/api/v1/marketplace/cars/{$carId}")->assertOk();
     }
 
-    public function test_dealer_can_create_and_publish_cars(): void
+    public function test_dealer_can_create_but_cannot_skip_inspection(): void
     {
         $dealer = User::factory()->kycVerified()->create(['role' => 'dealer']);
         $headers = $this->sellerToken($dealer);
@@ -68,8 +78,7 @@ class CarTest extends TestCase
 
         $carId = $create->json('data.id');
         $this->postJson("/api/v1/seller/cars/{$carId}/publish", [], $headers)
-            ->assertOk()
-            ->assertJsonPath('data.status', 'active');
+            ->assertStatus(422);
     }
 
     public function test_buyer_cannot_create_cars(): void
@@ -129,9 +138,9 @@ class CarTest extends TestCase
         $headers = $this->sellerToken($seller);
         $car = Car::factory()->for($seller, 'seller')->create(['status' => 'draft']);
 
-        // draft → active routes through publish.
+        // draft → active is closed: listings go live only via inspection.
         $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'active'], $headers)
-            ->assertOk()->assertJsonPath('data.status', 'active');
+            ->assertStatus(422);
 
         // active → archived is a direct set.
         $this->postJson("/api/v1/seller/cars/{$car->id}/status", ['status' => 'archived'], $headers)
@@ -225,6 +234,12 @@ class CarTest extends TestCase
             ->assertJsonCount(2, 'data.images');
 
         $carId = $create->json('data.id');
+        // Media test needs a live car: simulate a passed inspection, then publish.
+        Car::findOrFail($carId)->forceFill([
+            'status' => 'inspected',
+            'inspection_status' => 'passed',
+            'inspection_score' => '96/100',
+        ])->save();
         $this->postJson("/api/v1/seller/cars/{$carId}/publish", [], $headers)->assertOk();
 
         $get = $this->getJson("/api/v1/marketplace/cars/{$carId}")
@@ -248,7 +263,12 @@ class CarTest extends TestCase
         $this->assertNotEmpty($uuid);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $uuid);
 
-        // Publish using UUID
+        // Publish using UUID (inspected builds only)
+        Car::where('uuid', $uuid)->firstOrFail()->forceFill([
+            'status' => 'inspected',
+            'inspection_status' => 'passed',
+            'inspection_score' => '96/100',
+        ])->save();
         $this->postJson("/api/v1/seller/cars/{$uuid}/publish", [], $headers)
             ->assertOk()
             ->assertJsonPath('data.status', 'active');

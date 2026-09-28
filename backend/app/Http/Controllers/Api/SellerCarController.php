@@ -102,10 +102,42 @@ class SellerCarController extends Controller
     }
 
     /**
-     * Set any seller-manageable status: draft/active/archived/sold.
-     * Routes through the guarded transitions (publish/markSold) where
-     * they apply; inspection & moderation states (pending_inspection,
-     * inspected, rejected) stay house-managed and are rejected here.
+     * Submit a build for inspection (garage drop-off or on-site visit).
+     * This is the ONLY way a draft/archived/rejected car enters the
+     * verification queue — sellers can never self-publish to active.
+     */
+    public function submitInspection(Request $request, Car $car): JsonResponse
+    {
+        $this->authorize('update', $car);
+
+        $data = $request->validate([
+            'inspection_type' => ['sometimes', 'string', 'in:garage_dropoff,onsite_visit'],
+        ]);
+
+        $updated = $this->cars->submitInspection($car, $data['inspection_type'] ?? 'garage_dropoff');
+
+        try {
+            $adminIds = \App\Models\User::query()->whereIn('role', ['admin', 'super_admin'])->pluck('id')->all();
+            app(\App\Services\NotificationService::class)->sendMany(
+                $adminIds,
+                'listing',
+                "Inspection requested: {$updated->title}",
+                "Seller submitted a build for " . (($data['inspection_type'] ?? 'garage_dropoff') === 'onsite_visit' ? 'on-site visit' : 'garage drop-off') . ' — assign an inspector.',
+                ['car_id' => $updated->id, 'inspection_type' => $updated->inspection_type],
+                '/admin/listings',
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return (new CarResource($updated))->response()->setStatusCode(200);
+    }
+
+    /**
+     * Set seller-manageable status: draft/archived/sold. `active` is
+     * NOT seller-settable — a build goes live only through the
+     * inspection flow (submit → inspect → approve). Inspection &
+     * moderation states stay house-managed and are rejected here.
      */
     public function setStatus(Request $request, Car $car): CarResource
     {
@@ -115,18 +147,18 @@ class SellerCarController extends Controller
             'status' => ['required', 'string', 'in:draft,active,archived,sold'],
         ]);
 
+        if ($data['status'] === 'active') {
+            throw ValidationException::withMessages([
+                'status' => ['Listings go live only after passing inspection. Submit this build for inspection first.'],
+            ]);
+        }
+
         $current = $car->status instanceof \App\Enums\CarStatus
             ? $car->status->value
             : (string) $car->status;
 
         if ($data['status'] === $current) {
             return new CarResource($car->refresh());
-        }
-
-        if ($data['status'] === 'active') {
-            $this->ensureKycVerified($request->user());
-
-            return new CarResource($this->cars->publish($car));
         }
 
         if ($data['status'] === 'sold') {

@@ -27,6 +27,7 @@ import { useChat } from '../context/ChatContext.jsx'
 import ListingStatusPicker from '../components/ListingStatusPicker.jsx'
 import ShareModal from '../components/ShareModal.jsx'
 import ReviewSection from '../components/ReviewSection.jsx'
+import NotifyMeButton from '../components/NotifyMeButton.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
@@ -123,7 +124,8 @@ export default function CarDetail() {
   const origPriceDisplay = car.origPrice || car.original_price ? formatPrice(car.origPrice || car.original_price) : null
   const location = car.location || car.loc || car.city || 'Makati Showroom'
   const tag = car.tag || (car.condition === 'new' ? 'Brand New' : 'Restored Classic')
-  const score = car.score || car.inspection_score || '98/100'
+  const score = car.score || car.inspection_score || null
+  const scoreDisplay = score || 'Pending inspection'
 
   const specs = [
     ['Make / Brand', car.brand || '—'],
@@ -137,7 +139,7 @@ export default function CarDetail() {
     ['Stock Available', car.quantity != null ? `${car.quantity} unit${Number(car.quantity) === 1 ? '' : 's'}` : '—'],
     ['Exterior Color', car.color || '—'],
     ['Chassis / VIN', car.vin || 'Verified on File'],
-    ['Inspection Score', score],
+    ['Inspection Score', scoreDisplay],
     ['Showroom / City', location],
   ]
   const stockCount = car.quantity == null ? 1 : Number(car.quantity)
@@ -335,6 +337,9 @@ export default function CarDetail() {
                 </>
               ) : (
               <div className="detail-actions-row">
+                {(isSoldOut || isMarkedSold) && (
+                  <NotifyMeButton listingType="car" listingId={car.id} />
+                )}
                 {car.seller && (
                   <button
                     type="button"
@@ -364,7 +369,7 @@ export default function CarDetail() {
                   className="btn btn-secondary"
                   disabled={isSoldOut}
                   onClick={() => navigate(`/checkout?car_id=${car.uuid || car.id}`)}
-                  title={isSoldOut ? 'This build is currently unavailable' : 'Buy at list price — payment is held in escrow'}
+                  title={isSoldOut ? 'This build is currently unavailable' : 'Buy at list price — payment is hold'}
                 >
                   <FileText size={16} />
                   <span>Buy Now</span>

@@ -292,6 +292,79 @@ class PlatformTransaction extends Model
     }
 
     /**
+     * Settle a referral agent's commission into their wallet when the
+     * referred order completes. Idempotent: an existing settlement for
+     * the order is returned, and orders without an attributed agent (or
+     * with a zero/settled commission) yield nothing. Flips the order's
+     * commission_status to `settled` so the agent portal reflects reality.
+     */
+    public static function recordAgentCommission(Order $order): ?self
+    {
+        if (empty($order->agent_id) || (float) ($order->commission_amount ?? 0) <= 0) {
+            return null;
+        }
+        if (($order->commission_status ?? 'pending') === 'settled') {
+            return self::where('order_id', $order->id)
+                ->where('stream_type', 'agent_commission')
+                ->first();
+        }
+
+        $existing = self::where('order_id', $order->id)
+            ->where('stream_type', 'agent_commission')
+            ->first();
+        if ($existing) {
+            $order->forceFill(['commission_status' => 'settled'])->save();
+            return $existing;
+        }
+
+        $amount = round((float) $order->commission_amount, 2);
+        $txn = self::create([
+            'stream_type' => 'agent_commission',
+            'direction' => 'credit',
+            'gross_amount' => $amount,
+            'fee_rate' => (float) ($order->commission_rate ?? 5.00),
+            'net_amount' => $amount,
+            'currency' => 'PHP',
+            'payment_method' => $order->payment_method ?? 'bank_transfer',
+            'payment_reference' => $order->payment_reference ?? $order->order_number,
+            'reference_number' => $order->order_number,
+            'status' => 'completed',
+            'user_id' => $order->agent_id,
+            'seller_id' => $order->seller_id,
+            'car_id' => $order->car_id,
+            'order_id' => $order->id,
+            'title' => "Agent Commission — {$order->item_name}",
+            'description' => 'Referral commission of ₱' . number_format($amount, 2)
+                . " settled to agent on completion of {$order->order_number}",
+            'metadata' => [
+                'order_number' => $order->order_number,
+                'item_type' => $order->item_type,
+                'part_id' => $order->part_id,
+                'agent_code' => $order->agent_code,
+                'commission_rate' => (float) ($order->commission_rate ?? 5.00),
+            ],
+            'settled_at' => now(),
+        ]);
+
+        $order->forceFill(['commission_status' => 'settled'])->save();
+
+        try {
+            app(\App\Services\NotificationService::class)->send(
+                (int) $order->agent_id,
+                'payout',
+                'Commission settled ₱' . number_format($amount, 2),
+                "Your referral on {$order->order_number} completed — earnings are in your wallet.",
+                ['order_id' => $order->id, 'order_number' => $order->order_number, 'amount' => $amount],
+                '/wallet',
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $txn;
+    }
+
+    /**
      * Return the buyer payment after a dispute resolves to refund —
      * the held escrow leg (cars) or the captured payment (parts).
      */

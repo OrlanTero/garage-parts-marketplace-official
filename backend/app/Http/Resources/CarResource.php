@@ -41,8 +41,10 @@ class CarResource extends JsonResource
             'loc' => $this->location ?? $this->city,
             'status' => $enum($this->status),
             'rating' => (float) ($this->rating ?? 5.0),
-            'inspection_score' => $this->inspection_score ?? '99/100',
-            'score' => $this->inspection_score ?? '99/100',
+            // No fallback: a build shows a score only after an inspector
+            // records one. Uninspected builds expose null.
+            'inspection_score' => $this->inspection_score,
+            'score' => $this->inspection_score,
             'inspection_type' => $this->inspection_type,
             'inspection_status' => $this->inspection_status ?? 'pending',
             'inspection_date' => $this->inspection_date,

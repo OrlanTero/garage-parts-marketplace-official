@@ -26,6 +26,7 @@ import { useChat } from '../context/ChatContext.jsx'
 import ListingStatusPicker from '../components/ListingStatusPicker.jsx'
 import ShareModal from '../components/ShareModal.jsx'
 import ReviewSection from '../components/ReviewSection.jsx'
+import NotifyMeButton from '../components/NotifyMeButton.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
@@ -339,10 +340,18 @@ export default function PartDetail() {
                 </>
               ) : (
               <div className="detail-actions-row">
+                {(() => {
+                  const st = String(part.status?.value || part.status || '').toLowerCase()
+                  return (st === 'sold' || (part.quantity != null && Number(part.quantity) <= 0))
+                    ? <NotifyMeButton listingType="part" listingId={part.id} />
+                    : null
+                })()}
                 <button
                   type="button"
                   className="btn btn-primary"
+                  disabled={String(part.status?.value || part.status || '').toLowerCase() === 'sold' || (part.quantity != null && Number(part.quantity) <= 0)}
                   onClick={() => navigate(`/checkout?part_id=${part.uuid || part.id}`)}
+                  title={String(part.status?.value || part.status || '').toLowerCase() === 'sold' || (part.quantity != null && Number(part.quantity) <= 0) ? 'This part is currently unavailable' : 'Buy at list price'}
                 >
                   <ShoppingCart size={16} />
                   <span>Buy Now</span>

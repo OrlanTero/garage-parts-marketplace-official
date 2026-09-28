@@ -61,6 +61,35 @@ class AdminCarModerationController extends Controller
 
         $updatedCar = $this->cars->scheduleInspection($car, $validated, $request->user());
 
+        try {
+            $notify = app(\App\Services\NotificationService::class);
+            $kind = ($validated['inspection_type'] ?? 'garage_dropoff') === 'onsite_visit' ? 'on-site visit' : 'garage drop-off';
+            $notify->send(
+                (int) $car->seller_id,
+                'listing',
+                "Inspection scheduled: {$car->title}",
+                "Your build is scheduled for a {$kind}"
+                    . ($updatedCar->inspection_date ? ' on ' . $updatedCar->inspection_date->format('M d, Y h:i A') : '')
+                    . ($updatedCar->inspection_location ? " at {$updatedCar->inspection_location}" : '') . '.',
+                ['car_id' => $car->id, 'inspection_type' => $updatedCar->inspection_type],
+                '/my-listings',
+                $request->user(),
+            );
+            if ($updatedCar->inspector_id && (int) $updatedCar->inspector_id !== (int) $request->user()->id) {
+                $notify->send(
+                    (int) $updatedCar->inspector_id,
+                    'listing',
+                    "Inspection assigned: {$car->title}",
+                    "You were assigned a {$kind} inspection.",
+                    ['car_id' => $car->id],
+                    '/admin/appointments',
+                    $request->user(),
+                );
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return (new CarResource($updatedCar))->response()->setStatusCode(200);
     }
 
@@ -82,12 +111,43 @@ class AdminCarModerationController extends Controller
 
         $updatedCar = $this->cars->recordInspection($car, $validated, $request->user());
 
+        try {
+            $passed = ($updatedCar->inspection_status ?? '') === 'passed';
+            app(\App\Services\NotificationService::class)->send(
+                (int) $car->seller_id,
+                'listing',
+                $passed ? "Inspection passed: {$car->title}" : "Inspection failed: {$car->title}",
+                $passed
+                    ? "Score {$updatedCar->inspection_score} — submit for final approval to go live."
+                    : 'See the inspector notes and rejection reason, fix the issues, then resubmit.',
+                ['car_id' => $car->id, 'passed' => $passed, 'inspection_score' => $updatedCar->inspection_score],
+                '/my-listings',
+                $request->user(),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return (new CarResource($updatedCar))->response()->setStatusCode(200);
     }
 
     public function approve(Request $request, Car $car): JsonResponse
     {
         $updatedCar = $this->cars->approveListing($car, $request->user());
+
+        try {
+            app(\App\Services\NotificationService::class)->send(
+                (int) $car->seller_id,
+                'listing',
+                "Live on marketplace: {$car->title}",
+                "Approved with inspection score {$updatedCar->inspection_score} — buyers can now discover your build.",
+                ['car_id' => $car->id, 'inspection_score' => $updatedCar->inspection_score],
+                '/marketplace/' . ($updatedCar->uuid ?? $updatedCar->id),
+                $request->user(),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return (new CarResource($updatedCar))->response()->setStatusCode(200);
     }
@@ -99,6 +159,20 @@ class AdminCarModerationController extends Controller
         ]);
 
         $updatedCar = $this->cars->rejectListing($car, $validated['reason'], $request->user());
+
+        try {
+            app(\App\Services\NotificationService::class)->send(
+                (int) $car->seller_id,
+                'listing',
+                "Listing returned: {$car->title}",
+                "Not approved: {$validated['reason']} Fix the issues and resubmit for inspection.",
+                ['car_id' => $car->id, 'rejection_reason' => $validated['reason']],
+                '/my-listings',
+                $request->user(),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return (new CarResource($updatedCar))->response()->setStatusCode(200);
     }

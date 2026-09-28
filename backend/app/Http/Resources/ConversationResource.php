@@ -20,6 +20,10 @@ class ConversationResource extends JsonResource
             'listing_type' => $this->listing_type,
             'listing_id' => $this->listing_id,
             'listing_key' => $this->listing_key,
+            'is_locked' => (bool) $this->is_locked,
+            'locked_for_viewer' => $currentUser
+                ? app(\App\Services\ThreadGate::class)->lockedForViewer($this->resource, (int) $currentUser->id)
+                : false,
             'other_user' => $otherUser ? [
                 'id' => $otherUser->id,
                 'username' => $otherUser->username,

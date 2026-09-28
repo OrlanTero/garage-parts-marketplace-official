@@ -41,6 +41,19 @@ function messageTimeKey(msg) {
 }
 
 /**
+ * A listing thread is closed for deals when the listing is sold or its
+ * sellable stock hit zero (NULL quantity = legacy single unit, still open).
+ * Closed threads hide Make Offer / Reservation and lock buyer input.
+ */
+export function isListingClosed(listing) {
+  if (!listing) return false
+  const status = String(listing.status?.value || listing.status || '').toLowerCase()
+  if (status === 'sold') return true
+  if (listing.quantity !== null && listing.quantity !== undefined && Number(listing.quantity) <= 0) return true
+  return false
+}
+
+/**
  * Chronological sort used before rendering and after realtime inserts,
  * so border-radius grouping is computed on adjacent messages in time
  * order even when a live event arrives out of order.

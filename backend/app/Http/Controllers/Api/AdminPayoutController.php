@@ -74,6 +74,22 @@ class AdminPayoutController extends Controller
             'reviewed_at' => now(),
         ])->save();
 
+        try {
+            app(\App\Services\NotificationService::class)->send(
+                (int) $withdrawal->user_id,
+                'payout',
+                'Cash-out rejected',
+                'Your ₱' . number_format((float) $withdrawal->net_amount, 2) . ' cash-out was rejected.'
+                    . ($withdrawal->admin_note ? " Reason: {$withdrawal->admin_note}" : '')
+                    . ' Funds are unlocked.',
+                ['withdrawal_id' => $withdrawal->id, 'amount' => (float) $withdrawal->net_amount],
+                '/wallet',
+                $request->user(),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return response()->json(['status' => 'success', 'data' => $withdrawal->refresh()]);
     }
 
@@ -107,6 +123,21 @@ class AdminPayoutController extends Controller
             'reviewed_at' => $withdrawal->reviewed_at ?? now(),
             'paid_at' => now(),
         ])->save();
+
+        try {
+            app(\App\Services\NotificationService::class)->send(
+                (int) $withdrawal->user_id,
+                'payout',
+                'Cash-out paid ₱' . number_format((float) $withdrawal->net_amount, 2),
+                "Sent to your {$withdrawal->payoutAccount?->channel} {$withdrawal->payoutAccount?->maskedNumber()}"
+                    . " (ref: {$withdrawal->reference_number}).",
+                ['withdrawal_id' => $withdrawal->id, 'amount' => (float) $withdrawal->net_amount],
+                '/wallet',
+                $request->user(),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         try {
             PlatformTransaction::create([

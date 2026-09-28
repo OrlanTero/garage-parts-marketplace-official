@@ -90,6 +90,8 @@ export function ChatProvider({ children }) {
             primary_image_url: thread.listing.primary_image_url,
             condition: thread.listing.condition,
             inspection_score: thread.listing.inspection_score,
+            status: thread.listing.status || null,
+            quantity: thread.listing.quantity ?? null,
             url: thread.listing.url,
           }
         : null,
@@ -186,6 +188,7 @@ export function ChatProvider({ children }) {
         setOfferAutoOpenKey(`${listingType}:${listing.id}`)
       }
       const listingIdentifier = listing.uuid || listing.id
+      const listingStatus = listing.status?.value || listing.status || null
       const card = {
         type: listingType,
         id: listing.id,
@@ -195,6 +198,8 @@ export function ChatProvider({ children }) {
         primary_image_url: listing.primary_image_url || listing.img || listing.media?.[0]?.url,
         inspection_score: listing.inspection_score || listing.score,
         condition: listing.condition,
+        status: listingStatus,
+        quantity: listing.quantity ?? null,
         url: listingType === 'car' ? `/marketplace/${listingIdentifier}` : `/parts/${listingIdentifier}`,
       }
       setAttachedListing(card)

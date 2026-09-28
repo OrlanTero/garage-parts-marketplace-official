@@ -59,6 +59,13 @@ class Order extends Model
         'estimated_arrival',
         'warehouse_id',
         'notes',
+        'proof_images',
+        'proof_note',
+        'proof_status',
+        'proof_submitted_at',
+        'proof_reviewed_by',
+        'proof_reviewed_at',
+        'proof_rejection_reason',
     ];
 
     protected function casts(): array
@@ -72,6 +79,9 @@ class Order extends Model
             'commission_rate' => 'decimal:2',
             'commission_amount' => 'decimal:2',
             'estimated_arrival' => 'datetime',
+            'proof_images' => 'array',
+            'proof_submitted_at' => 'datetime',
+            'proof_reviewed_at' => 'datetime',
         ];
     }
 

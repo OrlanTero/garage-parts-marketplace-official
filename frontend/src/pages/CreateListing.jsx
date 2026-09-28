@@ -265,6 +265,8 @@ export default function CreateListing({ defaultType = 'car' }) {
   const [kycBlocked, setKycBlocked] = useState(false)
   const [kycModalOpen, setKycModalOpen] = useState(false)
   const [createdResult, setCreatedResult] = useState(null) // { type: 'car'|'part', data: {...}, published: boolean }
+  // Inspection path for car builds: garage drop-off or mobile on-site visit.
+  const [inspectionType, setInspectionType] = useState('garage_dropoff')
 
   // Upload States for High-Resolution Media
   const [carUploading, setCarUploading] = useState(false)
@@ -371,7 +373,6 @@ export default function CreateListing({ defaultType = 'car' }) {
       tag: preset.tag,
       city: preset.city,
       location: preset.location,
-      inspection_score: preset.inspection_score,
       description: preset.description,
       images: preset.images,
     })
@@ -490,7 +491,6 @@ export default function CreateListing({ defaultType = 'car' }) {
           tag: carData.tag || null,
           city: carData.city || null,
           location: carData.location || null,
-          inspection_score: carData.inspection_score || null,
           description: carData.description || null,
           images: carData.images && carData.images.length > 0 ? carData.images : undefined,
         }
@@ -498,14 +498,19 @@ export default function CreateListing({ defaultType = 'car' }) {
         const created = await sellerCars.create(payload)
         const carId = created.id
 
+        // Cars never go live on submit — they enter the inspection queue
+        // (garage drop-off or on-site visit). An inspector scores the
+        // build and admin approval publishes it with the result.
         if (publishNow && carId) {
-          await sellerCars.publish(carId)
+          await sellerCars.submitInspection(carId, { inspection_type: inspectionType })
         }
 
         setCreatedResult({
           type: 'car',
           data: { ...created, id: carId, title: payload.title },
-          published: publishNow,
+          published: false,
+          submittedForInspection: publishNow,
+          inspectionType,
         })
       } else {
         const payload = {
@@ -573,17 +578,22 @@ export default function CreateListing({ defaultType = 'car' }) {
   if (createdResult) {
     const isCar = createdResult.type === 'car'
     const targetUrl = isCar ? `/marketplace/${createdResult.data.id}` : `/parts/${createdResult.data.id}`
+    const carInInspection = isCar && createdResult.submittedForInspection
 
     return (
       <div className="create-listing-page">
         <div className="create-listing-hero">
           <div className="create-listing-hero-inner">
             <span className="create-listing-eyebrow">
-              <CheckCircle2 size={14} /> Listing Confirmed
+              <CheckCircle2 size={14} /> {carInInspection ? 'Submitted for Inspection' : 'Listing Confirmed'}
             </span>
-            <h1 className="create-listing-title">Your Listing is Live on Garage Marketplace</h1>
+            <h1 className="create-listing-title">
+              {carInInspection ? 'Your Build is In the Inspection Queue' : 'Your Listing is Live on Garage Marketplace'}
+            </h1>
             <p className="create-listing-lead">
-              Congratulations! Your {isCar ? 'vehicle build' : 'parts & accessories listing'} has been saved and is accessible across our network.
+              {carInInspection
+                ? `Your vehicle build was submitted for ${createdResult.inspectionType === 'onsite_visit' ? 'a mobile on-site visit' : 'a garage drop-off'} inspection. It is NOT on the marketplace yet.`
+                : `Congratulations! Your ${isCar ? 'vehicle build' : 'parts & accessories listing'} has been saved and is accessible across our network.`}
             </p>
           </div>
         </div>
@@ -596,14 +606,25 @@ export default function CreateListing({ defaultType = 'car' }) {
             {createdResult.data.title || (isCar ? 'Vehicle Listing' : 'Part Listing')}
           </h2>
           <p className="listing-success-desc">
-            Status: <strong>{createdResult.published ? 'Active & Published' : 'Saved as Draft'}</strong>. Enthusiasts and buyers can now discover your specs, inspection score, and direct contact details.
+            {carInInspection ? (
+              <>Status: <strong>Pending Inspection</strong>. An admin will assign an inspector — once it passes and is approved, it publishes live <strong>with the inspector&apos;s score</strong>. If it fails, the rejection reason is returned to you here and by notification.</>
+            ) : (
+              <>Status: <strong>{createdResult.published ? 'Active & Published' : 'Saved as Draft'}</strong>. Enthusiasts and buyers can now discover your specs{isCar ? '' : ', inspection score,'} and direct contact details.</>
+            )}
           </p>
 
           <div className="success-actions">
-            <Link to={targetUrl} className="btn btn-primary" style={{ padding: '12px 24px', fontSize: 15 }}>
-              <span>View Listing on Marketplace</span>
-              <ArrowRight size={16} />
-            </Link>
+            {carInInspection ? (
+              <Link to="/my-listings" className="btn btn-primary" style={{ padding: '12px 24px', fontSize: 15 }}>
+                <span>Track Inspection in My Listings</span>
+                <ArrowRight size={16} />
+              </Link>
+            ) : (
+              <Link to={targetUrl} className="btn btn-primary" style={{ padding: '12px 24px', fontSize: 15 }}>
+                <span>View Listing on Marketplace</span>
+                <ArrowRight size={16} />
+              </Link>
+            )}
             <button
               type="button"
               className="btn btn-secondary"
@@ -1036,15 +1057,29 @@ export default function CreateListing({ defaultType = 'car' }) {
                   </div>
 
                   <div className="form-group">
-                    <label>Inspection Score</label>
-                    <input
-                      type="text"
-                      name="inspection_score"
-                      className="form-input"
-                      placeholder="e.g. 99/100"
-                      value={carData.inspection_score}
-                      onChange={handleCarChange}
-                    />
+                    <label>Inspection Method *</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { id: 'garage_dropoff', label: 'Garage Drop-off' },
+                        { id: 'onsite_visit', label: 'On-Site Visit' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setInspectionType(opt.id)}
+                          style={{
+                            flex: 1, padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+                            fontSize: 13, fontWeight: 700,
+                            border: inspectionType === opt.id ? '2px solid var(--color-rust, #d8622c)' : '1px solid var(--color-border, #e2e8f0)',
+                            background: inspectionType === opt.id ? 'rgba(216, 98, 44, 0.08)' : 'transparent',
+                            color: 'inherit',
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="form-hint">Required first — an inspector scores your build before it can go live</span>
                   </div>
                 </div>
 
@@ -1667,11 +1702,9 @@ export default function CreateListing({ defaultType = 'car' }) {
                       className="preview-img"
                     />
                     {carData.tag && <span className="preview-tag-badge">{carData.tag}</span>}
-                    {carData.inspection_score && (
-                      <span className="preview-score-badge">
-                        <ShieldCheck size={13} /> {carData.inspection_score}
-                      </span>
-                    )}
+                    <span className="preview-score-badge" title="Score is assigned by the inspector after verification">
+                      <ShieldCheck size={13} /> Inspected on approval
+                    </span>
                   </>
                 ) : (
                   <>
@@ -1747,9 +1780,14 @@ export default function CreateListing({ defaultType = 'car' }) {
                 className="btn-publish"
                 disabled={submitting}
                 onClick={() => handleSubmit(true)}
+                title={listingType === 'car' ? 'Submits your build for mandatory inspection (garage drop-off or on-site visit). It goes live only after inspector approval.' : undefined}
               >
                 <Sparkles size={18} />
-                <span>{submitting ? 'Publishing Listing...' : 'Publish to Marketplace'}</span>
+                <span>
+                  {submitting
+                    ? (listingType === 'car' ? 'Submitting for Inspection...' : 'Publishing Listing...')
+                    : (listingType === 'car' ? 'Submit for Inspection' : 'Publish to Marketplace')}
+                </span>
               </button>
 
               <button

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AdminAppointmentController;
 use App\Http\Controllers\Api\AdminAuctionController;
+use App\Http\Controllers\Api\AdminCarTransactionController;
+use App\Http\Controllers\Api\AdminNotificationController;
 use App\Http\Controllers\Api\AdminPayoutController;
 use App\Http\Controllers\Api\AdminCarModerationController;
 use App\Http\Controllers\Api\AdminChatModerationController;
@@ -16,6 +18,7 @@ use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DealOfferController;
 use App\Http\Controllers\Api\ReservationController;
+use App\Http\Controllers\Api\RestockController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\KycController;
@@ -23,6 +26,7 @@ use App\Http\Controllers\Api\MarketplaceAuctionController;
 use App\Http\Controllers\Api\MarketplaceCarController;
 use App\Http\Controllers\Api\MarketplacePartController;
 use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OAuthController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
@@ -160,6 +164,31 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders/{identifier}/accept-inspection', [OrderController::class, 'acceptInspection'])->name('api.orders.acceptInspection');
         Route::post('/orders/{identifier}/reject-inspection', [OrderController::class, 'rejectInspection'])->name('api.orders.rejectInspection');
 
+        // In-app Notifications (persistent + realtime push)
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('api.notifications.index');
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('api.notifications.unreadCount');
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('api.notifications.readAll');
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('api.notifications.read');
+        Route::delete('/notifications', [NotificationController::class, 'clearRead'])->name('api.notifications.clearRead');
+        Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('api.notifications.destroy');
+
+        // Restock alerts (notify me when a sold-out listing returns)
+        Route::get('/restocks', [RestockController::class, 'index'])->name('api.restocks.index');
+        Route::post('/restocks', [RestockController::class, 'store'])->name('api.restocks.store');
+        Route::delete('/restocks/{subscription}', [RestockController::class, 'destroy'])->name('api.restocks.destroy');
+
+        // Wallet: balance, billing statements, payout accounts, cash-outs.
+        // Any authenticated user (sellers earn payouts, agents earn
+        // commissions) — zero balances simply report empty.
+        Route::get('/wallet', [SellerWalletController::class, 'wallet'])->name('api.wallet.show');
+        Route::get('/wallet/statements', [SellerWalletController::class, 'statements'])->name('api.wallet.statements');
+        Route::get('/payout-accounts', [SellerWalletController::class, 'accounts'])->name('api.payoutAccounts.index');
+        Route::post('/payout-accounts', [SellerWalletController::class, 'storeAccount'])->name('api.payoutAccounts.store');
+        Route::match(['put', 'patch'], '/payout-accounts/{account}', [SellerWalletController::class, 'updateAccount'])->name('api.payoutAccounts.update');
+        Route::delete('/payout-accounts/{account}', [SellerWalletController::class, 'destroyAccount'])->name('api.payoutAccounts.destroy');
+        Route::get('/withdrawals', [SellerWalletController::class, 'withdrawals'])->name('api.withdrawals.index');
+        Route::post('/withdrawals', [SellerWalletController::class, 'storeWithdrawal'])->name('api.withdrawals.store');
+
         // Buyer Price Offers (amount + comment on listings)
         Route::get('/offers', [OfferController::class, 'mine'])->name('api.offers.mine');
         Route::post('/offers', [OfferController::class, 'store'])->name('api.offers.store');
@@ -265,6 +294,7 @@ Route::prefix('v1')->group(function () {
             Route::match(['put', 'patch'], '/cars/{car}', [SellerCarController::class, 'update'])->name('cars.update');
             Route::delete('/cars/{car}', [SellerCarController::class, 'destroy'])->name('cars.destroy');
             Route::post('/cars/{car}/publish', [SellerCarController::class, 'publish'])->name('cars.publish');
+            Route::post('/cars/{car}/submit-inspection', [SellerCarController::class, 'submitInspection'])->name('cars.submitInspection');
             Route::post('/cars/{car}/unpublish', [SellerCarController::class, 'unpublish'])->name('cars.unpublish');
             Route::post('/cars/{car}/sold', [SellerCarController::class, 'markSold'])->name('cars.sold');
             Route::post('/cars/{car}/status', [SellerCarController::class, 'setStatus'])->name('cars.setStatus');
@@ -279,16 +309,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/parts/{part}/sold', [SellerPartController::class, 'markSold'])->name('parts.sold');
             Route::post('/parts/{part}/status', [SellerPartController::class, 'setStatus'])->name('parts.setStatus');
 
-            // Seller wallet: balance, billing statements, payout accounts, cash-outs
-            Route::get('/wallet', [SellerWalletController::class, 'wallet'])->name('wallet.show');
-            Route::get('/wallet/statements', [SellerWalletController::class, 'statements'])->name('wallet.statements');
-            Route::get('/payout-accounts', [SellerWalletController::class, 'accounts'])->name('payoutAccounts.index');
-            Route::post('/payout-accounts', [SellerWalletController::class, 'storeAccount'])->name('payoutAccounts.store');
-            Route::match(['put', 'patch'], '/payout-accounts/{account}', [SellerWalletController::class, 'updateAccount'])->name('payoutAccounts.update');
-            Route::delete('/payout-accounts/{account}', [SellerWalletController::class, 'destroyAccount'])->name('payoutAccounts.destroy');
-            Route::get('/withdrawals', [SellerWalletController::class, 'withdrawals'])->name('withdrawals.index');
-            Route::post('/withdrawals', [SellerWalletController::class, 'storeWithdrawal'])->name('withdrawals.store');
-
             // Seller sales analytics dashboard
             Route::get('/analytics', [SellerWalletController::class, 'analytics'])->name('analytics.show');
 
@@ -297,6 +317,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/orders/{order}/accept', [SellerOrderController::class, 'accept'])->name('orders.accept');
             Route::post('/orders/{order}/reject', [SellerOrderController::class, 'reject'])->name('orders.reject');
             Route::post('/orders/{order}/confirm-funds', [SellerOrderController::class, 'confirmFunds'])->name('orders.confirmFunds');
+            Route::post('/orders/{order}/proof', [SellerOrderController::class, 'submitProof'])->name('orders.proof');
             Route::patch('/orders/{order}/status', [SellerOrderController::class, 'updateStatus'])->name('orders.updateStatus');
             Route::post('/orders/{order}/refund', [SellerOrderController::class, 'refund'])->name('orders.refund');
 
@@ -386,6 +407,17 @@ Route::prefix('v1')->group(function () {
             // Sales Orders Management
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
             Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+
+            // Car build transactions: holds, handover proofs, fund release
+            Route::get('/car-transactions', [AdminCarTransactionController::class, 'index'])->name('carTransactions.index');
+            Route::post('/car-transactions/{order}/approve-proof', [AdminCarTransactionController::class, 'approveProof'])->name('carTransactions.approveProof');
+            Route::post('/car-transactions/{order}/reject-proof', [AdminCarTransactionController::class, 'rejectProof'])->name('carTransactions.rejectProof');
+
+            // Notifications: stats, ledger, user lookup, real broadcasts
+            Route::get('/notifications/stats', [AdminNotificationController::class, 'stats'])->name('notifications.stats');
+            Route::get('/notifications', [AdminNotificationController::class, 'index'])->name('notifications.index');
+            Route::post('/notifications/broadcast', [AdminNotificationController::class, 'broadcast'])->name('notifications.broadcast');
+            Route::delete('/notifications/{notification}', [AdminNotificationController::class, 'destroy'])->name('notifications.destroy');
 
             // Seller cash-out review queue (approve → pay, or reject)
             Route::get('/payout-withdrawals', [AdminPayoutController::class, 'index'])->name('payouts.index');

@@ -122,7 +122,9 @@ class BroadcastingTest extends TestCase
             return $event->car->id === $car->id;
         });
 
-        // 2. Publish
+        // 2. Inspection flow, then publish (self-publish of drafts is closed)
+        $this->carService->submitInspection($car, 'garage_dropoff');
+        $this->carService->recordInspection($car, ['passed' => true, 'inspection_score' => '96/100']);
         $this->carService->publish($car);
 
         Event::assertDispatched(CarStatusChanged::class, function (CarStatusChanged $event) use ($car) {
@@ -130,7 +132,7 @@ class BroadcastingTest extends TestCase
             $this->assertContains('marketplace.cars', $channels);
             $this->assertContains('cars.' . $car->id, $channels);
             $this->assertEquals('car.status_changed', $event->broadcastAs());
-            return $event->car->id === $car->id && $event->previousStatus === 'draft';
+            return $event->car->id === $car->id && $event->previousStatus === 'inspected';
         });
 
         // 3. Update

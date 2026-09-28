@@ -22,6 +22,8 @@ export const sellerOrdersApi = {
     client.patch(`/seller/orders/${id}/status`, payload).then((r) => r.data?.data ?? r.data),
   refund: (id, verification_note) =>
     client.post(`/seller/orders/${id}/refund`, verification_note ? { verification_note } : {}).then((r) => r.data?.data ?? r.data),
+  submitProof: (id, payload) =>
+    client.post(`/seller/orders/${id}/proof`, payload).then((r) => r.data?.data ?? r.data),
 }
 
 // Order lifecycle — cars via escrow (processing → negotiating → sold →

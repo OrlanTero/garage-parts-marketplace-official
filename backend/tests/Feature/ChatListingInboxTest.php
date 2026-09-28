@@ -148,6 +148,33 @@ class ChatListingInboxTest extends TestCase
         $this->assertNotContains('Offer from buyer B', collect($buyerThread->json('data'))->pluck('body')->all());
     }
 
+    public function test_thread_carries_per_conversation_unread_and_lock_flags(): void
+    {
+        $seller = User::factory()->seller()->create();
+        $buyerA = User::factory()->buyer()->create();
+        $buyerB = User::factory()->buyer()->create();
+        $car = Car::factory()->active()->create(['seller_id' => $seller->id]);
+
+        foreach ([$buyerA, $buyerB] as $buyer) {
+            $this->postJson('/api/v1/chat/conversations', [
+                'recipient_id' => $seller->id,
+                'listing_type' => 'car',
+                'listing_id' => $car->id,
+                'initial_message' => "Hello from {$buyer->username}",
+            ], $this->authToken($buyer))->assertCreated();
+        }
+
+        $thread = $this->getJson("/api/v1/chat/listings/car/{$car->id}", $this->authToken($seller))
+            ->assertOk();
+        $convs = $thread->json('conversations');
+        $this->assertCount(2, $convs);
+        foreach ($convs as $conv) {
+            $this->assertEquals(1, $conv['unread_count']);
+            $this->assertFalse((bool) $conv['locked_for_viewer']);
+        }
+        $this->assertCount(2, $thread->json('data'));
+    }
+
     public function test_stranger_cannot_open_listing_thread(): void
     {
         $seller = User::factory()->seller()->create();

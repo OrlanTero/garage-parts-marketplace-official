@@ -27,6 +27,8 @@ class OfferResource extends JsonResource
             'conversation_id' => $this->conversation_id,
             'parent_id' => $this->parent_id,
             'sender_id' => $this->sender_id,
+            'buyer_id' => $this->buyer_id,
+            'seller_id' => $this->seller_id,
             'has_checkout_token' => !empty($this->checkout_token),
             'checkout_used' => $this->checkout_used_at !== null,
             // Pinned-price checkout for the winning buyer. Exposed once the

@@ -6,6 +6,7 @@ import { AuthProvider } from './auth/AuthContext.jsx'
 import { RealtimeProvider } from './realtime/RealtimeContext.jsx'
 import { FavoritesProvider } from './context/FavoritesContext.jsx'
 import { ChatProvider } from './context/ChatContext.jsx'
+import { NotificationProvider } from './context/NotificationContext.jsx'
 import './styles.css'
 import './theme/theme.css'
 import './components/Modal.css'
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <RealtimeProvider>
           <FavoritesProvider>
             <ChatProvider>
-              <App />
+              <NotificationProvider>
+                <App />
+              </NotificationProvider>
             </ChatProvider>
           </FavoritesProvider>
         </RealtimeProvider>

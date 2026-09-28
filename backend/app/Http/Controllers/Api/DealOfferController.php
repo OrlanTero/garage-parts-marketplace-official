@@ -49,6 +49,8 @@ class DealOfferController extends Controller
         $user = $request->user();
         $this->authorizeParticipant($conversation, $user->id);
 
+        app(\App\Services\ThreadGate::class)->authorizeSend($conversation, (int) $user->id);
+
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:1', 'max:9999999999.99'],
             'message' => ['nullable', 'string', 'max:1000'],

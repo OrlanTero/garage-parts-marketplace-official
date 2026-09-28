@@ -303,8 +303,10 @@ class SellerApplicationTest extends TestCase
         $carId = $this->postJson('/api/v1/seller/cars', $this->carPayload(), $this->token($buyer))
             ->assertCreated()->json('data.id');
 
-        $this->postJson("/api/v1/seller/cars/{$carId}/publish", [], $this->token($buyer))
-            ->assertOk()->assertJsonPath('data.status', 'active');
+        $this->postJson("/api/v1/seller/cars/{$carId}/submit-inspection", [
+            'inspection_type' => 'garage_dropoff',
+        ], $this->token($buyer))
+            ->assertOk()->assertJsonPath('data.status', 'pending_inspection');
     }
 
     public function test_seller_can_filter_all_statuses_including_pending_moderation(): void

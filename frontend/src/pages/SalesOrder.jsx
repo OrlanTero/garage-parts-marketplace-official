@@ -252,6 +252,27 @@ export default function SalesOrder() {
   const isNegotiating = order.status === 'negotiating'
   const isSold = order.status === 'sold'
   const fundsActive = ['paid', 'confirmed'].includes(paymentStatus) && !isCompleted && !isRefunded
+  const isCancelled = order.status === 'cancelled'
+
+  // Single contextual status banner (priority order) — one banner only,
+  // never a stack of contradictory states.
+  const heroBanner = (() => {
+    const ref = paymentReference
+      ? <> (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>)</>
+      : null
+    if (isRejected) return { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', border: '#ef4444', icon: 'alert', title: 'Request Declined by Seller.', body: <>{order.verification_note || 'Another buyer request was accepted for this listing.'}</> }
+    if (isCancelled) return { color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.08)', border: '#64748b', icon: 'alert', title: 'Order Cancelled.', body: <>This order was cancelled and is closed.</> }
+    if (isRefunded) return { color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.08)', border: '#64748b', icon: 'alert', title: 'Refunded.', body: <>The payment was returned to the buyer and this order is closed.</> }
+    if (isDisputed) return { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', border: '#ef4444', icon: 'alert', title: 'Disputed — payment frozen.', body: <>The delivery was disputed. Funds stay frozen until the dispute resolves: the seller issues a refund, or support rules on release.</> }
+    if (isCompleted) return { color: '#10b981', bg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)', border: '#10b981', icon: 'check', title: 'Order Complete — Official Transaction Receipt.', body: <>Funds confirmed{ref} and delivery fulfilled. Print / save this page as your proof of transaction.</> }
+    if (isDelivered) return { color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.4)', icon: 'shield', title: isCarOrder ? 'Delivered — inspect the car below.' : 'Delivered.', body: <>{isCarOrder ? 'Review the delivery, then accept to release payment or reject to open a dispute.' : 'Delivery is complete — the seller will finalize your order.'}</> }
+    if (isSold) return { color: '#fb923c', bg: 'rgba(216, 98, 44, 0.08)', border: '#d8622c', icon: 'check', title: 'Sold — reserved for your order.', body: <>{isCarOrder ? <>The seller will arrange delivery next — your payment stays held until you accept the car.</> : <>The seller is preparing dispatch — delivery completes the order.</>}</> }
+    if (isNegotiating) return { color: '#a78bfa', bg: 'rgba(139, 92, 246, 0.08)', border: '#8b5cf6', icon: 'alert', title: 'Negotiation in progress.', body: <>The seller received your order and marked it as negotiating. Keep the conversation in chat while terms are finalized.</> }
+    if (fundsActive && isCarOrder) return { color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.4)', icon: 'shield', title: 'Payment Held & Secured — order not complete.', body: <>Your payment{ref} is frozen in platform escrow. It goes to the seller only after delivery + your inspection acceptance — never before.</> }
+    if (fundsActive && !isCarOrder) return { color: '#10b981', bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.4)', icon: 'shield', title: 'Payment Received — order confirmed.', body: <>Your payment{ref} is captured (parts are not held in escrow). The seller is preparing dispatch — delivery completes the order.</> }
+    if (isAccepted) return { color: '#10b981', bg: 'rgba(16, 185, 129, 0.08)', border: '#10b981', icon: 'check', title: 'Verified & Accepted.', body: <>The seller confirmed your request. Settlement details below are now active — please proceed with payment.</> }
+    return { color: '#eab308', bg: 'rgba(234, 179, 8, 0.08)', border: '#eab308', icon: 'alert', title: 'Awaiting Seller Verification.', body: <>Your request is queued with the seller, who may receive multiple requests for this listing and will accept one buyer. Payment instructions unlock here automatically once your request is verified & accepted.</> }
+  })()
 
   // Listing Information for the receipt: live listing when reachable,
   // otherwise the frozen order snapshot. Receipt never breaks.
@@ -406,90 +427,19 @@ export default function SalesOrder() {
         </div>
       </div>
 
-      {isCompleted && (
-        <div className="no-print" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <CheckCircle2 size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
+      {/* Single contextual status banner — one state, one banner, never a stack */}
+      {heroBanner && (
+        <div className="no-print" style={{ background: heroBanner.bg, border: `1px solid ${heroBanner.border}`, borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          {heroBanner.icon === 'check' ? <CheckCircle2 size={20} color={heroBanner.color} style={{ flexShrink: 0, marginTop: 2 }} />
+            : heroBanner.icon === 'shield' ? <ShieldCheck size={20} color={heroBanner.color} style={{ flexShrink: 0, marginTop: 2 }} />
+            : <AlertCircle size={20} color={heroBanner.color} style={{ flexShrink: 0, marginTop: 2 }} />}
           <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#10b981' }}>Order Complete — Official Transaction Receipt.</strong>{' '}
-            Funds confirmed{paymentReference ? <> (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>)</> : null} and delivery fulfilled.
-            Print / save this page as your proof of transaction.
+            <strong style={{ color: heroBanner.color }}>{heroBanner.title}</strong>{' '}
+            {heroBanner.body}
           </div>
         </div>
       )}
 
-      {/* VERIFICATION STATUS — payment unlocks only after seller acceptance */}
-      {!isAccepted && !isRejected && (
-        <div className="no-print" style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid #eab308', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <AlertCircle size={20} color="#eab308" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#eab308' }}>Awaiting Seller Verification.</strong>{' '}
-            Your request is queued with the seller, who may receive multiple requests for this listing and will accept one buyer.
-            Payment instructions unlock here automatically once your request is verified & accepted.
-          </div>
-        </div>
-      )}
-      {isRejected && (
-        <div className="no-print" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#ef4444' }}>Request Declined by Seller.</strong>{' '}
-            {order.verification_note || 'Another buyer request was accepted for this listing.'}
-          </div>
-        </div>
-      )}
-      {isAccepted && (
-        <div className="no-print" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <CheckCircle2 size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#10b981' }}>Verified & Accepted.</strong>{' '}
-            The seller confirmed your request. Settlement details below are now active — please proceed with payment.
-          </div>
-        </div>
-      )}
-
-      {/* CARS: escrow — payment held & secured, order not yet complete */}
-      {fundsActive && isCarOrder && (
-        <div className="no-print" style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <ShieldCheck size={20} color="#60a5fa" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#60a5fa' }}>Payment Held & Secured — order not complete.</strong>{' '}
-            {paymentReference ? <>Your payment (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>) is </> : 'Your payment is '}
-            frozen in platform escrow. It goes to the seller only after delivery + your inspection acceptance — never before.
-          </div>
-        </div>
-      )}
-
-      {/* PARTS: direct capture — payment received, no hold */}
-      {fundsActive && !isCarOrder && (
-        <div className="no-print" style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <ShieldCheck size={20} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#10b981' }}>Payment Received — order confirmed.</strong>{' '}
-            {paymentReference ? <>Your payment (ref: <strong style={{ fontFamily: 'monospace' }}>{paymentReference}</strong>) is </> : 'Your payment is '}
-            captured (parts are not held in escrow). The seller is preparing dispatch — delivery completes the order.
-          </div>
-        </div>
-      )}
-
-      {isNegotiating && (
-        <div className="no-print" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid #8b5cf6', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <AlertCircle size={20} color="#a78bfa" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#a78bfa' }}>Negotiation in progress.</strong>{' '}
-            The seller received your order and marked it as negotiating. Keep the conversation in chat while terms are finalized.
-          </div>
-        </div>
-      )}
-
-      {isSold && isCarOrder && (
-        <div className="no-print" style={{ background: 'rgba(216, 98, 44, 0.08)', border: '1px solid #d8622c', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <CheckCircle2 size={20} color="#fb923c" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#fb923c' }}>Marked Sold by Seller.</strong>{' '}
-            This unit is now reserved for your order. The seller will arrange delivery next — your payment stays held until you accept the car.
-          </div>
-        </div>
-      )}
 
       {/* BUYER INSPECTION — delivered, accept releases payout, reject opens dispute */}
       {isCarOrder && isAccepted && isDelivered && !isCompleted && !isDisputed && (
@@ -552,26 +502,6 @@ export default function SalesOrder() {
             </div>
           )}
           {inspectError && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 8 }}>{inspectError}</div>}
-        </div>
-      )}
-
-      {isDisputed && (
-        <div className="no-print" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#ef4444' }}>Disputed — payment frozen.</strong>{' '}
-            The delivery was disputed. Funds stay frozen until the dispute resolves: the seller issues a refund, or support rules on release.
-          </div>
-        </div>
-      )}
-
-      {isRefunded && (
-        <div className="no-print" style={{ background: 'rgba(148, 163, 184, 0.08)', border: '1px solid #64748b', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <AlertCircle size={20} color="#94a3b8" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#94a3b8' }}>Refunded.</strong>{' '}
-            The payment was returned to the buyer and this order is closed.
-          </div>
         </div>
       )}
 

@@ -83,7 +83,7 @@ class OrderFulfillmentTest extends TestCase
         $this->postJson("/api/v1/seller/orders/{$order->id}/accept", [], $this->token($seller))->assertOk();
     }
 
-    public function test_escrow_flow_negotiating_sold_delivered_accept_releases_payout(): void
+    public function test_escrow_flow_auto_sold_delivered_accept_releases_payout(): void
     {
         $seller = User::factory()->create(['role' => 'seller']);
         $buyer = User::factory()->create(['role' => 'buyer', 'email' => 'kenji@tokyogarage.jp']);
@@ -95,18 +95,16 @@ class OrderFulfillmentTest extends TestCase
         ]))->assertCreated()->json('data.order_number');
         $order = Order::where('order_number', $orderNumber)->firstOrFail();
 
-        // Prepaid: settled but HELD — order is not complete.
+        // Prepaid last unit: settled but HELD — auto-SOLD to this buyer,
+        // never negotiating. Listing flips to sold (off the marketplace).
         $this->assertEquals('paid', $order->payment_status);
-        $this->assertEquals('processing', $order->status);
-        $this->assertNotEquals('completed', $order->status);
+        $this->assertEquals('sold', $order->refresh()->status);
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 0, 'status' => 'sold']);
 
-        // Seller marks negotiation, then sold.
+        // A committed order cannot slide back into negotiation.
         $this->patchJson("/api/v1/seller/orders/{$order->id}/status", [
             'status' => 'negotiating',
-        ], $this->token($seller))->assertOk()->assertJsonPath('data.status', 'negotiating');
-        $this->patchJson("/api/v1/seller/orders/{$order->id}/status", [
-            'status' => 'sold',
-        ], $this->token($seller))->assertOk()->assertJsonPath('data.status', 'sold');
+        ], $this->token($seller))->assertStatus(422);
 
         // Seller delivers; buyer inspects and accepts → payout released.
         $this->patchJson("/api/v1/seller/orders/{$order->id}/status", [

@@ -86,8 +86,10 @@ class ReviewController extends Controller
             ->with('buyer:id,username,avatar_url')
             ->first();
 
+        // No review yet is a normal state (checked on every detail
+        // page load), not an error — return null instead of 404.
         if (!$review) {
-            return response()->json(['message' => 'No review found for this listing.'], 404);
+            return response()->json(['status' => 'success', 'data' => null]);
         }
 
         return (new ReviewResource($review))->response();

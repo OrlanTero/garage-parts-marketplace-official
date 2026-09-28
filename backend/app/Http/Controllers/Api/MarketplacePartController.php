@@ -35,9 +35,20 @@ class MarketplacePartController extends Controller
         return PartResource::collection($paginator);
     }
 
-    public function show(Part $part)
+    public function show(Request $request, Part $part)
     {
-        $this->authorize('view', $part);
+        // Same optional-auth resolution as cars: owners and involved
+        // buyers keep read access to sold (unlisted) parts.
+        $user = $request->user();
+        if (!$user && $request->bearerToken()) {
+            $user = \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+        }
+        if ($user) {
+            $request->setUserResolver(fn () => $user);
+            \Illuminate\Support\Facades\Gate::forUser($user)->authorize('view', $part);
+        } else {
+            $this->authorize('view', $part);
+        }
 
         return new PartResource($part->loadMissing(['seller:id,name', 'media'])->loadCount('heldOrders'));
     }

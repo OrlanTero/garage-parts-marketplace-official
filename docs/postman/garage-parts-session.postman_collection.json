@@ -42,6 +42,16 @@
             "type": "string"
         },
         {
+            "key": "listingType",
+            "value": "car",
+            "type": "string"
+        },
+        {
+            "key": "listingId",
+            "value": "1",
+            "type": "string"
+        },
+        {
             "key": "applicationId",
             "value": "1",
             "type": "string"
@@ -490,7 +500,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1790398403@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
+                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -546,7 +556,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1790398403@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
+                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -602,7 +612,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1790398403@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
+                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -658,7 +668,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1790398403@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
+                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -3366,7 +3376,7 @@
             ]
         },
         {
-            "name": "13. Chat & Direct Messaging (1:1 + PII Safety Engine)",
+            "name": "13. Chat & Listing Inbox (Listing threads + PII Safety Engine)",
             "item": [
                 {
                     "name": "GET Unread Messages Total Count",
@@ -3408,7 +3418,129 @@
                     }
                 },
                 {
-                    "name": "GET List Inbox Conversations",
+                    "name": "GET Listing Inbox (Buying & Selling)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Listing inbox array present\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); if (d.data.length) { pm.expect(d.data[0].listing).to.be.an(\"object\"); pm.expect(d.data[0].listing.title).to.be.a(\"string\"); pm.expect([\"buying\",\"selling\"]).to.include(d.data[0].role); } });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/inbox",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "inbox"
+                            ]
+                        },
+                        "description": "Listing-focused inbox. Each row is a car or part the user is selling or buying, with listing name, last message, unread count, and inquiry count."
+                    }
+                },
+                {
+                    "name": "GET Listing Thread (All Conversations On Listing)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Listing thread returned\", function () { const d = pm.response.json(); pm.expect(d.listing).to.be.an(\"object\"); pm.expect(d.listing.title).to.be.a(\"string\"); pm.expect(d.conversations).to.be.an(\"array\"); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/listings/{{listingType}}/{{listingId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "listings",
+                                "{{listingType}}",
+                                "{{listingId}}"
+                            ]
+                        },
+                        "description": "Opens one listing. Sellers see every buyer thread and all messages on that listing. Buyers see only their conversation with the seller."
+                    }
+                },
+                {
+                    "name": "POST Mark Listing Thread as Read",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Listing marked read\", function () { const d = pm.response.json(); pm.expect(d.marked_count).to.be.a(\"number\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/chat/listings/{{listingType}}/{{listingId}}/read",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat",
+                                "listings",
+                                "{{listingType}}",
+                                "{{listingId}}",
+                                "read"
+                            ]
+                        },
+                        "description": "Marks all unread messages the current user can see on this listing as read."
+                    }
+                },
+                {
+                    "name": "GET List 1:1 Conversations (Legacy)",
                     "event": [
                         {
                             "listen": "test",
@@ -3449,11 +3581,11 @@
                                 }
                             ]
                         },
-                        "description": "Retrieves user inbox conversations with latest message preview, unread status, and recipient profile."
+                        "description": "Retrieves user 1:1 conversations with latest message preview, unread status, recipient profile, and listing scope."
                     }
                 },
                 {
-                    "name": "POST Start / Resolve 1:1 Conversation (With Listing Context)",
+                    "name": "POST Start / Resolve Listing Conversation",
                     "event": [
                         {
                             "listen": "test",
@@ -3499,7 +3631,7 @@
                                 "conversations"
                             ]
                         },
-                        "description": "Finds existing or creates a new strictly 1:1 conversation thread between two users. Attaches listing context card and sets {{conversationId}} variable."
+                        "description": "Finds existing or creates a 1:1 conversation scoped to a listing (unique per buyer + seller + listing). Sets {{conversationId}} variable."
                     }
                 },
                 {
@@ -3809,7 +3941,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"inspection_type\": \"garage_dropoff\",\n    \"inspection_date\": \"2026-09-28 04:53:23\",\n    \"inspection_location\": \"Makati Certified Bay 1\",\n    \"notes\": \"Underside rust and turbo manifold inspection\"\n}"
+                            "raw": "{\n    \"inspection_type\": \"garage_dropoff\",\n    \"inspection_date\": \"2026-09-29 16:28:42\",\n    \"inspection_location\": \"Makati Certified Bay 1\",\n    \"notes\": \"Underside rust and turbo manifold inspection\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/admin/moderation/cars/{{carId}}/schedule-inspection",

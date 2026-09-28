@@ -24,6 +24,7 @@ import AppointmentMonitoring from './pages/AppointmentMonitoring.jsx'
 import ChatModeration from './pages/ChatModeration.jsx'
 import PromotionsManagement from './pages/PromotionsManagement.jsx'
 import OrdersManagement from './pages/OrdersManagement.jsx'
+import CarTransactions from './pages/CarTransactions.jsx'
 import OrderDetail from './pages/OrderDetail.jsx'
 import PayoutsManagement from './pages/PayoutsManagement.jsx'
 import DisputesManagement from './pages/DisputesManagement.jsx'
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="parts" element={<PartsManagement />} />
             <Route path="inventory" element={<InventoryManagement />} />
             <Route path="orders" element={<OrdersManagement />} />
+            <Route path="car-transactions" element={<CarTransactions />} />
             <Route path="orders/:orderId" element={<OrderDetail />} />
             <Route path="appointments" element={<AppointmentMonitoring />} />
             <Route path="chat-moderation" element={<ChatModeration />} />

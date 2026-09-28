@@ -24,6 +24,8 @@ export const sellerCars = {
     client.patch(`/seller/cars/${id}`, payload).then((r) => r.data?.data ?? r.data),
   destroy: (id) => client.delete(`/seller/cars/${id}`).then((r) => r.data),
   publish: (id) => client.post(`/seller/cars/${id}/publish`).then((r) => r.data?.data ?? r.data),
+  submitInspection: (id, payload = {}) =>
+    client.post(`/seller/cars/${id}/submit-inspection`, payload).then((r) => r.data?.data ?? r.data),
   unpublish: (id) => client.post(`/seller/cars/${id}/unpublish`).then((r) => r.data?.data ?? r.data),
   markSold: (id) => client.post(`/seller/cars/${id}/sold`).then((r) => r.data?.data ?? r.data),
   setStatus: (id, status) => client.post(`/seller/cars/${id}/status`, { status }).then((r) => r.data?.data ?? r.data),

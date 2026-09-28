@@ -18,7 +18,8 @@ import {
   Coffee,
   MessageSquare,
   Wallet as WalletIcon,
-  BarChart3
+  BarChart3,
+  Bell as BellIcon
 } from 'lucide-react'
 import Home from './pages/Home.jsx'
 import Marketplace from './pages/Marketplace.jsx'
@@ -35,6 +36,7 @@ import MyListings from './pages/MyListings.jsx'
 import Showroom from './pages/Showroom.jsx'
 import Offers from './pages/Offers.jsx'
 import MyOrders from './pages/MyOrders.jsx'
+import Notifications from './pages/Notifications.jsx'
 import Wallet from './pages/Wallet.jsx'
 import SellerAnalytics from './pages/SellerAnalytics.jsx'
 import Settings from './pages/Settings.jsx'
@@ -46,6 +48,8 @@ import SearchModal from './components/SearchModal.jsx'
 import MobileQuickActions from './components/MobileQuickActions.jsx'
 import AuthModal from './components/AuthModal.jsx'
 import UserMenu from './components/UserMenu.jsx'
+import NotificationBell from './components/NotificationBell.jsx'
+import NotificationToasts from './components/NotificationToasts.jsx'
 import FloatingChatDrawer from './components/chat/FloatingChatDrawer.jsx'
 import { useAuth } from './auth/AuthContext.jsx'
 import { useFavorites } from './context/FavoritesContext.jsx'
@@ -262,6 +266,8 @@ export default function App() {
               {unreadCount > 0 && <span className="action-badge action-badge--chat">{unreadCount}</span>}
             </Link>
 
+            {isAuthenticated && <NotificationBell />}
+
             {isAuthenticated ? (
               <UserMenu 
                 user={user} 
@@ -407,6 +413,14 @@ export default function App() {
                     <MessageSquare size={15} />
                     <span>Messages & Inquiries {unreadCount > 0 ? `(${unreadCount})` : ''}</span>
                   </Link>
+                  <Link
+                    to="/notifications"
+                    className="mobile-drawer-quicklink"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <BellIcon size={15} />
+                    <span>Notifications</span>
+                  </Link>
                   {!isBuyer && (
                     <>
                       <Link
@@ -488,6 +502,9 @@ export default function App() {
       {/* Floating 1:1 Live Chat Drawer */}
       <FloatingChatDrawer />
 
+      {/* Realtime notification toasts */}
+      {isAuthenticated && <NotificationToasts />}
+
       {/* Mobile floating quick-actions (Search / Saved / Messages) */}
       <MobileQuickActions
         onSearch={() => setSearchModalOpen(true)}
@@ -522,6 +539,7 @@ export default function App() {
           <Route path="/wishlist" element={<Favorites />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/inbox" element={<Messages />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/offers" element={<Offers />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/account" element={<Settings />} />

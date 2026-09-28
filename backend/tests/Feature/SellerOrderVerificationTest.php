@@ -132,22 +132,25 @@ class SellerOrderVerificationTest extends TestCase
             'mock_paid' => true,
         ])->assertCreated()->json('data.order_number');
 
-        // Funds held, order open — unit reserved, car NOT sold.
+        // Funds held on the last unit — auto-SOLD to this buyer, never
+        // left open in processing.
         $this->assertDatabaseHas('orders', [
             'order_number' => $orderNumber,
             'payment_status' => 'paid',
             'verification_status' => 'accepted',
-            'status' => 'processing',
+            'status' => 'sold',
         ]);
-        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 0, 'status' => 'active']);
+        $this->assertDatabaseHas('cars', ['id' => $car->id, 'quantity' => 0, 'status' => 'sold']);
 
-        // Listing reads as payment-secured…
-        $this->getJson("/api/v1/marketplace/cars/{$car->id}")
+        // Listing reads as payment-secured to the seller…
+        $this->getJson("/api/v1/marketplace/cars/{$car->id}", $this->sellerToken($seller))
             ->assertOk()
             ->assertJsonPath('data.payment_secured', true);
 
-        // …and with no stock left it leaves the public marketplace…
-        $this->assertDatabaseMissing('cars', ['id' => $car->id, 'status' => 'sold']);
+        // …but the sold unit is no longer public.
+        $this->getJson("/api/v1/marketplace/cars/{$car->id}")->assertStatus(403);
+
+        // …and sold, it leaves the public marketplace…
         $grid = $this->getJson('/api/v1/marketplace/cars')->assertOk()->json('data');
         $this->assertNotContains($car->id, collect($grid)->pluck('id')->all());
 

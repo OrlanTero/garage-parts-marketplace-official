@@ -175,6 +175,11 @@ class ChatController extends Controller
         $user = $request->user();
         $this->authorizeParticipant($conversation, $user->id);
 
+        // Winner-aware gate: sellers and the paying buyer always pass
+        // (stale locks on winner threads self-heal here); losers on a
+        // sold-out listing are rejected.
+        app(\App\Services\ThreadGate::class)->authorizeSend($conversation, (int) $user->id);
+
         $body = $request->validated('body');
         $sanitized = $piiService->sanitize($body);
 
@@ -197,6 +202,7 @@ class ChatController extends Controller
 
         if ($otherUser) {
             $this->safeBroadcast(new MessageSent($message, $otherUser->id));
+            $this->safeNotify($otherUser->id, $user, $conversation, $message);
         }
 
         return (new MessageResource($message))
@@ -258,6 +264,38 @@ class ChatController extends Controller
     {
         if (!$conversation->hasParticipant($userId)) {
             abort(403, 'You are not authorized to access this conversation.');
+        }
+    }
+
+    /**
+     * Persistent chat notification for the recipient (unread badge +
+     * notification center), linked straight into the listing thread.
+     */
+    private function safeNotify(int $recipientId, $sender, Conversation $conversation, Message $message): void
+    {
+        try {
+            $listingKey = $conversation->listing_type && $conversation->listing_id
+                ? "{$conversation->listing_type}:{$conversation->listing_id}"
+                : null;
+            $link = $listingKey
+                ? "/messages?listing={$listingKey}&conversation={$conversation->id}"
+                : '/messages';
+            app(\App\Services\NotificationService::class)->send(
+                $recipientId,
+                'chat',
+                'New message from @' . ($sender->username ?? 'member'),
+                mb_substr((string) $message->body, 0, 140),
+                [
+                    'conversation_id' => $conversation->id,
+                    'message_id' => $message->id,
+                    'sender_id' => $sender->id,
+                    'listing_key' => $listingKey,
+                ],
+                $link,
+                $sender,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Chat notification failed: ' . $e->getMessage());
         }
     }
 

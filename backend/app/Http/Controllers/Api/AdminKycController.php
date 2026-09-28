@@ -105,6 +105,20 @@ class AdminKycController extends Controller
             'kyc_rejection_reason' => null,
         ])->save();
 
+        try {
+            app(\App\Services\NotificationService::class)->send(
+                $user,
+                'kyc',
+                'KYC verified — seller badge granted',
+                'Your identity verification was approved. You can now sell with the verified badge.',
+                ['kyc_status' => 'approved'],
+                '/settings',
+                $request->user(),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return response()->json([
             'message' => "KYC verification for @{$user->username} approved successfully. Verified Seller Badge granted.",
             'user' => [
@@ -134,6 +148,20 @@ class AdminKycController extends Controller
             'kyc_rejection_reason' => $validated['reason'],
             'kyc_verified_by' => $request->user()?->id,
         ])->save();
+
+        try {
+            app(\App\Services\NotificationService::class)->send(
+                $user,
+                'kyc',
+                'KYC verification needs attention',
+                "Your submission was rejected: {$validated['reason']}",
+                ['kyc_status' => 'rejected'],
+                '/settings',
+                $request->user(),
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'message' => "KYC verification for @{$user->username} rejected.",

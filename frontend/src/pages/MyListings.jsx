@@ -179,6 +179,43 @@ export default function MyListings() {
     }
   }
 
+  const runSubmitInspection = async (carId, inspectionType = 'garage_dropoff') => {
+    const label = inspectionType === 'onsite_visit' ? 'Mobile On-Site Visit' : 'Garage Drop-off'
+    if (!window.confirm(`Submit this build for ${label} inspection? It enters the verification queue (not the marketplace) until approved.`)) return
+    setActingId(`inspect-${carId}`)
+    setError(null)
+    setNotice(null)
+    try {
+      await sellerCars.submitInspection(carId, { inspection_type: inspectionType })
+      setNotice(`Submitted for ${label} inspection — an inspector will be assigned. You will be notified of the result.`)
+      await load()
+    } catch (err) {
+      setError(extractError(err, 'Failed to submit for inspection.'))
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  const runSubmitProof = async (order) => {
+    const note = window.prompt('Handover note for the admin reviewer (e.g. turnover location, odometer, keys handed over):', '')
+    if (note === null) return
+    const urls = window.prompt('Photo proof URLs, comma-separated (handover photos, OR/CR, odometer):', '')
+    if (urls === null) return
+    const images = urls.split(',').map((u) => u.trim()).filter(Boolean)
+    setActingId(`proof-${order.id}`)
+    setError(null)
+    setNotice(null)
+    try {
+      await sellerOrdersApi.submitProof(order.id, { images, note: note.trim() || undefined })
+      setNotice('Handover proof submitted — admin review releases your held funds to your wallet.')
+      await load()
+    } catch (err) {
+      setError(extractError(err, 'Failed to submit handover proof.'))
+    } finally {
+      setActingId(null)
+    }
+  }
+
   const runOrderStatusChange = async (order, status) => {
     if (!status || status === order.status) {
       await load()
@@ -601,6 +638,23 @@ export default function MyListings() {
                             Refund Buyer
                           </button>
                         )}
+                        {verification === 'accepted' && (order.item?.type || order.item_type) === 'car' && ['shipped', 'delivered'].includes(order.status) && (order.proof?.status || 'none') !== 'approved' && (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={actingId === `proof-${order.id}`}
+                            onClick={() => runSubmitProof(order)}
+                            title="Submit handover photos + note — admin approval releases held funds to your wallet"
+                          >
+                            {order.proof?.status === 'pending' ? 'Resubmit Proof' : order.proof?.status === 'rejected' ? 'Fix & Resubmit Proof' : 'Submit Handover Proof'}
+                          </button>
+                        )}
+                        {(order.proof?.status === 'pending' || order.proof?.status === 'approved') && (
+                          <span className="muted" style={{ fontSize: 12 }}>
+                            Proof: {order.proof.status}{order.proof.status === 'rejected' && order.proof.rejection_reason ? ` — ${order.proof.rejection_reason}` : ''}
+                          </span>
+                        )}
+                        )}
                         {verification === 'pending' && (
                           <>
                             <button type="button" className="btn btn-secondary btn-sm" disabled={actingId === `accept-${order.id}`} onClick={() => runRequestAction(order, 'accept')} title="Verify & accept this buyer">
@@ -657,6 +711,37 @@ export default function MyListings() {
                   </div>
                   <div className="my-listings-row-actions">
                     <Link to={detailPath(item)} className="btn btn-ghost btn-sm" title="View listing"><Eye size={14} /></Link>
+                    {tab === 'cars' && ['draft', 'archived', 'rejected'].includes(status) && (
+                      <>
+                        <select
+                          className="btn btn-secondary btn-sm"
+                          defaultValue="garage_dropoff"
+                          id={`inspect-type-${item.id}`}
+                          title="Inspection method: garage drop-off or mobile on-site visit"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <option value="garage_dropoff">Drop-off</option>
+                          <option value="onsite_visit">On-Site</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          disabled={actingId === `inspect-${item.id}`}
+                          onClick={() => {
+                            const sel = document.getElementById(`inspect-type-${item.id}`)
+                            runSubmitInspection(item.id, sel?.value || 'garage_dropoff')
+                          }}
+                          title="Submit for mandatory inspection — goes live only after approval"
+                        >
+                          <ShieldCheck size={14} /> {actingId === `inspect-${item.id}` ? 'Submitting…' : 'Submit for Inspection'}
+                        </button>
+                      </>
+                    )}
+                    {tab === 'cars' && ['pending_inspection', 'inspected'].includes(status) && (
+                      <span className="muted" style={{ fontSize: 12 }} title="With the inspectors — you will be notified of the result">
+                        In inspection queue
+                      </span>
+                    )}
                     <ListingStatusPicker
                       listingType={tab === 'cars' ? 'car' : 'part'}
                       listingId={item.id}

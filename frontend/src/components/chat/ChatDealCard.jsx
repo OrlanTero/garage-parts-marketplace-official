@@ -55,7 +55,7 @@ function OfferCard({ offer, viewerId, onAction, acting }) {
       return
     }
     setCounterError('')
-    onAction('counter', { offer, amount })
+    onAction?.('counter', { offer, amount })
     setCounterOpen(false)
     setCounterAmount('')
   }
@@ -84,24 +84,24 @@ function OfferCard({ offer, viewerId, onAction, acting }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         {status === 'pending' && !isOriginator && (
           <>
-            <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction('accept', { offer })}>
+            <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction?.('accept', { offer })}>
               <Check size={13} /> Accept
             </button>
             <button type="button" style={btn(false)} disabled={acting} onClick={() => setCounterOpen((v) => !v)}>
               <Undo2 size={13} /> Counter
             </button>
-            <button type="button" style={btn(false)} disabled={acting} onClick={() => onAction('reject', { offer })}>
+            <button type="button" style={btn(false)} disabled={acting} onClick={() => onAction?.('reject', { offer })}>
               <X size={13} /> Decline
             </button>
           </>
         )}
         {status === 'pending' && isOriginator && (
-          <button type="button" style={btn(false)} disabled={acting} onClick={() => onAction('withdraw', { offer })}>
+          <button type="button" style={btn(false)} disabled={acting} onClick={() => onAction?.('withdraw', { offer })}>
             <X size={13} /> Withdraw
           </button>
         )}
         {status === 'accepted' && isOriginator && (
-          <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction('confirm', { offer })}>
+          <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction?.('confirm', { offer })}>
             <BadgeCheck size={13} /> Confirm Deal
           </button>
         )}
@@ -109,7 +109,7 @@ function OfferCard({ offer, viewerId, onAction, acting }) {
           <span style={{ fontSize: 12, color: '#eab308' }}>Accepted — waiting for originator confirmation…</span>
         )}
         {status === 'confirmed' && isSeller && (
-          <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction('checkout-link', { offer })}>
+          <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction?.('checkout-link', { offer })}>
             <Link2 size={13} /> Issue Checkout Link
           </button>
         )}
@@ -163,7 +163,7 @@ function ReservationCard({ reservation, viewerId, onAction, acting }) {
       return
     }
     setRefError('')
-    onAction('pay-reservation', { reservation, payment_reference: ref.trim() })
+    onAction?.('pay-reservation', { reservation, payment_reference: ref.trim() })
   }
 
   return (
@@ -205,7 +205,7 @@ function ReservationCard({ reservation, viewerId, onAction, acting }) {
           </div>
         )}
         {status === 'paid' && isSeller && (
-          <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction('accept-reservation', { reservation })}>
+          <button type="button" style={btn(true)} disabled={acting} onClick={() => onAction?.('accept-reservation', { reservation })}>
             <Check size={13} /> Accept Payment
           </button>
         )}
@@ -218,7 +218,7 @@ function ReservationCard({ reservation, viewerId, onAction, acting }) {
           </span>
         )}
         {(status === 'pending' || status === 'paid') && (
-          <button type="button" style={btn(false)} disabled={acting} onClick={() => onAction('cancel-reservation', { reservation })}>
+          <button type="button" style={btn(false)} disabled={acting} onClick={() => onAction?.('cancel-reservation', { reservation })}>
             Cancel
           </button>
         )}
@@ -228,13 +228,17 @@ function ReservationCard({ reservation, viewerId, onAction, acting }) {
   )
 }
 
-function CheckoutLinkCard({ metadata, offer }) {
+function CheckoutLinkCard({ metadata, offer, viewerId }) {
   const token = metadata?.checkout_token
   const amount = offer?.amount
   const itemType = offer?.item_type
   const listingId = itemType === 'car' ? offer?.car_id : offer?.part_id
   if (!token || !listingId) return null
   const url = `/checkout?${itemType === 'car' ? 'car_id' : 'part_id'}=${listingId}&offer_token=${token}`
+  // The checkout token is pinned to the deal buyer server-side — the
+  // seller must never see a checkout button on their own product.
+  const offerBuyerId = offer?.buyer_id ?? offer?.buyer?.id ?? null
+  const isBuyer = offerBuyerId != null && Number(offerBuyerId) === Number(viewerId)
 
   return (
     <div style={{ ...cardStyle, borderColor: '#10b981' }}>
@@ -247,9 +251,13 @@ function CheckoutLinkCard({ metadata, offer }) {
       <div style={{ fontSize: 18, fontWeight: 900, color: '#f8fafc', marginBottom: 8 }}>
         {peso(amount)} <span style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>agreed price</span>
       </div>
-      <Link to={url} style={{ ...btn(true), textDecoration: 'none' }}>
-        Proceed to Checkout <ArrowRight size={13} />
-      </Link>
+      {isBuyer ? (
+        <Link to={url} style={{ ...btn(true), textDecoration: 'none' }}>
+          Proceed to Checkout <ArrowRight size={13} />
+        </Link>
+      ) : (
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>Waiting for the buyer to check out at this price…</span>
+      )}
     </div>
   )
 }
@@ -295,10 +303,10 @@ export default function ChatDealCard({ message, viewerId, onAction, acting }) {
         <ReservationCard reservation={message.reservation} viewerId={viewerId} onAction={onAction} acting={acting} />
       )}
       {message.metadata?.checkout_token && !message.offer && (
-        <CheckoutLinkCard metadata={message.metadata} offer={null} />
+        <CheckoutLinkCard metadata={message.metadata} offer={null} viewerId={viewerId} />
       )}
       {message.metadata?.checkout_token && message.offer && (
-        <CheckoutLinkCard metadata={message.metadata} offer={message.offer} />
+        <CheckoutLinkCard metadata={message.metadata} offer={message.offer} viewerId={viewerId} />
       )}
     </>
   )

@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Models\Car;
 use App\Models\Order;
 use App\Models\Part;
+use App\Observers\CarObserver;
 use App\Observers\OrderObserver;
+use App\Observers\PartObserver;
 use App\Policies\CarPolicy;
 use App\Policies\PartPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -29,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Part::class, PartPolicy::class);
 
         Order::observe(OrderObserver::class);
+        Car::observe(CarObserver::class);
+        Part::observe(PartObserver::class);
 
         // Resolve user for broadcasting channel auth across Sanctum API & session guards
         Broadcast::resolveAuthenticatedUserUsing(fn (Request $request) => $request->user());

@@ -36,7 +36,8 @@ export default function OrdersManagement() {
   const loadOrders = async () => {
     setLoading(true)
     try {
-      const res = await adminApi.getOrders()
+      // Parts pipeline only — car builds live on the Car Transactions page.
+      const res = await adminApi.getOrders({ item_type: 'part' })
       const data = res?.data || []
       setOrders(data)
     } catch (err) {
@@ -191,10 +192,10 @@ export default function OrdersManagement() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, margin: '0 0 6px 0' }}>
-            Orders & Marketplace Fulfillment Lifecycle
+            Parts Orders & Fulfillment Lifecycle
           </h1>
           <p style={{ color: 'var(--admin-text-secondary)', fontSize: 14, margin: 0 }}>
-            Audit marketplace purchases, manage order fulfillment status, track carrier waybills, and process seller payouts.
+            Audit parts purchases, manage direct-capture fulfillment, track carrier waybills, and settle seller payouts. Car builds live on the Car Transactions page.
           </p>
         </div>
 

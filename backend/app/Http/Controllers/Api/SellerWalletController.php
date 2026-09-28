@@ -18,9 +18,10 @@ class SellerWalletController extends Controller
 {
     /**
      * Wallet balance math for a seller.
-     * Earned = completed seller payouts. Locked = open (pending/approved)
-     * withdrawals. Available = earned − locked. Rejected withdrawals and
-     * refunds never touch the balance (payouts only exist on completion).
+     * Earned = completed seller payouts + settled referral commissions.
+     * Locked = open (pending/approved) withdrawals. Available = earned −
+     * locked − paid out. Rejected withdrawals and refunds never touch the
+     * balance (payouts only exist on completion).
      *
      * @return array{earned: float, locked: float, available: float, withdrawn_paid: float}
      */
@@ -29,6 +30,12 @@ class SellerWalletController extends Controller
         $earned = (float) PlatformTransaction::query()
             ->where('seller_id', $user->id)
             ->where('stream_type', 'seller_payout')
+            ->where('status', 'completed')
+            ->sum('net_amount');
+
+        $earned += (float) PlatformTransaction::query()
+            ->where('user_id', $user->id)
+            ->where('stream_type', 'agent_commission')
             ->where('status', 'completed')
             ->sum('net_amount');
 
@@ -56,8 +63,11 @@ class SellerWalletController extends Controller
         $user = $request->user();
 
         $payouts = PlatformTransaction::query()
-            ->where('seller_id', $user->id)
-            ->where('stream_type', 'seller_payout')
+            ->where(function ($q) use ($user) {
+                $q->where(fn ($sq) => $sq->where('seller_id', $user->id)->where('stream_type', 'seller_payout'))
+                    ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_commission'));
+            })
+            ->where('status', 'completed')
             ->with(['order:id,order_number,item_name,item_type,status'])
             ->latest()
             ->take(5)
@@ -94,16 +104,18 @@ class SellerWalletController extends Controller
 
         if (in_array($type, ['all', 'payouts'], true)) {
             $payouts = PlatformTransaction::query()
-                ->where('seller_id', $user->id)
-                ->where('stream_type', 'seller_payout')
+                ->where(function ($q) use ($user) {
+                    $q->where(fn ($sq) => $sq->where('seller_id', $user->id)->where('stream_type', 'seller_payout'))
+                        ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_commission'));
+                })
                 ->with(['order:id,order_number,item_name,item_type'])
                 ->latest()
                 ->take(200)
                 ->get()
                 ->map(fn (PlatformTransaction $t) => [
-                    'id' => 'payout-' . $t->id,
-                    'kind' => 'payout',
-                    'title' => $t->title ?? ('Seller Payout — ' . ($t->order?->item_name ?? $t->order?->order_number ?? '')),
+                    'id' => $t->stream_type . '-' . $t->id,
+                    'kind' => $t->stream_type === 'agent_commission' ? 'commission' : 'payout',
+                    'title' => $t->title ?? (($t->stream_type === 'agent_commission' ? 'Agent Commission — ' : 'Seller Payout — ') . ($t->order?->item_name ?? $t->order?->order_number ?? '')),
                     'detail' => $t->order?->order_number,
                     'item_type' => $t->order?->item_type ?? $t->metadata['item_type'] ?? null,
                     'amount' => (float) $t->net_amount,
@@ -322,6 +334,20 @@ class SellerWalletController extends Controller
             'net_amount' => $amount,
             'status' => PayoutWithdrawal::STATUS_PENDING,
         ]);
+
+        try {
+            $adminIds = User::query()->whereIn('role', ['admin', 'super_admin'])->pluck('id')->all();
+            app(\App\Services\NotificationService::class)->sendMany(
+                $adminIds,
+                'payout',
+                "Cash-out request ₱{$amount} by @{$user->username}",
+                "Seller {$user->name} requested a cash-out to {$account->channel} {$account->maskedNumber()} — review in Payouts.",
+                ['withdrawal_id' => $withdrawal->id, 'amount' => $amount, 'seller_id' => $user->id],
+                '/admin/payouts',
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return (response()->json([
             'status' => 'success',

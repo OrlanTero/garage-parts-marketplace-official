@@ -27,6 +27,21 @@ class InventorySeeder extends Seeder
         $this->seedOwner($gap);
     }
 
+    /**
+     * Depot-only seeding for fresh installs: the dispatch warehouse and
+     * bins exist before any part is ever listed, so delivery quotes and
+     * checkout freight work on an empty catalog.
+     */
+    public function seedDepotOnly(): void
+    {
+        $gap = User::house();
+        if (!$gap) {
+            return;
+        }
+
+        $this->seedHouseWarehouse($gap);
+    }
+
     private function seedHouseWarehouse(User $owner): void
     {
         $warehouse = Warehouse::updateOrCreate(

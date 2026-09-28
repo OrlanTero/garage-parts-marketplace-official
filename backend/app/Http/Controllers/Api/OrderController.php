@@ -41,6 +41,12 @@ class OrderController extends Controller
             });
         }
 
+        // Lets the admin panel split the pipeline: parts fulfillment vs
+        // car build transactions.
+        if (in_array($request->input('item_type'), ['car', 'part'], true)) {
+            $query->where('item_type', $request->input('item_type'));
+        }
+
         $orders = $query->paginate($request->integer('per_page', 20));
 
         return OrderResource::collection($orders);
@@ -74,6 +80,9 @@ class OrderController extends Controller
             abort(422, 'Funds must be submitted before an order can be completed.');
         }
 
+        $this->ensureForwardTransition($order, $validated['status']);
+
+        $fromStatus = $order->status;
         $hadHeldPayment = in_array($order->payment_status, ['paid', 'confirmed'], true);
 
         $order->update($validated);
@@ -85,10 +94,28 @@ class OrderController extends Controller
             $car->forceFill(['quantity' => $onHand + max(1, (int) $order->quantity)])->save();
         }
 
-        // Parts use direct capture (no escrow release step): settling the
-        // seller payout when a captured order completes.
-        if (($validated['status'] ?? null) === 'completed' && $order->item_type !== 'car') {
-            $this->settlePartsPayout($order->refresh());
+        // Completion releases money exactly once, both flows: parts settle
+        // their captured payment here; cars release held escrow here when
+        // completion arrives via status update (inspection acceptance has
+        // its own idempotent path). Without this, completed orders leave
+        // the seller wallet empty.
+        if (($validated['status'] ?? null) === 'completed') {
+            $fresh = $order->refresh();
+            if (in_array($fresh->payment_status, ['paid', 'confirmed', 'released'], true)) {
+                try {
+                    PlatformTransaction::recordPayoutOnce($fresh);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+            $this->settleAgentCommission($fresh->refresh());
+        }
+
+        // Every admin move messages the buyer in-thread.
+        try {
+            app(\App\Services\OrderStatusMessenger::class)->announce($order->refresh(), $fromStatus);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return (new OrderResource($order->refresh()))->response();
@@ -233,6 +260,18 @@ class OrderController extends Controller
         $sellerId = $part ? $part->seller_id : ($car ? $car->seller_id : null);
         $sellerName = $part ? ($part->seller?->name ?? 'HKS & Garage Pro Parts') : ($car ? ($car->seller?->name ?? 'Verified Dealership') : 'Garage Parts Official Depot');
 
+        // Common sense: a seller cannot purchase their own listing — by
+        // account or by checkout email.
+        if ($sellerId) {
+            $buyerUserId = $request->user()?->id;
+            $sellerEmail = strtolower((string) ($part?->seller?->email ?? $car?->seller?->email ?? ''));
+            $buyerEmail = strtolower(trim((string) ($data['buyer_email'] ?? '')));
+            if (($buyerUserId && (int) $buyerUserId === (int) $sellerId)
+                || ($buyerEmail !== '' && $sellerEmail !== '' && $buyerEmail === $sellerEmail)) {
+                abort(422, 'You cannot purchase your own listing.');
+            }
+        }
+
         $unitPrice = $dealOffer
             ? (float) $dealOffer->amount
             : ($part ? (float) $part->price : ($car ? (float) $car->price : 2500.00));
@@ -273,13 +312,26 @@ class OrderController extends Controller
                 ->orWhere('id', is_numeric($agentCodeInput) ? (int) $agentCodeInput : 0)
                 ->first();
 
+            // Self-dealing block: an agent cannot earn commission on their
+            // own activity — neither as the listing seller nor as the buyer
+            // (by account or checkout email). Attribution is dropped
+            // entirely (no code, no amount) so agent stats stay honest.
+            $isSelfDeal = false;
             if ($agentUser) {
+                $callerId = $request->user()?->id;
+                $buyerEmail = strtolower(trim((string) ($data['buyer_email'] ?? '')));
+                $isSelfDeal = (int) $agentUser->id === (int) $sellerId
+                    || ($callerId && (int) $agentUser->id === (int) $callerId)
+                    || ($buyerEmail !== '' && strtolower((string) ($agentUser->email ?? '')) === $buyerEmail);
+            }
+
+            if ($agentUser && !$isSelfDeal) {
                 $agentId = $agentUser->id;
                 $agentCode = $agentUser->agent_code;
                 $agentName = $agentUser->name;
                 $commissionRate = (float) ($agentUser->commission_rate ?? 5.00);
                 $commissionAmount = round(($unitPrice * $quantity) * ($commissionRate / 100), 2);
-            } else {
+            } elseif (!$isSelfDeal) {
                 $agentCode = $agentCodeInput;
                 $commissionAmount = round(($unitPrice * $quantity) * (5.00 / 100), 2);
             }
@@ -466,7 +518,7 @@ class OrderController extends Controller
     private function decrementStock(Order $order): void
     {
         if ($order->item_type === 'car' && $order->car_id && ($car = Car::find($order->car_id))) {
-            $this->reserveCarUnits($car, max(1, (int) $order->quantity));
+            $this->reserveCarUnits($car, max(1, (int) $order->quantity), $order);
 
             return;
         }
@@ -615,10 +667,34 @@ class OrderController extends Controller
         ])->save();
 
         if ($payCar) {
-            $this->reserveCarUnits($payCar, max(1, (int) $order->quantity));
+            $this->reserveCarUnits($payCar, max(1, (int) $order->quantity), $order);
         }
 
         return (new OrderResource($order->refresh()))->response();
+    }
+
+    /**
+     * Reject backwards lifecycle moves: closed orders stay closed, and a
+     * committed (sold+) order never slides back into negotiation — a paid
+     * last unit is sold, not negotiable.
+     */
+    private function ensureForwardTransition(Order $order, string $next): void
+    {
+        $current = $order->status ?? 'processing';
+        if ($next === $current) {
+            return;
+        }
+        if (in_array($current, ['completed', 'refunded', 'cancelled'], true)) {
+            abort(422, 'This order is closed and can no longer change status.');
+        }
+        if ($next === 'negotiating'
+            && !in_array($current, ['processing', 'negotiating', 'reserved'], true)) {
+            abort(422, 'Only an open order can move into negotiation — this order is already committed.');
+        }
+        if ($next === 'sold'
+            && !in_array($current, ['processing', 'negotiating', 'reserved', 'preparing'], true)) {
+            abort(422, 'This order has already moved past the sold step.');
+        }
     }
 
     /**
@@ -626,16 +702,14 @@ class OrderController extends Controller
      * completes. Cars never reach here — their payout releases on buyer
      * inspection acceptance instead. Idempotent: never pays twice.
      */
-    private function settlePartsPayout(Order $order): void
+    /**
+     * Settle the referral agent's commission (if any) into their wallet.
+     * Best-effort and idempotent — never blocks completion.
+     */
+    private function settleAgentCommission(Order $order): void
     {
-        if ($order->item_type === 'car') {
-            return;
-        }
-        if (!in_array($order->payment_status, ['paid', 'confirmed'], true)) {
-            return;
-        }
         try {
-            PlatformTransaction::recordPayoutOnce($order);
+            PlatformTransaction::recordAgentCommission($order);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -643,13 +717,18 @@ class OrderController extends Controller
 
     /**
      * Reserve car units the moment payment is secured. Quantity floors
-     * at zero (NULL legacy stock counts as one implicit unit). Status
-     * is intentionally untouched — reserved is not sold.
+     * at zero (NULL legacy stock counts as one implicit unit). When the
+     * last unit goes, the sellout flow flips the order + listing to sold
+     * and locks loser threads — a paid last unit never sits in limbo.
      */
-    private function reserveCarUnits(Car $car, int $qty): void
+    private function reserveCarUnits(Car $car, int $qty, ?Order $order = null): void
     {
         $onHand = $car->quantity === null ? 1 : (int) $car->quantity;
         $car->forceFill(['quantity' => max(0, $onHand - max(1, $qty))])->save();
+
+        if ($order) {
+            app(\App\Services\SelloutService::class)->handleCarSellout($order, $car);
+        }
     }
 
     /**
@@ -683,6 +762,8 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             report($e);
         }
+
+        $this->settleAgentCommission($order->refresh());
 
         return (new OrderResource($order->refresh()))->response();
     }

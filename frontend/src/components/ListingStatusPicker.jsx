@@ -3,11 +3,14 @@ import { sellerCars } from '../api/cars.js'
 import { sellerParts } from '../api/parts.js'
 
 // House-managed states (inspection + moderation) are never seller-settable.
+// Cars additionally cannot self-activate: going live requires passing
+// inspection first (submit → inspect → approve), so `active` is excluded
+// for cars everywhere this picker is used.
 const SYSTEM_STATES = ['pending_inspection', 'inspected', 'rejected']
 
 export function sellerStatusOptions(listingType) {
   const all = listingType === 'car' ? CAR_STATUSES : PART_STATUSES
-  return all.filter((s) => !SYSTEM_STATES.includes(s))
+  return all.filter((s) => !SYSTEM_STATES.includes(s) && (listingType !== 'car' || s !== 'active'))
 }
 
 export function normalizeListingStatus(status) {

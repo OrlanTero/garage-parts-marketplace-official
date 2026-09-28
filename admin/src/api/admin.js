@@ -51,4 +51,18 @@ export const adminApi = {
   // Fund acceptance: house/admin verifies the buyer's submitted payment
   confirmOrderFunds: (orderId) =>
     client.post(`/seller/orders/${orderId}/confirm-funds`, {}).then((r) => r.data?.data ?? r.data),
+
+  // Car build transactions: holds, handover proofs, fund release
+  getCarTransactions: (params = {}) => client.get('/admin/car-transactions', { params }).then((r) => r.data),
+  approveCarProof: (orderId) =>
+    client.post(`/admin/car-transactions/${orderId}/approve-proof`, {}).then((r) => r.data?.data ?? r.data),
+  rejectCarProof: (orderId, reason) =>
+    client.post(`/admin/car-transactions/${orderId}/reject-proof`, { reason }).then((r) => r.data?.data ?? r.data),
+
+  // Notifications: stats, ledger, real broadcasts
+  getNotificationStats: () => client.get('/admin/notifications/stats').then((r) => r.data?.data ?? r.data),
+  getNotifications: (params = {}) => client.get('/admin/notifications', { params }).then((r) => r.data),
+  broadcastNotification: (payload) =>
+    client.post('/admin/notifications/broadcast', payload).then((r) => r.data),
+  deleteNotification: (id) => client.delete(`/admin/notifications/${id}`).then((r) => r.data),
 }

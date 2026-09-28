@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Car,
@@ -16,11 +16,15 @@ import { useAuth } from '../../auth/AuthContext.jsx'
 import { useChat } from '../../context/ChatContext.jsx'
 import {
   getMessagePositionInfo,
+  isListingClosed,
   isOwnMessage as isOwnMessageOf,
 } from '../../utils/chatUtils.js'
 import chatApi from '../../api/chat.js'
+import { sellerOrdersApi } from '../../api/seller.js'
+import { useListingOrders } from '../../hooks/useListingOrders.js'
 import SaleOrderStatusControl from '../SaleOrderStatusControl.jsx'
 import ChatMessageItem from './ChatMessageItem.jsx'
+import ThreadQuickBar from './ThreadQuickBar.jsx'
 import './FloatingChatDrawer.css'
 
 function listingFallbackImg(type) {
@@ -65,6 +69,12 @@ export default function FloatingChatDrawer() {
   const [offerAmount, setOfferAmount] = useState('')
   const [offerError, setOfferError] = useState('')
   const [offerSending, setOfferSending] = useState(false)
+  const [dealActing, setDealActing] = useState(false)
+  const [dealError, setDealError] = useState('')
+  // Conversation scope: 'all' merges the listing thread, otherwise the
+  // stream filters to one buyer inquiry.
+  const [convScope, setConvScope] = useState('all')
+  const scopeTouchedRef = useRef(false)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -75,14 +85,40 @@ export default function FloatingChatDrawer() {
     if (isDrawerOpen && !isDrawerMinimized) {
       scrollToBottom()
     }
-  }, [messages, isDrawerOpen, isDrawerMinimized])
+  }, [messages, convScope, isDrawerOpen, isDrawerMinimized])
 
   // Reset offer box whenever the listing thread changes
   useEffect(() => {
     setOfferBoxOpen(false)
     setOfferAmount('')
     setOfferError('')
+    setConvScope('all')
+    scopeTouchedRef.current = false
   }, [activeListing?.type, activeListing?.id])
+
+  // Multi-inquiry listings open on the active conversation until the
+  // user picks a toggle explicitly.
+  useEffect(() => {
+    if (!scopeTouchedRef.current && listingConversations.length > 1 && activeConversation?.id) {
+      setConvScope(String(activeConversation.id))
+    }
+  }, [activeConversation?.id, listingConversations.length])
+
+  const pickConvScope = (conv) => {
+    scopeTouchedRef.current = true
+    setConvScope(String(conv.id))
+    selectListingConversation(conv)
+  }
+
+  const pickAllScope = () => {
+    scopeTouchedRef.current = true
+    setConvScope('all')
+  }
+
+  const visibleMessages = useMemo(() => {
+    if (convScope === 'all') return messages
+    return messages.filter((m) => String(m.conversation_id) === String(convScope))
+  }, [messages, convScope])
 
   // Listing "Make an Offer" button opens this drawer with the offer box
   // pre-opened once the listing thread is ready.
@@ -108,6 +144,9 @@ export default function FloatingChatDrawer() {
   const listingTitle = listingCard?.title || 'Listing'
   const listingThumb = listingCard?.primary_image_url || listingFallbackImg(listingType)
   const isViewerSeller = listingRole === 'selling'
+  const listingClosed = isListingClosed(listingCard)
+  // Winner-aware server flag (falls back to the legacy thread lock).
+  const threadLocked = activeConversation?.locked_for_viewer ?? Boolean(activeConversation?.is_locked)
 
   const replyTargetName = recipientUser?.username
     ? `@${recipientUser.username}`
@@ -118,7 +157,7 @@ export default function FloatingChatDrawer() {
   const handleSend = (e) => {
     e?.preventDefault()
     const text = inputVal.trim()
-    if (!text || !activeConversation?.id) return
+    if (!text || !activeConversation?.id || threadLocked) return
 
     setInputVal('')
 
@@ -134,8 +173,51 @@ export default function FloatingChatDrawer() {
     }
   }
 
+  const handleDealAction = async (action, payload = {}) => {
+    const convId = payload.offer?.conversation_id || payload.reservation?.conversation_id || activeConversation?.id
+    if (!convId) return
+    setDealActing(true)
+    setDealError('')
+    try {
+      if (action === 'accept') await chatApi.acceptDealOffer(payload.offer.id)
+      else if (action === 'reject') await chatApi.rejectDealOffer(payload.offer.id)
+      else if (action === 'withdraw') await chatApi.withdrawDealOffer(payload.offer.id)
+      else if (action === 'confirm') await chatApi.confirmDealOffer(payload.offer.id)
+      else if (action === 'checkout-link') await chatApi.issueCheckoutLink(payload.offer.id)
+      else if (action === 'counter') {
+        const lt = activeListing?.type || attachedListing?.type
+        const lid = activeListing?.id || attachedListing?.id
+        if (!lt || !lid) throw new Error('No listing on this thread.')
+        const itemType = lt === 'car' ? 'car' : 'part'
+        await chatApi.createDealOffer(convId, {
+          item_type: itemType,
+          ...(itemType === 'car' ? { car_id: lid } : { part_id: lid }),
+          amount: payload.amount,
+          parent_id: payload.offer.id,
+        })
+      } else if (action === 'pay-reservation') {
+        await chatApi.payReservation(payload.reservation.id, { payment_reference: payload.payment_reference })
+      } else if (action === 'accept-reservation') {
+        await chatApi.acceptReservation(payload.reservation.id)
+      } else if (action === 'cancel-reservation') {
+        await chatApi.cancelReservation(payload.reservation.id)
+      }
+      const lt = activeListing?.type || attachedListing?.type
+      const lid = activeListing?.id || attachedListing?.id
+      if (lt && lid) await loadListingThread(lt, lid, convId)
+    } catch (err) {
+      setDealError(err?.response?.data?.message || 'Deal action failed.')
+    } finally {
+      setDealActing(false)
+    }
+  }
+
   const handleSendOffer = async (e) => {
     e?.preventDefault()
+    if (listingClosed) {
+      setOfferError('This listing is sold — offers are closed.')
+      return
+    }
     const amount = Number(offerAmount)
     if (!amount || amount < 1) {
       setOfferError('Enter a valid offer amount.')
@@ -257,17 +339,26 @@ export default function FloatingChatDrawer() {
           {/* Buyer/seller switcher for listings with several inquiries */}
           {listingConversations.length > 1 && (
             <div className="messages-hub-counterparty-strip" style={{ padding: '8px 12px 0' }}>
+              <button
+                type="button"
+                className={`messages-hub-counterparty-chip ${convScope === 'all' ? 'is-active' : ''}`}
+                onClick={pickAllScope}
+                title="Show every inquiry on this listing merged"
+              >
+                <span>All inquiries</span>
+              </button>
               {listingConversations.map((conv) => {
                 const name = conv.other_user?.username
                   ? `@${conv.other_user.username}`
                   : conv.other_user?.role || 'Member'
-                const active = activeConversation?.id === conv.id
+                const active = convScope !== 'all' && String(convScope) === String(conv.id)
                 return (
                   <button
                     key={conv.id}
                     type="button"
                     className={`messages-hub-counterparty-chip ${active ? 'is-active' : ''}`}
-                    onClick={() => selectListingConversation(conv)}
+                    onClick={() => pickConvScope(conv)}
+                    title={`Open conversation with ${name}`}
                   >
                     {conv.other_user?.avatar_url ? (
                       <img src={conv.other_user.avatar_url} alt={name} />
@@ -288,27 +379,31 @@ export default function FloatingChatDrawer() {
             <span>Buyer Protection Active: Phone, email, & off-platform links are protected.</span>
           </div>
 
-          {/* Messages Stream — every message on this listing */}
+          {/* Messages Stream — scoped to the active inquiry toggle */}
           <div className="floating-chat-drawer__messages">
             {isLoadingMessages ? (
               <div className="floating-chat-drawer__loader">
                 <div className="floating-chat-drawer__spinner" />
                 <span>Loading listing conversation...</span>
               </div>
-            ) : messages.length === 0 ? (
+            ) : visibleMessages.length === 0 ? (
               <div className="floating-chat-drawer__empty">
                 <p className="floating-chat-drawer__empty-title">
-                  {isViewerSeller ? 'No inquiries yet on this listing' : 'Start the conversation'}
+                  {convScope !== 'all'
+                    ? 'No messages in this conversation yet'
+                    : isViewerSeller ? 'No inquiries yet on this listing' : 'Start the conversation'}
                 </p>
                 <p className="floating-chat-drawer__empty-sub">
-                  {isViewerSeller
-                    ? 'When a buyer messages or makes an offer on this listing, the thread will appear here.'
-                    : `Send a message or make an offer on ${listingTitle}.`}
+                  {convScope !== 'all'
+                    ? 'Switch inquiries above, or say hello below — it stays in this thread.'
+                    : isViewerSeller
+                      ? 'When a buyer messages or makes an offer on this listing, the thread will appear here.'
+                      : `Send a message or make an offer on ${listingTitle}.`}
                 </p>
               </div>
             ) : (
-              messages.map((msg, idx) => {
-                const { position, showSenderHeader } = getMessagePositionInfo(messages, idx)
+              visibleMessages.map((msg, idx) => {
+                const { position, showSenderHeader } = getMessagePositionInfo(visibleMessages, idx)
                 return (
                   <ChatMessageItem
                     key={msg.id || msg.temp_id || idx}
@@ -318,15 +413,23 @@ export default function FloatingChatDrawer() {
                     showSenderHeader={showSenderHeader}
                     hideListingCard
                     onRetry={() => retryMessage(msg)}
+                    viewerId={user?.id}
+                    onDealAction={handleDealAction}
+                    dealActing={dealActing}
                   />
                 )
               })
             )}
             <div ref={messagesEndRef} />
+            {dealError && (
+              <div className="messages-hub-deal-error" style={{ margin: '0 12px 6px' }}>
+                {dealError}
+              </div>
+            )}
           </div>
 
-          {/* Make-an-offer on this listing */}
-          {activeConversation?.id && (
+          {/* Make-an-offer on this listing (closed once sold) */}
+          {activeConversation?.id && !listingClosed && (
             <div style={{ padding: '0 12px' }}>
               <button
                 type="button"
@@ -364,6 +467,13 @@ export default function FloatingChatDrawer() {
           )}
 
           {/* Input Footer */}
+          {threadLocked ? (
+            <div className="floating-chat-drawer__footer" style={{ alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: '#94a3b8', flex: 1 }}>
+                Thread locked — this listing was sold. The seller can still reach you here.
+              </span>
+            </div>
+          ) : (
           <form className="floating-chat-drawer__footer" onSubmit={handleSend}>
             <textarea
               className="floating-chat-drawer__input"
@@ -389,6 +499,7 @@ export default function FloatingChatDrawer() {
               <Send size={16} />
             </button>
           </form>
+          )}
         </>
       )}
     </div>

@@ -17,6 +17,8 @@ class Conversation extends Model
         'listing_type',
         'listing_id',
         'listing_key',
+        'is_locked',
+        'locked_exempt_user_id',
         'last_message_id',
         'last_message_at',
     ];
@@ -24,8 +26,18 @@ class Conversation extends Model
     protected function casts(): array
     {
         return [
+            'is_locked' => 'boolean',
             'last_message_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Buyer-side lock state for a sender: locked threads reject new
+     * messages/offers from everyone except the exempt user (the seller).
+     */
+    public function lockedFor(int $userId): bool
+    {
+        return (bool) $this->is_locked && (int) $this->locked_exempt_user_id !== $userId;
     }
 
     public function userOne(): BelongsTo

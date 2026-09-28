@@ -17,7 +17,9 @@ class NotificationSent implements ShouldBroadcast
         public string $title,
         public string $message,
         public string $type = 'info',
-        public array $data = []
+        public array $data = [],
+        public ?string $link = null,
+        public ?int $notificationId = null,
     ) {
     }
 
@@ -38,10 +40,12 @@ class NotificationSent implements ShouldBroadcast
     {
         return [
             'id' => (string) \Illuminate\Support\Str::uuid(),
+            'notification_id' => $this->notificationId,
             'title' => $this->title,
             'message' => $this->message,
             'type' => $this->type,
             'data' => $this->data,
+            'link' => $this->link,
             'timestamp' => now()->toISOString(),
         ];
     }
