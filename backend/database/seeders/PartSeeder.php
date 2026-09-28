@@ -323,6 +323,33 @@ class PartSeeder extends Seeder
                     ],
                 ],
             ],
+            // Draft example — visible in the admin catalog (Draft tab) but
+            // hidden from the public marketplace until published.
+            [
+                'seller_id' => $apexParts->id,
+                'title' => 'OMP Racing Bucket Seat Pair (FIA)',
+                'category' => 'interior',
+                'brand' => 'OMP',
+                'part_number' => 'OMP-HA0-0785-BLK',
+                'compatibility' => 'Universal side-mount rails',
+                'condition' => 'new',
+                'quantity' => 2,
+                'price' => 68000.00,
+                'city' => 'Makati',
+                'location' => 'Makati Parts Depot',
+                'status' => PartStatus::Draft,
+                'rating' => 0,
+                'reviews_count' => 0,
+                'published_at' => null,
+                'description' => 'FIA-homologated fiberglass bucket seats, pair with side mounts and sliders.',
+                'media' => [
+                    [
+                        'url' => 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1000&auto=format&fit=crop',
+                        'caption' => 'OMP Bucket Seats',
+                        'is_primary' => true,
+                    ],
+                ],
+            ],
         ];
 
         foreach ($partsData as $data) {

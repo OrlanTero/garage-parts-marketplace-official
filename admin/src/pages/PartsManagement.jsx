@@ -76,6 +76,7 @@ export default function PartsManagement() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [liveCategories, setLiveCategories] = useState([])
   const [liveSpecs, setLiveSpecs] = useState({})
 
@@ -120,8 +121,11 @@ export default function PartsManagement() {
       const params = {}
       if (search.trim()) params.q = search.trim()
       if (categoryFilter !== 'all') params.category = categoryFilter
+      if (statusFilter !== 'all') params.status = statusFilter
 
-      const res = await partsApi.list(params)
+      // House-catalog scope (all statuses) — the public marketplace list
+      // hides drafts/unpublished, which is why new parts never appeared.
+      const res = await partsApi.adminList(params)
       setParts(res.data || [])
     } catch {
       setParts([])
@@ -132,7 +136,7 @@ export default function PartsManagement() {
 
   useEffect(() => {
     fetchParts()
-  }, [categoryFilter])
+  }, [categoryFilter, statusFilter])
 
   // Live category catalog from backend taxonomy (replaces hardcoded pills).
   useEffect(() => {
@@ -307,6 +311,16 @@ export default function PartsManagement() {
     }
   }
 
+  const handlePublish = async (partId) => {
+    try {
+      await partsApi.publish(partId)
+      setActionSuccess('Part published to the marketplace.')
+      fetchParts()
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to publish part.')
+    }
+  }
+
   const handleDelete = async (partId) => {
     if (!window.confirm('Are you sure you want to remove this part from inventory?')) return
     try {
@@ -448,19 +462,36 @@ export default function PartsManagement() {
         </div>
       </div>
 
-      {/* Filter toolbar */}
+      {/* Filter toolbar: search + status tabs + categories */}
       <div
         className="admin-card"
         style={{
           padding: '16px 20px',
           marginBottom: 20,
           display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
+          flexDirection: 'column',
+          gap: 12,
         }}
       >
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+          {[
+            { id: 'all', label: 'All Statuses' },
+            { id: 'draft', label: 'Draft' },
+            { id: 'active', label: 'Active' },
+            { id: 'sold', label: 'Sold' },
+            { id: 'archived', label: 'Archived' },
+          ].map((st) => (
+            <button
+              key={st.id}
+              type="button"
+              onClick={() => setStatusFilter(st.id)}
+              className={`btn btn-sm ${statusFilter === st.id ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: 13 }}
+            >
+              {st.label}
+            </button>
+          ))}
+        </div>
         <form
           onSubmit={handleSearchSubmit}
           style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, maxWidth: 400 }}
@@ -512,27 +543,28 @@ export default function PartsManagement() {
       <div className="table-container admin-card" style={{ padding: 0, overflow: 'hidden' }}>
         <table className="admin-table">
           <thead>
-            <tr>
-              <th>Part & Brand</th>
-              <th>Category</th>
-              <th>Condition</th>
-              <th>Stock</th>
-              <th>Price (PHP)</th>
-              <th>Seller / Depot</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
+              <tr>
+                <th>Part & Brand</th>
+                <th>Category</th>
+                <th>Condition</th>
+                <th>Status</th>
+                <th>Stock</th>
+                <th>Price (PHP)</th>
+                <th>Seller / Depot</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: 48, color: 'var(--admin-text-muted)' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: 48, color: 'var(--admin-text-muted)' }}>
                   <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: 12 }} />
                   <div>Loading parts catalog...</div>
                 </td>
               </tr>
             ) : parts.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: 48, color: 'var(--admin-text-muted)' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: 48, color: 'var(--admin-text-muted)' }}>
                   <Package size={36} style={{ color: 'var(--admin-text-muted)', marginBottom: 12 }} />
                   <h3 style={{ margin: '0 0 6px 0', color: 'var(--admin-text-primary)' }}>No Parts Found</h3>
                   <p style={{ margin: 0, fontSize: 14 }}>No components match your search criteria.</p>
@@ -580,6 +612,23 @@ export default function PartsManagement() {
                       </span>
                     </td>
                     <td>
+                      <span
+                        className={`badge ${
+                          part.status === 'active'
+                            ? 'badge-success'
+                            : part.status === 'sold'
+                              ? 'badge-info'
+                              : part.status === 'archived'
+                                ? 'badge-neutral'
+                                : 'badge-warning'
+                        }`}
+                        style={{ fontSize: 11, textTransform: 'capitalize' }}
+                        title={part.status === 'draft' ? 'Not visible on the marketplace' : `Status: ${part.status || 'draft'}`}
+                      >
+                        {part.status || 'draft'}
+                      </span>
+                    </td>
+                    <td>
                       <div style={{ fontWeight: 600, color: qty > 0 ? 'var(--admin-text-primary)' : 'var(--admin-danger)', fontSize: 13 }}>
                         {qty} in stock
                       </div>
@@ -599,6 +648,17 @@ export default function PartsManagement() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                        {(part.status === 'draft' || part.status === 'archived') && (
+                          <button
+                            type="button"
+                            onClick={() => handlePublish(part.id)}
+                            className="btn btn-primary btn-sm"
+                            title="Publish to the marketplace"
+                          >
+                            <CheckCircle size={14} />
+                            <span>Publish</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleOpenView(part)}

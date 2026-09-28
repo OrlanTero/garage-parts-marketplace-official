@@ -29,6 +29,8 @@ class SellerPartController extends Controller
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
             // Admins auditing the catalog may scope to any seller.
             'seller_id' => ['sometimes', 'integer', 'exists:users,id'],
+            'q' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'category' => ['sometimes', 'nullable', 'string', 'max:60'],
         ]);
 
         $ownerId = app(\App\Services\InventoryService::class)
@@ -39,6 +41,16 @@ class SellerPartController extends Controller
             ->with('media')
             ->withCount('heldOrders')
             ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
+            ->when($validated['category'] ?? null, fn ($q, $c) => $q->where('category', $c))
+            ->when($validated['q'] ?? null, function ($q, $s) {
+                $like = "%{$s}%";
+                $q->where(fn ($inner) => $inner
+                    ->where('title', 'like', $like)
+                    ->orWhere('brand', 'like', $like)
+                    ->orWhere('part_number', 'like', $like)
+                    ->orWhere('mpn', 'like', $like)
+                    ->orWhere('barcode', 'like', $like));
+            })
             ->orderByDesc('created_at');
 
         return PartResource::collection($query->paginate((int) ($validated['per_page'] ?? 15)));

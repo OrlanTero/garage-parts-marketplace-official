@@ -83,6 +83,40 @@ class PartTest extends TestCase
             ->assertJsonPath('data.seller.id', $house->id);
     }
 
+    public function test_admin_draft_appears_in_catalog_list_but_not_marketplace(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $house = User::factory()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
+        $headers = $this->sellerToken($admin);
+
+        $partId = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft')
+            ->json('data.id');
+
+        // Hidden from the public marketplace…
+        $this->getJson('/api/v1/marketplace/parts')->assertOk()->assertJsonCount(0, 'data');
+
+        // …but visible in the house-catalog management list, all + draft.
+        $this->getJson('/api/v1/seller/parts', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?status=draft', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?status=active', $headers)->assertOk()->assertJsonCount(0, 'data');
+
+        // Search + category filters work on the management list.
+        $this->getJson('/api/v1/seller/parts?q=Bosch', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?q=nothing-matches-this', $headers)->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/seller/parts?category=brakes', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?category=suspension', $headers)->assertOk()->assertJsonCount(0, 'data');
+
+        // Publishing flips it onto the marketplace.
+        $this->postJson("/api/v1/seller/parts/{$partId}/publish", [], $headers)->assertOk();
+        $this->getJson('/api/v1/marketplace/parts')->assertOk()->assertJsonCount(1, 'data');
+    }
+
     public function test_standard_seller_cannot_create_parts(): void
     {
         $seller = User::factory()->create(['role' => 'seller']);

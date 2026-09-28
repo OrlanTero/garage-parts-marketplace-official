@@ -16,6 +16,7 @@ class ShowroomSeeder extends Seeder
     {
         $this->seedSettings();
         $this->seedDemoSlots();
+        self::refreshSellerFlags();
     }
 
     /**
@@ -190,5 +191,22 @@ class ShowroomSeeder extends Seeder
                 ]
             );
         }
+    }
+
+    /**
+     * Keep seller activation consistent with approved slots (the approve
+     * endpoint does this live; the seeder writes slots directly).
+     */
+    public static function refreshSellerFlags(): void
+    {
+        $activeSellerIds = ShowroomSlot::where('status', 'approved')->distinct()->pluck('seller_id')->all();
+        if (empty($activeSellerIds)) {
+            return;
+        }
+
+        User::whereIn('id', $activeSellerIds)->update(['is_showroom_active' => true]);
+        User::whereIn('id', $activeSellerIds)->whereNull('showroom_activated_at')->update([
+            'showroom_activated_at' => now(),
+        ]);
     }
 }

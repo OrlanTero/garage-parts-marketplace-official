@@ -2,6 +2,9 @@ import client from './client.js'
 
 export const partsApi = {
   list: (params = {}) => client.get('/marketplace/parts', { params }).then((r) => r.data),
+  // House-catalog management (all statuses — drafts included). Admins are
+  // scoped to the GAP Valenzuela Main catalog by the backend.
+  adminList: (params = {}) => client.get('/seller/parts', { params }).then((r) => r.data),
   get: (id) => client.get(`/marketplace/parts/${id}`).then((r) => r.data),
   create: (data) => client.post('/seller/parts', data).then((r) => r.data),
   update: (id, data) => client.put(`/seller/parts/${id}`, data).then((r) => r.data),

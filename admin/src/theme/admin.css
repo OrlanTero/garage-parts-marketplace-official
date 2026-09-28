@@ -800,7 +800,7 @@ input, select, textarea {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
   position: relative;
   animation: modalSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

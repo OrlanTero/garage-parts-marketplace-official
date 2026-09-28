@@ -144,5 +144,16 @@ class FundsSeeder extends Seeder
                 ]);
             }
         }
+
+        // 3. Settle completed sales orders into wallets: seller payouts for
+        // every completed order with submitted funds, plus any referral
+        // agent commissions. Idempotent — safe to re-run.
+        $settled = Order::where('status', 'completed')
+            ->whereIn('payment_status', ['paid', 'confirmed', 'released'])
+            ->get();
+        foreach ($settled as $order) {
+            PlatformTransaction::recordPayoutOnce($order);
+            PlatformTransaction::recordAgentCommission($order);
+        }
     }
 }

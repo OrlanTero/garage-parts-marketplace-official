@@ -183,7 +183,8 @@ class AdminShowroomController extends Controller
     }
 
     /**
-     * Revoke an active showroom slot.
+     * Revoke an active showroom slot. The seller stays active only while
+     * at least one other approved slot remains on the floor.
      */
     public function revoke(Request $request, ShowroomSlot $slot): JsonResponse
     {
@@ -199,10 +200,29 @@ class AdminShowroomController extends Controller
             ]);
         }
 
+        $this->refreshSellerFlag((int) $slot->seller_id, (int) $slot->id);
+
         return response()->json([
             'status' => 'success',
             'message' => "Showroom slot #{$slot->id} revoked. Vehicle removed from showroom floor.",
             'data' => $slot->fresh(['seller', 'car']),
+        ]);
+    }
+
+    /**
+     * A seller is showroom-active exactly while ≥1 approved slot (other
+     * than the excluded one) remains. Keeps the header flag consistent
+     * with the floor — the source of the NOT-ACTIVATED paradox.
+     */
+    private function refreshSellerFlag(int $sellerId, int $excludeSlotId): void
+    {
+        $stillActive = ShowroomSlot::where('seller_id', $sellerId)
+            ->where('id', '!=', $excludeSlotId)
+            ->where('status', 'approved')
+            ->exists();
+
+        \App\Models\User::whereKey($sellerId)->update([
+            'is_showroom_active' => $stillActive,
         ]);
     }
 
@@ -247,11 +267,27 @@ class AdminShowroomController extends Controller
             'showroom_status' => $newState ? 'approved' : 'none',
         ]);
 
+        // Keep the slot ledger consistent with the floor: unplacing
+        // revokes the car's approved slot.
+        if (!$newState) {
+            ShowroomSlot::where('car_id', $car->id)
+                ->where('status', 'approved')
+                ->update(['status' => 'revoked']);
+        }
+
         if ($newState && $car->seller) {
             $car->seller->update([
                 'is_showroom_active' => true,
                 'showroom_activated_at' => $car->seller->showroom_activated_at ?? now(),
             ]);
+        } elseif (!$newState && $car->seller_id) {
+            // Unplacing the last floor car deactivates the seller.
+            $remaining = ShowroomSlot::where('seller_id', $car->seller_id)
+                ->where('status', 'approved')
+                ->exists();
+            if (!$remaining) {
+                \App\Models\User::whereKey($car->seller_id)->update(['is_showroom_active' => false]);
+            }
         }
 
         return response()->json([

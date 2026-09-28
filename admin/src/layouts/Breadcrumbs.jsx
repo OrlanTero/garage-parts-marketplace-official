@@ -6,7 +6,7 @@ const ROUTE_LABELS = {
   sellers: 'Seller Management',
   dealers: 'Dealer Management',
   cars: 'Car Builds & Showroom',
-  parts: 'Parts & Catalog Inventory',
+  parts: 'Parts & Catalog',
   inventory: 'Inventory & Stock Control',
   moderation: 'Listing Approval & Moderation',
   kyc: 'KYC & Seller Verification',

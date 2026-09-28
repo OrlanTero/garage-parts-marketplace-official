@@ -145,8 +145,43 @@ export default function FloatingChatDrawer() {
   const listingThumb = listingCard?.primary_image_url || listingFallbackImg(listingType)
   const isViewerSeller = listingRole === 'selling'
   const listingClosed = isListingClosed(listingCard)
+
+  const { orders: listingOrders, refresh: refreshListingOrders } = useListingOrders(
+    activeListing?.type || attachedListing?.type,
+    activeListing?.id || attachedListing?.id,
+    listingRole,
+  )
+
+  const activeOrderForConv = useMemo(() => {
+    const open = (listingOrders || []).filter((o) =>
+      ['negotiating', 'reserved', 'preparing', 'sold', 'shipped', 'delivered'].includes(o.status),
+    )
+    if (recipientUser?.id != null) {
+      const match = open.find((o) => Number(o.buyer?.user_id) === Number(recipientUser.id))
+      if (match) return match
+    }
+    return open[0] || null
+  }, [listingOrders, recipientUser?.id])
+
+  const handleQuickAdvance = async (order, status) => {
+    if (!order || !isViewerSeller) return
+    setDealError('')
+    setDealActing(true)
+    try {
+      await sellerOrdersApi.updateStatus(order.id, { status })
+      const lt = activeListing?.type || attachedListing?.type
+      const lid = activeListing?.id || attachedListing?.id
+      if (lt && lid) await loadListingThread(lt, lid, activeConversation?.id)
+      await refreshListingOrders()
+    } catch (err) {
+      setDealError(err?.response?.data?.message || 'Could not advance the order.')
+    } finally {
+      setDealActing(false)
+    }
+  }
   // Winner-aware server flag (falls back to the legacy thread lock).
   const threadLocked = activeConversation?.locked_for_viewer ?? Boolean(activeConversation?.is_locked)
+  const showQuickBar = !threadLocked && Boolean(activeListing || attachedListing) && (listingClosed || activeOrderForConv)
 
   const replyTargetName = recipientUser?.username
     ? `@${recipientUser.username}`
@@ -428,8 +463,19 @@ export default function FloatingChatDrawer() {
             )}
           </div>
 
-          {/* Make-an-offer on this listing (closed once sold) */}
-          {activeConversation?.id && !listingClosed && (
+          {/* Sold pipeline: quick updates replace Make Offer */}
+          {showQuickBar ? (
+            <div style={{ padding: '0 12px' }}>
+              <ThreadQuickBar
+                isSeller={isViewerSeller}
+                activeOrder={activeOrderForConv}
+                sending={dealActing}
+                onSendText={(text) => sendMessage(text)}
+                onAdvanceStatus={handleQuickAdvance}
+              />
+            </div>
+          ) : activeConversation?.id && !listingClosed && !threadLocked ? (
+          /* Make-an-offer on this listing (closed once sold) */
             <div style={{ padding: '0 12px' }}>
               <button
                 type="button"
@@ -464,7 +510,7 @@ export default function FloatingChatDrawer() {
                 </form>
               )}
             </div>
-          )}
+          ) : null}
 
           {/* Input Footer */}
           {threadLocked ? (

@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             CarAuctionSeeder::class,
             ShowroomSeeder::class,
             FundsSeeder::class,
+            WalletSeeder::class,
+            NotificationSeeder::class,
         ]);
     }
 }

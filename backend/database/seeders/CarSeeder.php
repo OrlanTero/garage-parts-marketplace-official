@@ -462,6 +462,43 @@ class CarSeeder extends Seeder
                     ],
                 ],
             ],
+            // Inspected + passed, awaiting admin approval — demos the final
+            // publish step (approve goes live WITH this score).
+            [
+                'seller_id' => $manilaSeller->id,
+                'title' => '2004 Mazda RX-8 Type-S 6-Speed Manual',
+                'brand' => 'Mazda',
+                'model' => 'RX-8 Type-S',
+                'year' => 2004,
+                'price' => 540000.00,
+                'original_price' => 590000.00,
+                'mileage_km' => 95000,
+                'body_style' => BodyStyle::Coupe,
+                'fuel_type' => FuelType::Petrol,
+                'transmission' => Transmission::Manual,
+                'condition' => CarCondition::Used,
+                'tag' => 'Rotary Fresh Apex',
+                'color' => 'Velocity Red',
+                'vin' => 'JM1FE173040200011',
+                'description' => 'Renesis rotary with fresh apex seals and compression test card. Inspected and passed — awaiting admin approval to go live.',
+                'city' => 'Manila',
+                'location' => 'Manila Classic Restorations',
+                'status' => CarStatus::Inspected,
+                'rating' => 4.70,
+                'inspection_score' => '94/100',
+                'inspection_type' => 'garage_dropoff',
+                'inspection_status' => 'passed',
+                'inspector_notes' => 'Compression 7.2/7.1/7.3 across rotors. Clean chassis, no flood history.',
+                'is_approved' => false,
+                'published_at' => null,
+                'media' => [
+                    [
+                        'url' => 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1200&auto=format&fit=crop',
+                        'caption' => 'RX-8 Front 3/4',
+                        'is_primary' => true,
+                    ],
+                ],
+            ],
         ];
 
         foreach ($carsData as $data) {

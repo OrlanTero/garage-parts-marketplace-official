@@ -56,10 +56,15 @@ class SellerShowroomController extends Controller
             ->latest()
             ->get();
 
+        // Resilient read: active if the flag says so OR any approved slot
+        // is on the floor (covers seeded / directly-written slots whose
+        // seller flag was never flipped).
+        $hasFloorSlot = $slots->contains(fn ($slot) => $slot->status === 'approved');
+
         return response()->json([
             'status' => 'success',
             'data' => [
-                'is_showroom_active' => (bool) $seller->is_showroom_active,
+                'is_showroom_active' => (bool) $seller->is_showroom_active || $hasFloorSlot,
                 'showroom_activated_at' => $seller->showroom_activated_at,
                 'fee_config' => $feeConfig,
                 'cars' => $cars,
