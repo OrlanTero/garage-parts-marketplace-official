@@ -238,16 +238,16 @@ class OrderFulfillmentTest extends TestCase
             ->count());
     }
 
-    public function test_delivery_quote_prices_by_distance_from_main_branch(): void
+    public function test_delivery_quote_prices_per_km_from_depot(): void
     {
-        // Makati pin (~17km from Valenzuela) → NCR Fringe tier.
+        // Makati pin (~16.8km from Valenzuela) → 16.8 × ₱15 = ₱252.
         $this->getJson('/api/v1/delivery-quote?latitude=14.5547&longitude=121.0244&city=Makati')
             ->assertOk()
             ->assertJsonPath('data.zone', 'NCR Fringe')
-            ->assertJsonPath('data.fee', 250)
+            ->assertJsonPath('data.fee', 252)
             ->assertJsonPath('data.free', false);
 
-        // Cebu pin (inter-island) → top tier.
+        // Cebu pin (inter-island) → capped at the max fee.
         $this->getJson('/api/v1/delivery-quote?latitude=10.3157&longitude=123.8854&city=Cebu%20City')
             ->assertOk()
             ->assertJsonPath('data.zone', 'Inter-island Freight')
@@ -260,6 +260,38 @@ class OrderFulfillmentTest extends TestCase
             ->assertJsonPath('data.fee', 350);
     }
 
+    public function test_freight_rules_threshold_quantity_and_custom_rate(): void
+    {
+        // Subtotal at/above threshold → free.
+        $this->getJson('/api/v1/delivery-quote?latitude=14.5547&longitude=121.0244&city=Makati&quantity=1')
+            ->assertOk()
+            ->assertJsonPath('data.free', false);
+
+        // Quantity rule: configure min 3, order 3 → free.
+        \App\Models\PlatformSetting::set('free_freight_min_quantity', '3', 'variables');
+        $this->getJson('/api/v1/delivery-quote?latitude=14.5547&longitude=121.0244&city=Makati&quantity=3')
+            ->assertOk()
+            ->assertJsonPath('data.free', true);
+        $this->getJson('/api/v1/delivery-quote?latitude=14.5547&longitude=121.0244&city=Makati&quantity=2')
+            ->assertOk()
+            ->assertJsonPath('data.free', false);
+        \App\Models\PlatformSetting::set('free_freight_min_quantity', '0', 'variables');
+
+        // Custom per-km rate + floor: rate ₱10, min ₱200 → 16.8km bills ₱200.
+        \App\Models\PlatformSetting::set('freight_per_km', '10', 'variables');
+        \App\Models\PlatformSetting::set('freight_min_fee', '200', 'variables');
+        $this->getJson('/api/v1/delivery-quote?latitude=14.5547&longitude=121.0244&city=Makati')
+            ->assertOk()
+            ->assertJsonPath('data.fee', 200);
+        \App\Models\PlatformSetting::set('freight_per_km', '15', 'variables');
+        \App\Models\PlatformSetting::set('freight_min_fee', '150', 'variables');
+
+        // Cars always ship free (parts-only pricing).
+        $this->getJson('/api/v1/delivery-quote?latitude=14.5547&longitude=121.0244&city=Makati&item_type=car')
+            ->assertOk()
+            ->assertJsonPath('data.free', true);
+    }
+
     public function test_checkout_stores_server_computed_fee_distance_and_zone(): void
     {
         $part = $this->makePart();
@@ -270,13 +302,13 @@ class OrderFulfillmentTest extends TestCase
         ]))->assertCreated();
 
         $response
-            ->assertJsonPath('data.financials.shipping_fee', 250)
+            ->assertJsonPath('data.financials.shipping_fee', 252)
             ->assertJsonPath('data.delivery.zone', 'NCR Fringe')
-            ->assertJsonPath('data.financials.total_amount', 2700);
+            ->assertJsonPath('data.financials.total_amount', 2702);
 
         $this->assertDatabaseHas('orders', [
             'buyer_email' => 'kenji@tokyogarage.jp',
-            'shipping_fee' => 250,
+            'shipping_fee' => 252,
             'delivery_zone' => 'NCR Fringe',
         ]);
     }

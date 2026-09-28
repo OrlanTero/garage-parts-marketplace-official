@@ -174,7 +174,7 @@ export default function PartsMarketplace() {
       <section className="parts-hero">
         <div className="parts-hero-inner">
           <span className="parts-eyebrow">
-            <Truck size={16} /> Free Freight on Orders Over ₱8,000 · Genuine & Japanese Surplus
+            <Truck size={16} /> Free Freight on Orders Over ₱10,000 · Genuine & Japanese Surplus
           </span>
           <h1 className="parts-title">Performance Parts, Internals & Fab</h1>
           <p className="parts-lead">

@@ -99,6 +99,10 @@ export default function TaxonomyManagement() {
     free_freight_threshold: '10000',
     standard_flat_fee: '350',
     reservation_fee_percentage: '5',
+    freight_per_km: '15',
+    freight_min_fee: '150',
+    freight_max_fee: '1200',
+    free_freight_min_quantity: '0',
   })
   const [varsLoaded, setVarsLoaded] = useState(false)
   const [varSaving, setVarSaving] = useState(false)
@@ -112,6 +116,10 @@ export default function TaxonomyManagement() {
         free_freight_threshold: data?.free_freight_threshold?.value ?? '10000',
         standard_flat_fee: data?.standard_flat_fee?.value ?? '350',
         reservation_fee_percentage: data?.reservation_fee_percentage?.value ?? '5',
+        freight_per_km: data?.freight_per_km?.value ?? '15',
+        freight_min_fee: data?.freight_min_fee?.value ?? '150',
+        freight_max_fee: data?.freight_max_fee?.value ?? '1200',
+        free_freight_min_quantity: data?.free_freight_min_quantity?.value ?? '0',
       })
       setVarsLoaded(true)
     } catch {
@@ -133,6 +141,10 @@ export default function TaxonomyManagement() {
         free_freight_threshold: variables.free_freight_threshold,
         standard_flat_fee: variables.standard_flat_fee,
         reservation_fee_percentage: variables.reservation_fee_percentage,
+        freight_per_km: variables.freight_per_km,
+        freight_min_fee: variables.freight_min_fee,
+        freight_max_fee: variables.freight_max_fee,
+        free_freight_min_quantity: variables.free_freight_min_quantity,
       })
       setActionSuccess('Configuration variables saved — delivery fees and tracking links resolve from these live.')
     } catch (err) {
@@ -920,6 +932,53 @@ export default function TaxonomyManagement() {
                       className="admin-input"
                       value={variables.reservation_fee_percentage}
                       onChange={(e) => setVariables({ ...variables, reservation_fee_percentage: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--admin-text-muted)', margin: '14px 0 10px 0', lineHeight: 1.6 }}>
+                  Parts per-kilometer pricing: fee = distance × rate, clamped to [min, max]. Applies after the free-freight checks (flag → subtotal → quantity).
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label className="admin-label">Per-km rate (₱/km)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="admin-input"
+                      value={variables.freight_per_km}
+                      onChange={(e) => setVariables({ ...variables, freight_per_km: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Min fee (₱ floor)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="admin-input"
+                      value={variables.freight_min_fee}
+                      onChange={(e) => setVariables({ ...variables, freight_min_fee: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Max fee (₱ cap)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="admin-input"
+                      value={variables.freight_max_fee}
+                      onChange={(e) => setVariables({ ...variables, freight_max_fee: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Free-freight min qty (0 = off)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="admin-input"
+                      value={variables.free_freight_min_quantity}
+                      onChange={(e) => setVariables({ ...variables, free_freight_min_quantity: e.target.value })}
                     />
                   </div>
                 </div>

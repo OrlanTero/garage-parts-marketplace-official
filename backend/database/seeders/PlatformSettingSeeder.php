@@ -42,5 +42,33 @@ class PlatformSettingSeeder extends Seeder
             'variables',
             'Reservation deposit (% of deal/listing price) sellers can request in chat.',
         );
+
+        PlatformSetting::set(
+            'freight_per_km',
+            '15',
+            'variables',
+            'Standard parts delivery fee per kilometer (PHP/km) from the dispatch warehouse to the buyer address.',
+        );
+
+        PlatformSetting::set(
+            'freight_min_fee',
+            '150',
+            'variables',
+            'Minimum parts delivery fee (PHP) — short hops never bill below this.',
+        );
+
+        PlatformSetting::set(
+            'freight_max_fee',
+            '1200',
+            'variables',
+            'Maximum parts delivery fee cap (PHP) — long-haul freight never exceeds this.',
+        );
+
+        PlatformSetting::set(
+            'free_freight_min_quantity',
+            '0',
+            'variables',
+            'Order quantity at/above which parts freight is free (0 = disabled; subtotal threshold still applies).',
+        );
     }
 }

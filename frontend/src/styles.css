@@ -165,7 +165,7 @@ body {
 
 /* Solid Scrolled Header */
 .topbar--solid {
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--topbar-bg-translucent, rgba(255, 255, 255, 0.94));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--color-border);
@@ -181,9 +181,9 @@ body {
 .topbar--solid .topbar-search input { color: var(--color-heading); }
 .topbar--solid .topbar-search input::placeholder { color: var(--color-text-muted); }
 .topbar--solid .topbar-search-icon { color: var(--color-text-muted); }
-.topbar--solid .action-btn { background: #ffffff; border-color: var(--color-border); color: var(--color-metal); }
+.topbar--solid .action-btn { background: var(--topbar-action-bg, #ffffff); border-color: var(--topbar-action-border, var(--color-border)); color: var(--topbar-action-text, var(--color-metal)); }
 .topbar--solid .action-btn:hover { border-color: var(--color-rust); color: var(--color-rust); background: var(--color-sand-light); }
-.topbar--solid .mobile-toggle-btn { color: var(--color-heading); border-color: var(--color-border); background: #ffffff; }
+.topbar--solid .mobile-toggle-btn { color: var(--color-heading); border-color: var(--color-border); background: var(--topbar-action-bg, #ffffff); }
 
 /* Brand Identity */
 .brand {

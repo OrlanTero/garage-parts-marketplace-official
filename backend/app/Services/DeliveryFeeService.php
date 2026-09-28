@@ -6,15 +6,17 @@ use App\Models\PlatformSetting;
 use App\Models\Warehouse;
 
 /**
- * Distance-based delivery fee from the dispatch warehouse
- * (house default — GAP Valenzuela Main Depot unless re-pinned).
+ * Parts-only delivery fee from the dispatch warehouse (house default —
+ * GAP Valenzuela Main Depot unless re-pinned). Cars always ship free
+ * and never reach the priced path.
  *
- * Parts freight is priced by straight-line distance (haversine) from the
- * origin. When no GPS pin exists we fall back to a city centroid match,
- * then to the configured standard flat fee.
+ * Fee = straight-line distance (haversine, buyer address ← warehouse)
+ * × the configured per-km rate, clamped to [min, max]. When no GPS pin
+ * or recognized city exists we fall back to the standard flat fee.
  *
- * Free-freight promises are preserved: whole-car orders, parts flagged
- * free_shipping, and merchandise subtotals at/above the threshold.
+ * Free freight, in order: listing flagged free_shipping → subtotal
+ * at/above the threshold → quantity at/above the configured minimum
+ * (0 = disabled).
  */
 class DeliveryFeeService
 {
@@ -24,15 +26,9 @@ class DeliveryFeeService
 
     public const FREE_FREIGHT_THRESHOLD = 10000.00;
     public const FALLBACK_FLAT_FEE = 350.00;
-
-    /** [max_km => [fee, zone]] */
-    private const TIERS = [
-        15 => [150.00, 'Metro Core'],
-        40 => [250.00, 'NCR Fringe'],
-        150 => [450.00, 'Luzon Nearby'],
-        500 => [800.00, 'Luzon Far'],
-        PHP_INT_MAX => [1200.00, 'Inter-island Freight'],
-    ];
+    public const PER_KM_RATE = 15.00;
+    public const MIN_FEE = 150.00;
+    public const MAX_FEE = 1200.00;
 
     private const CITY_CENTROIDS = [
         'valenzuela' => [14.7008, 120.9830],
@@ -79,12 +75,17 @@ class DeliveryFeeService
         ?float $originLatitude = null,
         ?float $originLongitude = null,
         ?string $originName = null,
+        int $quantity = 1,
     ): array {
         $origin = $originName ?? self::MAIN_BRANCH_NAME;
         $originLat = $originLatitude ?? self::MAIN_BRANCH_LATITUDE;
         $originLng = $originLongitude ?? self::MAIN_BRANCH_LONGITUDE;
         $threshold = (float) PlatformSetting::get('free_freight_threshold', self::FREE_FREIGHT_THRESHOLD);
         $flatFee = (float) PlatformSetting::get('standard_flat_fee', self::FALLBACK_FLAT_FEE);
+        $perKm = (float) PlatformSetting::get('freight_per_km', self::PER_KM_RATE);
+        $minFee = (float) PlatformSetting::get('freight_min_fee', self::MIN_FEE);
+        $maxFee = (float) PlatformSetting::get('freight_max_fee', self::MAX_FEE);
+        $minQty = (int) PlatformSetting::get('free_freight_min_quantity', 0);
 
         if ($itemType === 'car') {
             return $this->free('Whole-vehicle orders ship free from the depot.', $origin);
@@ -96,6 +97,10 @@ class DeliveryFeeService
 
         if ($subtotal >= $threshold) {
             return $this->free("Free freight for orders at/above ₱{$threshold}.", $origin);
+        }
+
+        if ($minQty > 0 && $quantity >= $minQty) {
+            return $this->free("Free freight for {$quantity} items (minimum {$minQty}).", $origin);
         }
 
         [$destLat, $destLng, $pinned] = $this->resolveDestination($latitude, $longitude, $city);
@@ -112,30 +117,29 @@ class DeliveryFeeService
         }
 
         $distanceKm = round($this->haversineKm($originLat, $originLng, $destLat, $destLng), 1);
+        $fee = (float) min($maxFee, max($minFee, round($distanceKm * $perKm, 2)));
+        $zone = $this->zoneFor($distanceKm);
 
-        foreach (self::TIERS as $maxKm => [$fee, $zone]) {
-            if ($distanceKm <= $maxKm) {
-                return [
-                    'fee' => $fee,
-                    'distance_km' => $distanceKm,
-                    'zone' => $zone,
-                    'free' => false,
-                    'reason' => ($pinned ? 'Pinned drop-off' : 'City centroid estimate')
-                        . " — {$distanceKm} km from {$origin} ({$zone}).",
-                    'origin' => $origin,
-                ];
-            }
-        }
-
-        // Unreachable: last tier covers PHP_INT_MAX.
         return [
-            'fee' => $flatFee,
+            'fee' => $fee,
             'distance_km' => $distanceKm,
-            'zone' => 'Standard',
+            'zone' => $zone,
             'free' => false,
-            'reason' => 'Fallback flat freight applied.',
+            'reason' => ($pinned ? 'Pinned drop-off' : 'City centroid estimate')
+                . " — {$distanceKm} km × ₱{$perKm}/km from {$origin} ({$zone}).",
             'origin' => $origin,
         ];
+    }
+
+    private function zoneFor(float $distanceKm): string
+    {
+        return match (true) {
+            $distanceKm <= 15 => 'Metro Core',
+            $distanceKm <= 40 => 'NCR Fringe',
+            $distanceKm <= 150 => 'Luzon Nearby',
+            $distanceKm <= 500 => 'Luzon Far',
+            default => 'Inter-island Freight',
+        };
     }
 
     /**

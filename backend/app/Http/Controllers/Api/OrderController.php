@@ -154,6 +154,7 @@ class OrderController extends Controller
             $originLat,
             $originLng,
             $originName,
+            $quantity,
         );
 
         return response()->json(['status' => 'success', 'data' => $quote]);
@@ -278,8 +279,9 @@ class OrderController extends Controller
 
         // Server-computed freight from the dispatch warehouse (house
         // default with a pinned address, else the main-branch point) —
-        // client totals are never trusted. Pins/centroids price the zone;
-        // free-freight promises (cars, free-shipping parts, threshold+) hold.
+        // client totals are never trusted. Pins/centroids price per-km;
+        // free-freight promises (cars, free-shipping parts, threshold+,
+        // min-quantity) hold.
         $originWarehouse = $this->dispatchOrigin();
         [$originLat, $originLng, $originName] = $this->delivery->originFor($originWarehouse);
         $quote = $this->delivery->quote(
@@ -292,6 +294,7 @@ class OrderController extends Controller
             $originLat,
             $originLng,
             $originName,
+            $quantity,
         );
         $shippingFee = $quote['fee'];
 

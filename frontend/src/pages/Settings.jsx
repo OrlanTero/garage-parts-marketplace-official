@@ -20,6 +20,7 @@ import { accountApi, ADDRESS_LABELS } from '../api/account.js'
 import { kycApi } from '../api/kyc.js'
 import { mediaApi } from '../api/media.js'
 import { isRealtimeEnabled, setRealtimeEnabled } from '../realtime/echo.js'
+import { useTheme } from '../context/ThemeContext.jsx'
 import DeliveryMapPicker from '../components/DeliveryMapPicker.jsx'
 import KycVerificationModal from '../components/KycVerificationModal.jsx'
 
@@ -609,6 +610,7 @@ function KycTab({ user, refresh }) {
 function PrefsTab() {
   const [realtime, setRealtime] = useState(isRealtimeEnabled())
   const [notice, setNotice] = useState('')
+  const { mode, resolved, setMode } = useTheme()
 
   const toggleRealtime = () => {
     const next = !realtime
@@ -659,6 +661,36 @@ function PrefsTab() {
           }} />
         </button>
       </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px', marginBottom: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Appearance theme</div>
+          <div style={{ fontSize: 12, color: '#94a3b8' }}>Day / night surfaces across the marketplace. System follows your device.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[
+            ['day', 'Day'],
+            ['night', 'Night'],
+            ['system', 'System'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setMode(id)}
+              aria-pressed={mode === id}
+              style={{
+                fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 999, cursor: 'pointer',
+                border: mode === id ? '1px solid #d8622c' : '1px solid #2d3748',
+                background: mode === id ? 'rgba(216, 98, 44, 0.15)' : 'transparent',
+                color: mode === id ? '#fb923c' : '#94a3b8',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>Currently showing: <strong style={{ color: '#cbd5e1' }}>{resolved} theme</strong></div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px', flexWrap: 'wrap' }}>
         <div>

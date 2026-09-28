@@ -55,13 +55,17 @@ class AdminConfigController extends Controller
             'settings.free_freight_threshold' => ['sometimes', 'numeric', 'min:0'],
             'settings.standard_flat_fee' => ['sometimes', 'numeric', 'min:0'],
             'settings.reservation_fee_percentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'settings.freight_per_km' => ['sometimes', 'numeric', 'min:0'],
+            'settings.freight_min_fee' => ['sometimes', 'numeric', 'min:0'],
+            'settings.freight_max_fee' => ['sometimes', 'numeric', 'min:0'],
+            'settings.free_freight_min_quantity' => ['sometimes', 'integer', 'min:0'],
         ]);
 
         // NB: read raw input (not validated()) so unknown keys still reach
         // the allowlist below instead of being silently stripped.
         $settings = $request->input('settings', []);
         foreach ($settings as $key => $value) {
-            if (!in_array($key, ['delivery_services', 'free_freight_threshold', 'standard_flat_fee', 'reservation_fee_percentage'], true)) {
+            if (!in_array($key, ['delivery_services', 'free_freight_threshold', 'standard_flat_fee', 'reservation_fee_percentage', 'freight_per_km', 'freight_min_fee', 'freight_max_fee', 'free_freight_min_quantity'], true)) {
                 abort(422, "Unknown setting key: {$key}.");
             }
             PlatformSetting::set($key, $value, 'variables');

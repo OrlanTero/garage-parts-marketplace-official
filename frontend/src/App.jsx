@@ -19,7 +19,9 @@ import {
   MessageSquare,
   Wallet as WalletIcon,
   BarChart3,
-  Bell as BellIcon
+  Bell as BellIcon,
+  Sun as SunIcon,
+  Moon as MoonIcon
 } from 'lucide-react'
 import Home from './pages/Home.jsx'
 import Marketplace from './pages/Marketplace.jsx'
@@ -48,10 +50,12 @@ import SearchModal from './components/SearchModal.jsx'
 import MobileQuickActions from './components/MobileQuickActions.jsx'
 import AuthModal from './components/AuthModal.jsx'
 import UserMenu from './components/UserMenu.jsx'
+import ThemeToggle from './components/ThemeToggle.jsx'
 import NotificationBell from './components/NotificationBell.jsx'
 import NotificationToasts from './components/NotificationToasts.jsx'
 import FloatingChatDrawer from './components/chat/FloatingChatDrawer.jsx'
 import { useAuth } from './auth/AuthContext.jsx'
+import { useTheme } from './context/ThemeContext.jsx'
 import { useFavorites } from './context/FavoritesContext.jsx'
 import { useChat } from './context/ChatContext.jsx'
 import { getActiveReferralCode } from './utils/referral.js'
@@ -62,7 +66,6 @@ const NAV = [
   { to: '/parts', label: 'Parts & Accessories' },
   { to: '/showroom', label: 'Showroom & Café' },
   { to: '/sell', label: 'Sell Your Build' },
-  { to: '/services', label: 'Inspections' },
   { to: '/about', label: 'About Us' },
 ]
 
@@ -103,6 +106,7 @@ export default function App() {
   } = useAuth()
   const { favoritesCount } = useFavorites()
   const { unreadCount } = useChat()
+  const { isNight, toggle: toggleTheme } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
   const isAuthRoute = location.pathname === '/login' || location.pathname === '/register'
@@ -266,6 +270,8 @@ export default function App() {
               {unreadCount > 0 && <span className="action-badge action-badge--chat">{unreadCount}</span>}
             </Link>
 
+            {/*<ThemeToggle />*/}
+
             {isAuthenticated && <NotificationBell />}
 
             {isAuthenticated ? (
@@ -421,6 +427,15 @@ export default function App() {
                     <BellIcon size={15} />
                     <span>Notifications</span>
                   </Link>
+                  <button
+                    type="button"
+                    className="mobile-drawer-quicklink"
+                    onClick={toggleTheme}
+                    style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
+                  >
+                    {isNight ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+                    <span>{isNight ? 'Day theme' : 'Night theme'}</span>
+                  </button>
                   {!isBuyer && (
                     <>
                       <Link

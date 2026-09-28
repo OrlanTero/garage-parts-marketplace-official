@@ -45,6 +45,21 @@ function CatalogFields({ formData, setFormData }) {
           </select>
         </div>
       </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '10px 12px', border: '1px solid var(--admin-border)', borderRadius: 'var(--radius-md)', background: formData.free_shipping ? 'rgba(16, 185, 129, 0.08)' : 'var(--admin-bg-subtle)' }}>
+        <input
+          type="checkbox"
+          id="catalog-free-shipping"
+          checked={Boolean(formData.free_shipping)}
+          onChange={(e) => setFormData((prev) => ({ ...prev, free_shipping: e.target.checked }))}
+          style={{ width: 16, height: 16, accentColor: 'var(--color-rust)' }}
+        />
+        <label htmlFor="catalog-free-shipping" style={{ fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          Free freight on this part
+          <span style={{ display: 'block', fontSize: 11, fontWeight: 400, color: 'var(--admin-text-muted)' }}>
+            Off by default — buyers pay per-km freight from the depot unless this is on, or the order hits a free-freight rule.
+          </span>
+        </label>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
         <div>
           <label className="admin-label">Lifecycle</label>
@@ -100,7 +115,7 @@ export default function PartsManagement() {
     price: '',
     original_price: '',
     quantity: 1,
-    free_shipping: true,
+    free_shipping: false,
     description: '',
     city: 'Makati',
     location: 'Makati Parts Depot',
@@ -162,7 +177,7 @@ export default function PartsManagement() {
       price: '',
       original_price: '',
       quantity: 5,
-      free_shipping: true,
+      free_shipping: false,
       description: '',
       city: 'Makati',
       location: 'Makati Parts Depot',

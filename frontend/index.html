@@ -17,6 +17,18 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Apply the saved theme before first paint (no day/night flash).
+      try {
+        var t = localStorage.getItem('gpm_theme') || 'system';
+        if (t !== 'day' && t !== 'night') {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'day');
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
