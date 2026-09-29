@@ -500,7 +500,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
+                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -556,7 +556,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
+                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -612,7 +612,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
+                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -668,7 +668,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1790526522@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
+                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -3941,7 +3941,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"inspection_type\": \"garage_dropoff\",\n    \"inspection_date\": \"2026-09-29 16:28:42\",\n    \"inspection_location\": \"Makati Certified Bay 1\",\n    \"notes\": \"Underside rust and turbo manifold inspection\"\n}"
+                            "raw": "{\n    \"inspection_type\": \"garage_dropoff\",\n    \"inspection_date\": \"2026-09-30 12:56:07\",\n    \"inspection_location\": \"Makati Certified Bay 1\",\n    \"notes\": \"Underside rust and turbo manifold inspection\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/admin/moderation/cars/{{carId}}/schedule-inspection",

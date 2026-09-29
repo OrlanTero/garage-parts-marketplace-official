@@ -4,7 +4,6 @@ import {
   Menu,
   Search,
   Activity,
-  Bell,
   LogOut,
   User,
   Shield,
@@ -16,13 +15,13 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { healthApi } from '../api/health.js'
+import NotificationBell from '../components/NotificationBell.jsx'
 
 export function Header({ setMobileOpen }) {
   const { user, logout, logoutAll } = useAuth()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [healthStatus, setHealthStatus] = useState('checking') // checking | online | offline
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const dropdownRef = useRef(null)
 
   // Poll health status once on mount
@@ -51,7 +50,6 @@ export function Header({ setMobileOpen }) {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false)
-        setNotificationsOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -147,7 +145,8 @@ export function Header({ setMobileOpen }) {
       </div>
 
       {/* Right: Status Pill & Profile */}
-      <div className="admin-header-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }} ref={dropdownRef}>
+      <div className="admin-header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }} ref={dropdownRef}>
+        <NotificationBell />
         {/* System Health Status Indicator */}
         {/*<div*/}
         {/*  className="admin-health-pill"*/}

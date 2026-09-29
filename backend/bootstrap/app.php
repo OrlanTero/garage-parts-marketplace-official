@@ -22,7 +22,19 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Session module: role guard — use as `role:buyer`, `role:seller`, ...
         $middleware->alias(['role' => \App\Http\Middleware\EnsureUserRole::class]);
+
+        // All /api/* traffic speaks JSON (see ForceJsonResponse). Global
+        // (path-guarded inside) so it can never be skipped by group
+        // resolution quirks on auth-failing requests.
+        $middleware->append(\App\Http\Middleware\ForceJsonResponse::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // API-only app: no web `login` route exists, so the framework's
+        // default redirect for unauthenticated requests fatals with
+        // "Route [login] not defined". Answer JSON 401 on /api/* instead.
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+        });
     })->create();

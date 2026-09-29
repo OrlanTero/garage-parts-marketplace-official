@@ -62,6 +62,22 @@ export default function FundsManagement() {
   const [selectedTxn, setSelectedTxn] = useState(null)
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
 
+  // CSV export state (authed blob download — plain links can't carry auth)
+  const [exportingCsv, setExportingCsv] = useState(false)
+  const [exportError, setExportError] = useState('')
+
+  const handleExportCsv = async (params) => {
+    setExportingCsv(true)
+    setExportError('')
+    try {
+      await adminFundsApi.downloadReportCsv(params)
+    } catch (err) {
+      setExportError(err?.response?.data?.message || 'CSV export failed. Please try again.')
+    } finally {
+      setExportingCsv(false)
+    }
+  }
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -586,19 +602,22 @@ export default function FundsManagement() {
             </span>
           </div>
 
-          <a
-            href={adminFundsApi.exportReportCsvUrl({
+          <button
+            type="button"
+            onClick={() => handleExportCsv({
               stream_type: streamFilter !== 'all' ? streamFilter : undefined,
               status: statusFilter !== 'all' ? statusFilter : undefined,
               search: search.trim() || undefined,
             })}
-            target="_blank"
-            rel="noopener noreferrer"
+            disabled={exportingCsv}
             className="btn btn-secondary btn-sm"
           >
             <Download size={13} />
-            Export Ledger CSV
-          </a>
+            {exportingCsv ? 'Exporting…' : 'Export Ledger CSV'}
+          </button>
+          {exportError && (
+            <span style={{ fontSize: 12, color: 'var(--admin-danger)', fontWeight: 600 }}>{exportError}</span>
+          )}
         </div>
 
         <table className="admin-table">
@@ -996,18 +1015,18 @@ export default function FundsManagement() {
                 Close
               </button>
 
-              <a
-                href={adminFundsApi.exportReportCsvUrl({
+              <button
+                type="button"
+                onClick={() => handleExportCsv({
                   period: reportPeriod,
                   stream_type: reportStream !== 'all' ? reportStream : undefined,
                 })}
-                target="_blank"
-                rel="noopener noreferrer"
+                disabled={exportingCsv}
                 className="btn btn-primary btn-sm"
               >
                 <Download size={14} />
-                Download Report CSV
-              </a>
+                {exportingCsv ? 'Exporting…' : 'Download Report CSV'}
+              </button>
             </div>
           </div>
         </div>

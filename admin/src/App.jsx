@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext.jsx'
+import { NotificationProvider } from './context/NotificationContext.jsx'
 import { ProtectedRoute } from './auth/ProtectedRoute.jsx'
 import { GuestRoute } from './auth/GuestRoute.jsx'
 import { AdminLayout } from './layouts/AdminLayout.jsx'
@@ -32,6 +33,7 @@ import VerificationsManagement from './pages/VerificationsManagement.jsx'
 import ReviewsModeration from './pages/ReviewsModeration.jsx'
 import GaragesManagement from './pages/GaragesManagement.jsx'
 import NotificationsBroadcasting from './pages/NotificationsBroadcasting.jsx'
+import MyNotifications from './pages/MyNotifications.jsx'
 import SupportTickets from './pages/SupportTickets.jsx'
 import UsersManagement from './pages/UsersManagement.jsx'
 import AnalyticsReports from './pages/AnalyticsReports.jsx'
@@ -46,6 +48,7 @@ export default function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
+        <NotificationProvider>
         <Routes>
           {/* Guest Only Routes */}
           <Route
@@ -96,6 +99,7 @@ export default function App() {
             <Route path="reviews" element={<ReviewsModeration />} />
             <Route path="garages" element={<GaragesManagement />} />
             <Route path="notifications" element={<NotificationsBroadcasting />} />
+            <Route path="my-notifications" element={<MyNotifications />} />
             <Route path="support" element={<SupportTickets />} />
             <Route path="users" element={<UsersManagement initialRole="staff_admin" title="Admin Users & Permissions" />} />
             <Route path="admin-users" element={<UsersManagement initialRole="staff_admin" title="Admin Users & Permissions" />} />
@@ -108,6 +112,7 @@ export default function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   )

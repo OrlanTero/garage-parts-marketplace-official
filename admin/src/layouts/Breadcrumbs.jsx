@@ -25,6 +25,7 @@ const ROUTE_LABELS = {
   reviews: 'Customer Reviews & Moderation',
   garages: 'Partner Garages & Bays',
   notifications: 'WebSocket Realtime Broadcasts',
+  'my-notifications': 'My Notifications Inbox',
   support: 'Support Tickets & Help Desk',
   analytics: 'Marketplace Analytics & Reports',
   'audit-logs': 'Security Audit Trail',
