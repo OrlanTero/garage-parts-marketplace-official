@@ -3,3 +3,25 @@ backend/vendor/
 backend/node_modules/
 frontend/node_modules/
 frontend/dist/
+admin/node_modules/
+admin/dist/
+admin/.vite/
+
+# Vite / build caches
+.vite/
+dist/
+
+# Laravel runtime (never commit)
+backend/storage/logs/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/testing/
+backend/storage/framework/views/
+backend/storage/app/public/
+backend/bootstrap/cache/*.php
+!backend/bootstrap/cache/.gitignore
+
+# IDE / planner scratch
+.idea/
+.junie/
+.vscode/
