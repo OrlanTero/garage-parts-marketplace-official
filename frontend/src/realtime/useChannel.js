@@ -16,6 +16,7 @@ export function useChannel(channelName, eventHandlers = {}) {
     if (!channelName) return
 
     const echo = getEcho()
+    if (!echo) return undefined
     const channel = echo.channel(channelName)
 
     const registeredEvents = Object.keys(handlersRef.current)

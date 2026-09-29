@@ -502,6 +502,16 @@
   }
 }
 
+@media (max-width: 400px) {
+  .modern-part-card {
+    grid-template-columns: 1fr;
+  }
+  .modern-part-card .part-card-media {
+    aspect-ratio: 16 / 10;
+    width: 100%;
+  }
+}
+
 /* ==========================================================================
    3. CategoryCard
    ========================================================================== */

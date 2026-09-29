@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext.jsx'
 import { Loader2 } from 'lucide-react'
 
 export function GuestRoute({ children }) {
-  const { isLoading, isAuthenticated, isAdmin } = useAuth()
+  const { isLoading, isAuthenticated, isStaff } = useAuth()
 
   if (isLoading) {
     return (
@@ -13,7 +13,7 @@ export function GuestRoute({ children }) {
     )
   }
 
-  if (isAuthenticated && isAdmin) {
+  if (isAuthenticated && isStaff) {
     return <Navigate to="/" replace />
   }
 

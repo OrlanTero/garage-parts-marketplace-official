@@ -1,0 +1,120 @@
+/* ==========================================================================
+   Shared dark modal system for marketplace popups.
+   Namespaced (gpm-modal__) so page-level .modal-* styles (e.g. Home's
+   light RSVP card) keep working untouched. Imported once in main.jsx.
+   ========================================================================== */
+
+.gpm-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: gpm-modal-fade 0.2s ease-out;
+}
+
+.gpm-modal__content {
+  background: #161922;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: gpm-modal-pop 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gpm-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.gpm-modal__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gpm-modal__close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.gpm-modal__close:hover {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+.gpm-modal__body {
+  padding: 20px;
+  overflow-y: auto;
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.gpm-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #1e293b;
+  background: #10131a;
+  flex-shrink: 0;
+}
+
+@keyframes gpm-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes gpm-modal-pop {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 560px) {
+  .gpm-modal__overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .gpm-modal__content {
+    max-width: 100%;
+    max-height: calc(100vh - 40px);
+    border-radius: 14px 14px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gpm-modal__overlay,
+  .gpm-modal__content {
+    animation: none;
+  }
+}

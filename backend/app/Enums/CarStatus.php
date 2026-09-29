@@ -9,7 +9,10 @@ namespace App\Enums;
 enum CarStatus: string
 {
     case Draft = 'draft';
+    case PendingInspection = 'pending_inspection';
+    case Inspected = 'inspected';
     case Active = 'active';
+    case Rejected = 'rejected';
     case Sold = 'sold';
     case Archived = 'archived';
 

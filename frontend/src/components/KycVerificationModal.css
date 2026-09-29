@@ -1,0 +1,751 @@
+/* ==========================================================================
+   Seller KYC Verification Modal (Dark Trust Theme)
+   ========================================================================== */
+
+.kyc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(8, 9, 13, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px;
+  animation: kycFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes kycFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.kyc-modal-container {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: auto;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1c1d24 0%, #131418 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: kycScaleUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes kycScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.kyc-modal-handle {
+  display: none;
+  width: 44px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  margin: 4px auto 0;
+}
+
+/* ---------------- Header ---------------- */
+.kyc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, #242630 0%, #1a1b22 100%);
+  padding: 22px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.kyc-modal-header-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.kyc-modal-header-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kyc-modal-header-icon--approved {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.kyc-modal-header-icon--pending {
+  background: rgba(234, 88, 12, 0.15);
+  color: #ea580c;
+}
+
+.kyc-modal-header-icon--default {
+  background: rgba(216, 98, 44, 0.15);
+  color: #d8622c;
+}
+
+.kyc-modal-header-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.kyc-modal-header-sub {
+  font-size: 13px;
+  color: #a7adb8;
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+
+.kyc-modal-close {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a7adb8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kyc-modal-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+/* ---------------- Body ---------------- */
+.kyc-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 24px 28px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kyc-modal-loading {
+  text-align: center;
+  padding: 56px 0;
+  color: #a7adb8;
+  font-size: 14px;
+}
+
+.kyc-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  border-top-color: #d8622c;
+  animation: kycSpin 0.8s linear infinite;
+}
+
+@keyframes kycSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------- Status banners ---------------- */
+.kyc-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.kyc-banner--pending {
+  background: rgba(234, 88, 12, 0.12);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  color: #ea580c;
+}
+
+.kyc-banner--rejected {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.kyc-banner--success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.kyc-banner--error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 13px;
+  align-items: center;
+}
+
+.kyc-banner__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.kyc-banner--error .kyc-banner__icon {
+  margin-top: 0;
+}
+
+.kyc-banner__title {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.kyc-banner__text {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---------------- Step progress ---------------- */
+.kyc-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.kyc-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.kyc-step--active { color: #d8622c; }
+.kyc-step--done { color: #10b981; }
+.kyc-step--idle { color: #a7adb8; }
+
+.kyc-step__dot {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.kyc-step__dot--active { background: #d8622c; }
+.kyc-step__dot--done { background: #10b981; }
+.kyc-step__dot--idle { background: rgba(255, 255, 255, 0.1); }
+
+.kyc-step__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kyc-steps__connector {
+  flex: 1;
+  min-width: 12px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------------- Form blocks ---------------- */
+.kyc-form-block {
+  margin-bottom: 20px;
+}
+
+.kyc-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.kyc-input,
+.kyc-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.kyc-input::placeholder,
+.kyc-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.kyc-input:focus,
+.kyc-textarea:focus {
+  border-color: #d8622c;
+  box-shadow: 0 0 0 3px rgba(216, 98, 44, 0.18);
+}
+
+/* ---------------- Document option cards ---------------- */
+.kyc-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kyc-doc-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kyc-doc-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kyc-doc-option--selected {
+  background: rgba(216, 98, 44, 0.12);
+  border: 1px solid #d8622c;
+}
+
+.kyc-doc-option__name {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.kyc-doc-option--selected .kyc-doc-option__name {
+  color: #ffffff;
+}
+
+.kyc-doc-option__desc {
+  display: block;
+  font-size: 11px;
+  color: #a7adb8;
+  margin-top: 2px;
+}
+
+.kyc-doc-option__radio {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.kyc-doc-option--selected .kyc-doc-option__radio {
+  border: 5px solid #d8622c;
+  background: #ffffff;
+}
+
+/* ---------------- Upload zones ---------------- */
+.kyc-upload-zone {
+  position: relative;
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 22px 18px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kyc-upload-zone:hover {
+  border-color: rgba(216, 98, 44, 0.55);
+  background: rgba(216, 98, 44, 0.05);
+}
+
+.kyc-upload-zone--filled {
+  border-style: solid;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.kyc-upload-icon {
+  color: #d8622c;
+  display: block;
+  margin: 0 auto 8px;
+}
+
+.kyc-upload-title {
+  margin: 0;
+  font-size: 13px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.kyc-upload-hint {
+  font-size: 11px;
+  color: #a7adb8;
+}
+
+.kyc-upload-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.kyc-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.kyc-preview__img {
+  max-height: 150px;
+  max-width: 100%;
+  border-radius: 8px;
+  object-fit: contain;
+  display: block;
+}
+
+.kyc-preview__remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s ease;
+}
+
+.kyc-preview__remove:hover {
+  background: #dc2626;
+}
+
+/* ---------------- Review summary ---------------- */
+.kyc-review-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.kyc-review-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 12px;
+}
+
+.kyc-review-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.kyc-review-item__label {
+  color: #a7adb8;
+  display: block;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.kyc-review-item__value {
+  color: #ffffff;
+  font-weight: 600;
+  word-break: break-word;
+  text-transform: capitalize;
+}
+
+.kyc-review-item__value--mono {
+  font-family: 'SF Mono', ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  text-transform: none;
+}
+
+.kyc-review-item__value--ok {
+  color: #10b981;
+}
+
+/* ---------------- Info note ---------------- */
+.kyc-info-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.08);
+  color: #b6bcc7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kyc-info-note__icon {
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+/* ---------------- Footers / actions ---------------- */
+.kyc-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kyc-modal-foot--start {
+  justify-content: flex-end;
+}
+
+.kyc-modal-foot .btn {
+  white-space: normal;
+}
+
+/* ---------------- Approved state ---------------- */
+.kyc-approved {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.kyc-approved__badge {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.25);
+}
+
+.kyc-approved__title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 6px;
+}
+
+.kyc-approved__sub {
+  color: #10b981;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 20px;
+}
+
+.kyc-approved__card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: left;
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+
+.kyc-approved__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.kyc-approved__row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.kyc-approved__row-label {
+  color: #a7adb8;
+  flex-shrink: 0;
+}
+
+.kyc-approved__row-value {
+  color: #ffffff;
+  font-weight: 700;
+  text-align: right;
+  text-transform: capitalize;
+  word-break: break-word;
+}
+
+.kyc-approved__row-value--ok {
+  color: #10b981;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Mobile Bottom-Sheet Responsiveness
+   ========================================================================== */
+@media (max-width: 640px) {
+  .kyc-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+    justify-content: center;
+    animation: kycMobileFadeIn 0.22s ease forwards;
+  }
+
+  @keyframes kycMobileFadeIn {
+    from { background: rgba(0, 0, 0, 0); }
+    to { background: rgba(8, 9, 13, 0.8); }
+  }
+
+  .kyc-modal-container {
+    max-width: 100%;
+    margin: 0;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 22px 22px 0 0;
+    animation: kycMobileSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  @keyframes kycMobileSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .kyc-modal-handle {
+    display: block;
+  }
+
+  .kyc-modal-header {
+    padding: 14px 20px 18px;
+    flex-wrap: nowrap;
+  }
+
+  .kyc-modal-header-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .kyc-modal-header-title {
+    font-size: 1.08rem;
+  }
+
+  .kyc-modal-header-sub {
+    font-size: 12px;
+  }
+
+  .kyc-modal-body {
+    padding: 18px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 480px) {
+  .kyc-steps {
+    gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .kyc-step {
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .kyc-step__dot {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .kyc-steps__connector {
+    min-width: 6px;
+  }
+
+  .kyc-review-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .kyc-modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kyc-modal-foot--start {
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .kyc-modal-foot .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 13.5px;
+  }
+
+  .kyc-approved__card {
+    padding: 16px;
+  }
+
+  .kyc-approved__row {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .kyc-approved__row-value {
+    text-align: left;
+  }
+
+  .kyc-modal-header-sub {
+    display: block;
+  }
+}

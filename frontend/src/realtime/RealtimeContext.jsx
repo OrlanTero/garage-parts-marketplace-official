@@ -1,14 +1,20 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { getEcho, subscribeConnectionState, disconnectEcho, reconnectEcho } from './echo.js'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { getEcho, subscribeConnectionState, disconnectEcho, reconnectEcho, isRealtimeEnabled } from './echo.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 
 const RealtimeContext = createContext(null)
 
 export function RealtimeProvider({ children }) {
-  const { user, token } = useAuth()
+  const { token } = useAuth()
   const [connectionState, setConnectionState] = useState('disconnected')
+  const prevTokenRef = useRef(token)
 
   useEffect(() => {
+    if (!isRealtimeEnabled()) {
+      setConnectionState('disabled')
+      return undefined
+    }
+
     // Subscribe to connection state changes
     const unsubscribe = subscribeConnectionState((state) => {
       setConnectionState(state)
@@ -22,13 +28,18 @@ export function RealtimeProvider({ children }) {
     }
   }, [])
 
-  // When auth token changes (login / logout), reconnect echo if needed so private channels re-authorize smoothly
+  // When the auth token changes (login / logout / refresh), reconnect echo
+  // so private channels re-authorize with the fresh token. getEcho() alone
+  // would return the stale singleton and keep failing auth.
   useEffect(() => {
-    if (token) {
-      // Refresh or reconnect to ensure authorizer has fresh token
-      getEcho()
+    if (!isRealtimeEnabled()) return
+    const prev = prevTokenRef.current
+    prevTokenRef.current = token
+    if (prev === token) return
+    if (prev || token) {
+      reconnectEcho()
     }
-  }, [token, user])
+  }, [token])
 
   const value = useMemo(
     () => ({

@@ -390,11 +390,135 @@ class CarSeeder extends Seeder
                     ],
                 ],
             ],
+            [
+                'seller_id' => $makatiSeller->id,
+                'title' => '1994 Nissan Skyline GT-R V-Spec II (BNR32)',
+                'brand' => 'Nissan',
+                'model' => 'Skyline GT-R V-Spec II',
+                'year' => 1994,
+                'price' => 3850000.00,
+                'original_price' => 4100000.00,
+                'mileage_km' => 62000,
+                'body_style' => BodyStyle::Coupe,
+                'fuel_type' => FuelType::Petrol,
+                'transmission' => Transmission::Manual,
+                'condition' => CarCondition::Used,
+                'tag' => 'Godzilla · Pending Inspection',
+                'color' => 'Crystal White',
+                'vin' => 'BNR32-3001294',
+                'description' => 'Factory V-Spec II with active ATTESA E-TS Pro AWD and Brembo calipers. RB26DETT twin-turbo engine with Nismo airbox and Tomei downpipes. Scheduled for 100-point Garage Drop-off inspection.',
+                'city' => 'Makati',
+                'location' => 'Makati Partner Lift Bay #3',
+                'status' => CarStatus::PendingInspection,
+                'rating' => 5.00,
+                'inspection_score' => null,
+                'inspection_type' => 'garage_dropoff',
+                'inspection_status' => 'scheduled',
+                'inspection_date' => now()->addDays(2)->setTime(10, 0),
+                'inspection_location' => 'Makati Garage Hub - Bay 3',
+                'is_approved' => false,
+                'published_at' => null,
+                'media' => [
+                    [
+                        'url' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop',
+                        'caption' => 'BNR32 V-Spec II Front Profile',
+                        'is_primary' => true,
+                    ],
+                ],
+            ],
+            [
+                'seller_id' => $manilaSeller->id,
+                'title' => '2020 Porsche 718 Cayman GT4 4.0L 6-Speed',
+                'brand' => 'Porsche',
+                'model' => '718 Cayman GT4',
+                'year' => 2020,
+                'price' => 7450000.00,
+                'original_price' => 7800000.00,
+                'mileage_km' => 12400,
+                'body_style' => BodyStyle::Coupe,
+                'fuel_type' => FuelType::Petrol,
+                'transmission' => Transmission::Manual,
+                'condition' => CarCondition::Used,
+                'tag' => 'Naturally Aspirated 4.0L',
+                'color' => 'Racing Yellow',
+                'vin' => 'WP0AC2A82LK274910',
+                'description' => '4.0-liter naturally aspirated flat-six producing 414 hp, paired with a 6-speed manual gearbox. Clubsport package with carbon bucket seats and PCCB ceramic brakes. Awaiting on-site mobile inspector verification.',
+                'city' => 'Manila',
+                'location' => 'BGC Private Collector Garage',
+                'status' => CarStatus::Draft,
+                'rating' => 5.00,
+                'inspection_score' => null,
+                'inspection_type' => 'onsite_visit',
+                'inspection_status' => 'pending',
+                'inspection_date' => now()->addDays(3)->setTime(14, 30),
+                'inspection_location' => 'Bonifacio Global City, Taguig',
+                'is_approved' => false,
+                'published_at' => null,
+                'media' => [
+                    [
+                        'url' => 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop',
+                        'caption' => 'Porsche GT4 Track Setup',
+                        'is_primary' => true,
+                    ],
+                ],
+            ],
+            // Inspected + passed, awaiting admin approval — demos the final
+            // publish step (approve goes live WITH this score).
+            [
+                'seller_id' => $manilaSeller->id,
+                'title' => '2004 Mazda RX-8 Type-S 6-Speed Manual',
+                'brand' => 'Mazda',
+                'model' => 'RX-8 Type-S',
+                'year' => 2004,
+                'price' => 540000.00,
+                'original_price' => 590000.00,
+                'mileage_km' => 95000,
+                'body_style' => BodyStyle::Coupe,
+                'fuel_type' => FuelType::Petrol,
+                'transmission' => Transmission::Manual,
+                'condition' => CarCondition::Used,
+                'tag' => 'Rotary Fresh Apex',
+                'color' => 'Velocity Red',
+                'vin' => 'JM1FE173040200011',
+                'description' => 'Renesis rotary with fresh apex seals and compression test card. Inspected and passed — awaiting admin approval to go live.',
+                'city' => 'Manila',
+                'location' => 'Manila Classic Restorations',
+                'status' => CarStatus::Inspected,
+                'rating' => 4.70,
+                'inspection_score' => '94/100',
+                'inspection_type' => 'garage_dropoff',
+                'inspection_status' => 'passed',
+                'inspector_notes' => 'Compression 7.2/7.1/7.3 across rotors. Clean chassis, no flood history.',
+                'is_approved' => false,
+                'published_at' => null,
+                'media' => [
+                    [
+                        'url' => 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1200&auto=format&fit=crop',
+                        'caption' => 'RX-8 Front 3/4',
+                        'is_primary' => true,
+                    ],
+                ],
+            ],
         ];
 
         foreach ($carsData as $data) {
             $mediaItems = $data['media'] ?? [];
             unset($data['media']);
+
+            $isMainGarage = ($data['seller_id'] === $makatiSeller->id);
+
+            if (!isset($data['is_approved']) && ($data['status'] === CarStatus::Active || ($data['status'] instanceof CarStatus && $data['status']->value === 'active'))) {
+                $data['is_approved'] = true;
+                $data['inspection_type'] = $data['inspection_type'] ?? 'garage_dropoff';
+                $data['inspection_status'] = $data['inspection_status'] ?? 'passed';
+                $data['approved_at'] = now()->subDays(1);
+            }
+
+            // All active cars from main garage seed account (and verified partners) are automatically placed in showroom without fee
+            if ($data['is_approved'] && ($data['status'] === CarStatus::Active || ($data['status'] instanceof CarStatus && $data['status']->value === 'active'))) {
+                $data['is_in_showroom'] = true;
+                $data['showroom_status'] = 'approved';
+            }
 
             $car = Car::updateOrCreate(
                 ['vin' => $data['vin']],

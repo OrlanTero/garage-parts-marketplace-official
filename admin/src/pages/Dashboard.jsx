@@ -17,17 +17,20 @@ import {
 import { carsApi } from '../api/cars.js'
 import { partsApi } from '../api/parts.js'
 import { healthApi } from '../api/health.js'
+import { adminApi } from '../api/admin.js'
 
 export default function Dashboard() {
   const [carsData, setCarsData] = useState({ list: [], total: 0, loading: true })
   const [partsData, setPartsData] = useState({ list: [], total: 0, loading: true })
+  const [usersCount, setUsersCount] = useState(0)
   const [systemHealth, setSystemHealth] = useState({ status: 'checking', details: null })
 
   const loadData = async () => {
     try {
-      const [carsRes, partsRes, healthRes] = await Promise.allSettled([
+      const [carsRes, partsRes, usersRes, healthRes] = await Promise.allSettled([
         carsApi.list({ per_page: 5 }),
         partsApi.list({ per_page: 5 }),
+        adminApi.getUsers({ per_page: 1 }),
         healthApi.check(),
       ])
 
@@ -51,6 +54,10 @@ export default function Dashboard() {
         })
       } else {
         setPartsData((prev) => ({ ...prev, loading: false }))
+      }
+
+      if (usersRes.status === 'fulfilled') {
+        setUsersCount(usersRes.value.meta?.total || usersRes.value.data?.length || 0)
       }
 
       if (healthRes.status === 'fulfilled') {
@@ -200,13 +207,13 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--admin-text-primary)', lineHeight: 1 }}>
-            8+
+            {usersCount || '...'}
           </div>
           <div style={{ marginTop: 12, fontSize: 13, color: 'var(--admin-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="badge badge-seller" style={{ padding: '2px 8px', fontSize: 11 }}>
-              4 Verified Shops
+              Verified Accounts
             </span>
-            <span>Buyers & Admins</span>
+            <span>Buyers, Staff & Admins</span>
           </div>
         </div>
 
@@ -239,7 +246,7 @@ export default function Dashboard() {
       </div>
 
       {/* Grid: Recent Car Builds & Recent Parts */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 24, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 24, marginBottom: 32 }}>
         {/* Recent Cars */}
         <div className="admin-card">
           <div className="admin-card-header">

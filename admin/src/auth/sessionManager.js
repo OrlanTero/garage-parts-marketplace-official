@@ -1,13 +1,15 @@
 import client from '../api/client.js'
 import { tokenStorage } from './tokenStorage.js'
 
+const STAFF_ROLES = ['admin', 'super_admin', 'inspector']
+
 function unwrapSession(payload) {
   const token = payload?.token ?? null
   const user = payload?.user ?? null
 
-  if (user && user.role !== 'admin') {
+  if (user && !STAFF_ROLES.includes(user.role)) {
     tokenStorage.clear()
-    const err = new Error('Access denied. Administrator privileges are required to access this portal.')
+    const err = new Error('Access denied. Staff privileges (admin or inspector) are required to access this portal.')
     err.code = 'ROLE_UNAUTHORIZED'
     throw err
   }
@@ -47,14 +49,16 @@ export const sessionManager = {
   me: async () => {
     const response = await client.get('/auth/me')
     const user = response.data
-    if (user && user.role !== 'admin') {
+    if (user && !STAFF_ROLES.includes(user.role)) {
       tokenStorage.clear()
-      const err = new Error('Access denied. Administrator privileges are required.')
+      const err = new Error('Access denied. Staff privileges are required.')
       err.code = 'ROLE_UNAUTHORIZED'
       throw err
     }
     return user
   },
 
-  isAdmin: (user) => user?.role === 'admin',
+  isAdmin: (user) => user?.role === 'admin' || user?.role === 'super_admin',
+  isStaff: (user) => STAFF_ROLES.includes(user?.role),
+  isInspector: (user) => user?.role === 'inspector',
 }

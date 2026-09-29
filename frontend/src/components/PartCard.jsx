@@ -44,6 +44,7 @@ export default function PartCard({
 
   // Normalize data across API and mockup shapes
   const id = part.id
+  const linkId = part.uuid || part.id
   const title = part.title || `${part.brand ? part.brand + ' ' : ''}${part.part_number || 'Performance Part'}`
   const rawCat = part.cat || part.category || 'other'
   const catName = part.catName || (rawCat.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()))
@@ -103,8 +104,8 @@ export default function PartCard({
               <Truck size={11} /> Free Freight
             </span>
           )}
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={`part-wishlist-btn ${saved ? 'active' : ''}`}
             onClick={handleWishlist}
             aria-label="Save Part"
@@ -126,7 +127,7 @@ export default function PartCard({
           </div>
 
           <h3 className="part-card-title">
-            <Link to={`/parts/${id}`}>{title}</Link>
+            <Link to={`/parts/${linkId}`}>{title}</Link>
           </h3>
 
           <div className="part-card-meta-line">
@@ -147,8 +148,8 @@ export default function PartCard({
               {origPriceDisplay && <span className="part-price-orig">{origPriceDisplay}</span>}
             </div>
             <div className="part-card-actions">
-              <Link to={`/parts/${id}`} className="btn btn-secondary part-inquire-btn">
-                <span>Inquire / Bag</span>
+              <Link to={`/parts/${linkId}`} className="btn btn-secondary part-inquire-btn">
+                <span>Inquire</span>
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -174,6 +175,7 @@ export default function PartCard({
             <Truck size={11} /> Free Freight
           </span>
         )}
+
         <button 
           type="button" 
           className={`part-wishlist-btn ${saved ? 'active' : ''}`}
@@ -194,7 +196,7 @@ export default function PartCard({
         </div>
 
         <h3 className="part-card-title">
-          <Link to={`/parts/${id}`}>{title}</Link>
+          <Link to={`/parts/${linkId}`}>{title}</Link>
         </h3>
 
         {brand && (
@@ -209,8 +211,8 @@ export default function PartCard({
             <span className="part-price-main">{priceDisplay}</span>
             {origPriceDisplay && <span className="part-price-orig">{origPriceDisplay}</span>}
           </div>
-          <Link to={`/parts/${id}`} className="btn btn-secondary part-inquire-btn">
-            <span>Inquire / Bag</span>
+          <Link to={`/parts/${linkId}`} className="btn btn-secondary part-inquire-btn">
+            <span>Inquire</span>
           </Link>
         </div>
       </div>

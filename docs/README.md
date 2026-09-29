@@ -9,7 +9,7 @@ Monorepo: `frontend/` (React 18 + Vite) + `backend/` (Laravel 12 API). Core depe
 | Database | MySQL 8 |
 | Cache | file default, Redis optional (`CACHE_STORE=redis`) |
 | Queue | `database` default, Redis-ready (`QUEUE_CONNECTION=redis`) |
-| Storage | local/`public` default, S3-ready (`FILESYSTEM_DISK=s3`) |
+| Storage | local/`public` default, AWS EFS (`FILESYSTEM_DISK=efs`), or S3-ready (`FILESYSTEM_DISK=s3`) |
 | Web server / OS | Nginx on Ubuntu |
 | VCS / CI/CD | GitHub + GitHub Actions (`.github/workflows/ci.yml`) |
 

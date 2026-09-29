@@ -13,14 +13,16 @@ class PartSeeder extends Seeder
 {
     public function run(): void
     {
-        $makatiSeller = User::where('email', 'seller@garagemarket.ph')->first() ?? User::first();
-        $cebuSeller = User::where('email', 'cebu.performance@garagemarket.ph')->first() ?? $makatiSeller;
-        $manilaSeller = User::where('email', 'manila.classic@garagemarket.ph')->first() ?? $makatiSeller;
-        $davaoSeller = User::where('email', 'davao.overland@garagemarket.ph')->first() ?? $makatiSeller;
+        // House catalog: car parts are sold exclusively by GAP Valenzuela Main.
+        $house = User::house() ?? User::where('email', 'partsseller@garagemarket.ph')->first() ?? User::first();
+        $apexParts = $house;
+        $tokyoOem = $house;
+        $metroDealer = $house;
+        $autobahnDealer = $house;
 
         $partsData = [
             [
-                'seller_id' => $makatiSeller->id,
+                'seller_id' => $apexParts->id,
                 'title' => 'Brembo GT 6-Piston Monobloc Big Brake Kit 355x32mm',
                 'category' => PartCategory::Brakes,
                 'brand' => 'Brembo',
@@ -58,7 +60,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $cebuSeller->id,
+                'seller_id' => $tokyoOem->id,
                 'title' => 'Recaro SR-7 KK100 Reclinable Bucket Seats (Pair)',
                 'category' => PartCategory::Interior,
                 'brand' => 'Recaro',
@@ -91,7 +93,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $manilaSeller->id,
+                'seller_id' => $metroDealer->id,
                 'title' => 'HKS Hi-Power Spec-L II Titanium Tip Catback Exhaust',
                 'category' => PartCategory::Exhaust,
                 'brand' => 'HKS',
@@ -124,7 +126,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $cebuSeller->id,
+                'seller_id' => $autobahnDealer->id,
                 'title' => 'Work Meister S1 3-Piece Wheels 18x9.5 +22 5x114.3',
                 'category' => PartCategory::TiresWheels,
                 'brand' => 'Work Wheels',
@@ -157,7 +159,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $makatiSeller->id,
+                'seller_id' => $apexParts->id,
                 'title' => 'Nardi Classic 360mm Wood Steering Wheel with Horn Kit',
                 'category' => PartCategory::Interior,
                 'brand' => 'Nardi',
@@ -190,7 +192,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $manilaSeller->id,
+                'seller_id' => $tokyoOem->id,
                 'title' => 'Koyo N-Flow Dual-Pass Aluminum Racing Radiator',
                 'category' => PartCategory::Engine,
                 'brand' => 'Koyo',
@@ -223,7 +225,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $makatiSeller->id,
+                'seller_id' => $apexParts->id,
                 'title' => 'RAYS Volk Racing TE37 Saga S-Plus 18x9.5 +38 Bronze',
                 'category' => PartCategory::TiresWheels,
                 'brand' => 'RAYS',
@@ -256,7 +258,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $cebuSeller->id,
+                'seller_id' => $tokyoOem->id,
                 'title' => 'Garrett Motion G25-550 Dual Ball Bearing Turbocharger',
                 'category' => PartCategory::Engine,
                 'brand' => 'Garrett',
@@ -289,7 +291,7 @@ class PartSeeder extends Seeder
                 ],
             ],
             [
-                'seller_id' => $davaoSeller->id,
+                'seller_id' => $metroDealer->id,
                 'title' => 'Ohlins Road & Track DFV Coilovers Kit',
                 'category' => PartCategory::Suspension,
                 'brand' => 'Ohlins',
@@ -318,6 +320,33 @@ class PartSeeder extends Seeder
                         'url' => 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=1000&auto=format&fit=crop',
                         'caption' => 'DFV Dual Flow Valve Adjustment Knob',
                         'is_primary' => false,
+                    ],
+                ],
+            ],
+            // Draft example — visible in the admin catalog (Draft tab) but
+            // hidden from the public marketplace until published.
+            [
+                'seller_id' => $apexParts->id,
+                'title' => 'OMP Racing Bucket Seat Pair (FIA)',
+                'category' => 'interior',
+                'brand' => 'OMP',
+                'part_number' => 'OMP-HA0-0785-BLK',
+                'compatibility' => 'Universal side-mount rails',
+                'condition' => 'new',
+                'quantity' => 2,
+                'price' => 68000.00,
+                'city' => 'Makati',
+                'location' => 'Makati Parts Depot',
+                'status' => PartStatus::Draft,
+                'rating' => 0,
+                'reviews_count' => 0,
+                'published_at' => null,
+                'description' => 'FIA-homologated fiberglass bucket seats, pair with side mounts and sliders.',
+                'media' => [
+                    [
+                        'url' => 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1000&auto=format&fit=crop',
+                        'caption' => 'OMP Bucket Seats',
+                        'is_primary' => true,
                     ],
                 ],
             ],

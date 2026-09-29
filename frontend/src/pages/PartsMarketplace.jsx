@@ -14,31 +14,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Package,
-  Wrench,
-  Disc,
-  Flame,
-  Armchair,
-  Compass,
-  Sliders,
   CheckCircle2,
   Lock
 } from 'lucide-react'
-import { PART_FILTER_META } from '../api/parts.js'
+import { taxonomyApi, useTaxonomy, categoryDisplay, formatCount, specOptions, specLabel } from '../api/taxonomy.js'
 import { useMarketplaceParts } from '../marketplace/useMarketplaceParts.js'
 import PartCard from '../components/PartCard.jsx'
 import './PartsMarketplace.css'
-
-// Preset category buttons
-const CATEGORY_CHIPS = [
-  { id: 'all', label: 'All Catalog', icon: Sparkles },
-  { id: 'engine', label: 'Engine & Turbo', icon: Wrench },
-  { id: 'wheels', label: 'Wheels & Rims', icon: Disc },
-  { id: 'brakes', label: 'Brakes & BBK', icon: Sliders },
-  { id: 'exhaust', label: 'Exhaust & Headers', icon: Flame },
-  { id: 'interior', label: 'Interior & Recaro', icon: Armchair },
-  { id: 'suspension', label: 'Coilovers & Suspension', icon: Sliders },
-  { id: 'accessories', label: 'Aero & Accessories', icon: Compass },
-]
 
 // Fallback curated performance parts catalog
 const CURATED_SAMPLE_PARTS = [
@@ -57,14 +39,36 @@ export default function PartsMarketplace() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialSearch = searchParams.get('search') || ''
   const initialCategory = searchParams.get('category') || ''
+  const initialSeller = searchParams.get('seller_username') || searchParams.get('seller') || ''
 
   const { parts: apiParts, meta, filters, setFilter, page, setPage, loading, error, reload } = useMarketplaceParts({
     search: initialSearch,
-    category: initialCategory
+    category: initialCategory,
+    seller_username: initialSeller,
   })
 
   const [activeCategoryTab, setActiveCategoryTab] = useState(initialCategory || 'all')
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'list'
+
+  // Live taxonomy — categories & part-maker brands served by the backend.
+  const { categories: liveCategories, specs } = useTaxonomy()
+  const partConditions = useMemo(() => specOptions(specs, 'part_conditions'), [specs])
+  const [partBrands, setPartBrands] = useState([])
+  useEffect(() => {
+    taxonomyApi.partBrands().then(setPartBrands).catch(() => setPartBrands([]))
+  }, [])
+  const categoryChips = useMemo(
+    () => [
+      { id: 'all', label: 'All Catalog', icon: Sparkles },
+      ...liveCategories.map((cat) => ({
+        id: cat.slug,
+        label: cat.name,
+        icon: categoryDisplay(cat.slug).icon,
+        hint: formatCount(cat.parts_count),
+      })),
+    ],
+    [liveCategories]
+  )
 
   // Sync category tab with filter and URL
   useEffect(() => {
@@ -139,6 +143,7 @@ export default function PartsMarketplace() {
   const activeFilterList = useMemo(() => {
     const list = []
     if (filters.search) list.push({ key: 'search', label: `Search: "${filters.search}"`, clear: () => setFilter('search', '') })
+    if (filters.seller_username) list.push({ key: 'seller_username', label: `Merchant: @${filters.seller_username}`, clear: () => setFilter('seller_username', '') })
     if (filters.category) list.push({ key: 'category', label: `Category: ${filters.category.replace('_', ' ')}`, clear: () => handleCategorySelect('all') })
     if (filters.brand) list.push({ key: 'brand', label: `Brand: ${filters.brand}`, clear: () => setFilter('brand', '') })
     if (filters.condition) list.push({ key: 'condition', label: `Condition: ${filters.condition}`, clear: () => setFilter('condition', '') })
@@ -169,7 +174,7 @@ export default function PartsMarketplace() {
       <section className="parts-hero">
         <div className="parts-hero-inner">
           <span className="parts-eyebrow">
-            <Truck size={16} /> Free Freight on Orders Over ₱8,000 · Genuine & Japanese Surplus
+            <Truck size={16} /> Free Freight on Orders Over ₱10,000 · Genuine & Japanese Surplus
           </span>
           <h1 className="parts-title">Performance Parts, Internals & Fab</h1>
           <p className="parts-lead">
@@ -179,7 +184,7 @@ export default function PartsMarketplace() {
 
           {/* Category Chips Bar */}
           <div className="parts-category-chips">
-            {CATEGORY_CHIPS.map((chip) => {
+            {categoryChips.map((chip) => {
               const Icon = chip.icon
               const isActive = activeCategoryTab === chip.id
               return (
@@ -233,9 +238,9 @@ export default function PartsMarketplace() {
               aria-label="Filter by Category"
             >
               <option value="">All Categories</option>
-              {PART_FILTER_META.categories.map((c) => (
-                <option key={c} value={c}>
-                  {c.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              {liveCategories.map((c) => (
+                <option key={c.id} value={c.slug}>
+                  {c.name}
                 </option>
               ))}
             </select>
@@ -248,17 +253,11 @@ export default function PartsMarketplace() {
               aria-label="Filter by Brand"
             >
               <option value="">All Brands</option>
-              <option value="HKS">HKS</option>
-              <option value="Brembo">Brembo</option>
-              <option value="RAYS">RAYS Volk Racing</option>
-              <option value="Work Wheels">Work Wheels</option>
-              <option value="Recaro">Recaro</option>
-              <option value="Nardi">Nardi</option>
-              <option value="Koyo">Koyo Radiators</option>
-              <option value="Garrett">Garrett Motion</option>
-              <option value="Cusco">Cusco</option>
-              <option value="Tein">Tein Suspension</option>
-              <option value="Bride">Bride Racing</option>
+              {partBrands.map((b) => (
+                <option key={b.name} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
             </select>
 
             {/* Condition Dropdown */}
@@ -269,9 +268,11 @@ export default function PartsMarketplace() {
               aria-label="Filter by Condition"
             >
               <option value="">Any Condition</option>
-              <option value="new">Brand New OEM</option>
-              <option value="used">Used Surplus</option>
-              <option value="refurbished">Refurbished</option>
+              {partConditions.map((c) => (
+                <option key={c} value={c}>
+                  {specLabel(c)}
+                </option>
+              ))}
             </select>
 
             {/* In Stock Checkbox */}

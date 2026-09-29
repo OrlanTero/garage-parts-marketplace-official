@@ -16,15 +16,29 @@ class Part extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'uuid',
         'seller_id',
+        'brand_id',
+        'category_id',
+        'subcategory_id',
         'title',
         'category',
         'brand',
         'part_number',
+        'mpn',
+        'barcode',
+        'uom',
+        'specifications',
+        'lifecycle_status',
         'compatibility',
         'condition',
         'tag',
         'quantity',
+        'reserved_quantity',
+        'min_stock',
+        'max_stock',
+        'reorder_point',
+        'safety_stock',
         'price',
         'original_price',
         'free_shipping',
@@ -49,6 +63,12 @@ class Part extends Model
             'category' => PartCategory::class,
             'condition' => PartCondition::class,
             'quantity' => 'integer',
+            'reserved_quantity' => 'integer',
+            'min_stock' => 'integer',
+            'max_stock' => 'integer',
+            'reorder_point' => 'integer',
+            'safety_stock' => 'integer',
+            'specifications' => 'array',
             'price' => 'decimal:2',
             'original_price' => 'decimal:2',
             'free_shipping' => 'boolean',
@@ -60,9 +80,98 @@ class Part extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+            // Sync legacy strings from taxonomy FKs.
+            if (!empty($model->brand_id) && empty($model->brand)) {
+                $model->brand = Brand::whereKey($model->brand_id)->value('name') ?? $model->brand;
+            }
+            if (!empty($model->category_id) && empty($model->category)) {
+                $model->category = Category::whereKey($model->category_id)->value('slug') ?? $model->category;
+            }
+        });
+
+        static::updating(function ($model) {
+            if ($model->isDirty('brand_id') && !empty($model->brand_id)) {
+                $name = Brand::whereKey($model->brand_id)->value('name');
+                if ($name) {
+                    $model->brand = $name;
+                }
+            }
+            if ($model->isDirty('category_id') && !empty($model->category_id)) {
+                $slug = Category::whereKey($model->category_id)->value('slug');
+                if ($slug) {
+                    $model->category = $slug;
+                }
+            }
+        });
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if ($field) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        return $this->where('uuid', $value)
+            ->orWhere('id', is_numeric($value) ? (int) $value : 0)
+            ->first();
+    }
+
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function brandRef(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function categoryRef(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    public function subcategoryRef(): BelongsTo
+    {
+        return $this->belongsTo(Subcategory::class, 'subcategory_id');
+    }
+
+    /** Vehicle models this part is verified to fit. */
+    public function compatibleModels(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(CarModel::class, 'car_model_part')->withTimestamps();
+    }
+
+    /** Available-to-promise = on hand minus reserved. */
+    public function getAvailableQuantityAttribute(): int
+    {
+        return max(0, (int) $this->quantity - (int) $this->reserved_quantity);
+    }
+
+    public function stockMovements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StockMovement::class)->orderByDesc('created_at');
+    }
+
+    public function supplierLinks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PartSupplier::class);
+    }
+
+    public function serials(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PartSerial::class);
+    }
+
+    public function relations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PartRelation::class);
     }
 
     public function media(): \Illuminate\Database\Eloquent\Relations\MorphMany
@@ -93,6 +202,37 @@ class Part extends Model
         return $this->morphMany(Favorite::class, 'favoritable');
     }
 
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'part_id');
+    }
+
+    /**
+     * Orders with captured payment on this part right now. Unlike cars
+     * (see Car::heldOrders, escrow), parts use direct capture — paid /
+     * confirmed on an open order means the stock is spoken for, with
+     * payout settling on completion instead of inspection release.
+     */
+    public function heldOrders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->orders()
+            ->whereIn('payment_status', ['paid', 'confirmed'])
+            ->whereNotIn('status', ['completed', 'refunded', 'cancelled']);
+    }
+
+    public function getPaymentSecuredAttribute(): bool
+    {
+        if (array_key_exists('held_orders_count', $this->attributes)) {
+            return (int) $this->attributes['held_orders_count'] > 0;
+        }
+
+        if ($this->relationLoaded('heldOrders')) {
+            return $this->heldOrders->isNotEmpty();
+        }
+
+        return $this->heldOrders()->exists();
+    }
+
     public function getPrimaryImageUrlAttribute(): ?string
     {
         if ($this->relationLoaded('media')) {
@@ -113,11 +253,17 @@ class Part extends Model
         return $this->media()->pluck('url')->all();
     }
 
-    /** Public marketplace scope: active listings, newest first. */
+    /**
+     * Public marketplace scope: active listings with live catalog status
+     * and stock. Zero-stock units are unavailable (payment secured by an
+     * open order). NULL quantity means "unspecified" (legacy rows).
+     */
     public function scopeListed(Builder $query): Builder
     {
         return $query->where('status', PartStatus::Active->value)
+            ->where('lifecycle_status', 'active')
             ->whereNotNull('published_at')
+            ->where(fn (Builder $q) => $q->where('quantity', '>', 0)->orWhereNull('quantity'))
             ->orderByDesc('published_at');
     }
 
@@ -135,12 +281,16 @@ class Part extends Model
                 $q->where(fn (Builder $inner) => $inner
                     ->where('title', 'like', $like)
                     ->orWhere('brand', 'like', $like)
-                    ->orWhere('part_number', 'like', $like));
+                    ->orWhere('part_number', 'like', $like)
+                    ->orWhere('mpn', 'like', $like)
+                    ->orWhere('barcode', 'like', $like));
             })
             ->when($filters['category'] ?? null, fn (Builder $q, $v) => $q->where('category', $v))
             ->when($filters['brand'] ?? null, fn (Builder $q, $v) => $q->where('brand', $v))
             ->when($filters['condition'] ?? null, fn (Builder $q, $v) => $q->where('condition', $v))
             ->when($filters['city'] ?? null, fn (Builder $q, $v) => $q->where('city', $v))
+            ->when($filters['seller_id'] ?? null, fn (Builder $q, $v) => $q->where('seller_id', $v))
+            ->when($filters['seller_username'] ?? null, fn (Builder $q, $v) => $q->whereHas('seller', fn ($sq) => $sq->where('username', $v)))
             ->when($filters['min_price'] ?? null, fn (Builder $q, $v) => $q->where('price', '>=', $v))
             ->when($filters['max_price'] ?? null, fn (Builder $q, $v) => $q->where('price', '<=', $v))
             ->when($filters['in_stock'] ?? null, fn (Builder $q) => $q->where('quantity', '>', 0));

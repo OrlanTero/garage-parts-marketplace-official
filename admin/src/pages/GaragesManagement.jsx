@@ -18,6 +18,23 @@ import { Accordion, AccordionItem, AccordionHeader, AccordionBody } from '../com
 
 const CERTIFIED_GARAGES = [
   {
+    id: 'GRG-00',
+    name: 'GAP Valenzuela Main',
+    owner: 'Garage Marketplace (House Garage)',
+    location: 'Valenzuela City, Metro Manila',
+    bays: 10,
+    certifiedSince: '2024',
+    rating: 5.0,
+    reviewsCount: 412,
+    status: 'operational',
+    statusLabel: 'Headquarters · Flagship Hub',
+    statusVariant: 'rust',
+    equipment: ['Main Parts Depot & Warehousing', '100-Point Inspection Lift Bays', 'Nationwide Freight Dispatch'],
+    hourlyLabor: '₱2,800.00 / hr',
+    phone: '+63 (2) 8888-0000',
+    activeInstallations: [],
+  },
+  {
     id: 'GRG-01',
     name: 'Top Secret Performance Lab',
     owner: 'Kazuhiko Nagata (Smokey)',

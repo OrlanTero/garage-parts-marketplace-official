@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext.jsx'
 import { ShieldAlert, Loader2 } from 'lucide-react'
 
 export function ProtectedRoute({ children }) {
-  const { isLoading, isAuthenticated, isAdmin, user, logout } = useAuth()
+  const { isLoading, isAuthenticated, isStaff, user, logout } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
@@ -21,7 +21,7 @@ export function ProtectedRoute({ children }) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (!isAdmin) {
+  if (!isStaff) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F172A', padding: 24 }}>
         <div className="admin-card" style={{ maxWidth: 480, width: '100%', textAlign: 'center', border: '1px solid #334155', background: '#1E293B', color: '#F8FAFC' }}>
@@ -29,14 +29,14 @@ export function ProtectedRoute({ children }) {
             <ShieldAlert size={48} />
           </div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', marginBottom: 8, color: '#FFFFFF' }}>
-            Restricted Admin Area
+            Restricted Staff Area
           </h2>
           <p style={{ color: '#94A3B8', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
-            The account <strong>{user?.email}</strong> is registered as a <span className="badge badge-warning">{user?.role}</span>. Administrator privileges are strictly required to access the Garage Parts operational portal.
+            The account <strong>{user?.email}</strong> is registered as a <span className="badge badge-warning">{user?.role}</span>. Staff privileges (admin or inspector) are strictly required to access the Garage Parts operational portal.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button type="button" className="btn btn-primary" onClick={logout}>
-              Sign In With Admin Account
+              Sign In With Staff Account
             </button>
           </div>
         </div>

@@ -15,16 +15,31 @@ class PartResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'uuid' => $this->uuid,
             'title' => $this->title,
             'category' => $enum($this->category),
             'cat' => $enum($this->category),
             'brand' => $this->brand,
             'part_number' => $this->part_number,
+            'mpn' => $this->mpn,
+            'barcode' => $this->barcode,
+            'uom' => $this->uom ?? 'pc',
+            'specifications' => $this->specifications ?? [],
+            'lifecycle_status' => $this->lifecycle_status ?? 'active',
             'compatibility' => $this->compatibility,
             'condition' => $enum($this->condition),
             'cond' => $enum($this->condition),
             'tag' => $this->tag,
-            'quantity' => $this->quantity,
+            'quantity' => (int) ($this->quantity ?? 0),
+            // "Paid" display state — see CarResource.
+            'payment_secured' => (bool) $this->payment_secured,
+            'reserved_quantity' => (int) ($this->reserved_quantity ?? 0),
+            'available_quantity' => max(0, (int) ($this->quantity ?? 0) - (int) ($this->reserved_quantity ?? 0)),
+            'min_stock' => (int) ($this->min_stock ?? 0),
+            'max_stock' => $this->max_stock !== null ? (int) $this->max_stock : null,
+            'reorder_point' => (int) ($this->reorder_point ?? 0),
+            'safety_stock' => (int) ($this->safety_stock ?? 0),
+            'stock_status' => $this->stockStatus(),
             'price' => $this->price,
             'original_price' => $this->original_price,
             'origPrice' => $this->original_price,
@@ -49,9 +64,29 @@ class PartResource extends JsonResource
             'updated_at' => $this->updated_at,
             'seller' => $this->whenLoaded('seller', fn () => [
                 'id' => $this->seller->id,
-                'name' => $this->seller->name,
-                'email' => $this->seller->email,
+                'username' => $this->seller->username,
+                'avatar_url' => $this->seller->avatar_url,
+                'is_kyc_verified' => (bool) ($this->seller->is_kyc_verified && $this->seller->kyc_status === 'approved'),
+                'kyc_status' => $this->seller->kyc_status ?? 'not_submitted',
+                'role' => $this->seller->role instanceof BackedEnum ? $this->seller->role->value : $this->seller->role,
+                'rating' => (float) ($this->seller->rating ?? 5.0),
             ]),
         ];
+    }
+
+    private function stockStatus(): string
+    {
+        $qty = (int) ($this->quantity ?? 0);
+        if ($qty <= 0) {
+            return 'out_of_stock';
+        }
+        if ($qty <= (int) ($this->reorder_point ?? 0)) {
+            return 'low';
+        }
+        if ($this->max_stock !== null && $qty > (int) $this->max_stock) {
+            return 'overstock';
+        }
+
+        return 'in_stock';
     }
 }

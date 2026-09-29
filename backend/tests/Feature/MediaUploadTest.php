@@ -215,4 +215,32 @@ class MediaUploadTest extends TestCase
         $response = $this->get('/storage/media/non-existent-file.jpg');
         $response->assertStatus(404);
     }
+
+    public function test_efs_filesystem_disk_configuration_and_operations(): void
+    {
+        config(['filesystems.default' => 'efs']);
+        config(['filesystems.disks.efs.filesystem_id' => 'fs-09f27049f75b949db']);
+        config(['filesystems.disks.efs.access_point_arn' => 'arn:aws:elasticfilesystem:ap-southeast-2:285150348650:access-point/fsap-042f0d387ab010679']);
+        config(['filesystems.disks.efs.dns' => 'fs-09f27049f75b949db.efs.ap-southeast-2.amazonaws.com']);
+        config(['filesystems.disks.efs.region' => 'ap-southeast-2']);
+
+        $this->assertEquals('fs-09f27049f75b949db', config('filesystems.disks.efs.filesystem_id'));
+        $this->assertEquals('ap-southeast-2', config('filesystems.disks.efs.region'));
+
+        Storage::fake('efs');
+        $seller = User::factory()->seller()->create();
+        $file = UploadedFile::fake()->image('turbo-efs.jpg', 1000, 1000);
+
+        $uploadResponse = $this->postJson('/api/v1/media/upload', [
+            'file' => $file,
+            'caption' => 'EFS Stored Turbo',
+        ], $this->authToken($seller));
+
+        $uploadResponse->assertStatus(201);
+        $filePath = $uploadResponse->json('data.file_path');
+        Storage::disk('efs')->assertExists($filePath);
+
+        $response = $this->get('/storage/'.$filePath);
+        $response->assertStatus(200);
+    }
 }

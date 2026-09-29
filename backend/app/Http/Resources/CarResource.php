@@ -15,6 +15,7 @@ class CarResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'uuid' => $this->uuid,
             'title' => $this->title,
             'brand' => $this->brand,
             'model' => $this->model,
@@ -27,6 +28,10 @@ class CarResource extends JsonResource
             'fuel_type' => $enum($this->fuel_type),
             'transmission' => $enum($this->transmission),
             'condition' => $enum($this->condition),
+            'quantity' => (int) ($this->quantity ?? 1),
+            // "Paid" display state: a buyer already secured this listing
+            // with payment held in escrow on an open order.
+            'payment_secured' => (bool) $this->payment_secured,
             'tag' => $this->tag,
             'color' => $this->color,
             'vin' => $this->vin,
@@ -36,8 +41,25 @@ class CarResource extends JsonResource
             'loc' => $this->location ?? $this->city,
             'status' => $enum($this->status),
             'rating' => (float) ($this->rating ?? 5.0),
-            'inspection_score' => $this->inspection_score ?? '99/100',
-            'score' => $this->inspection_score ?? '99/100',
+            // No fallback: a build shows a score only after an inspector
+            // records one. Uninspected builds expose null.
+            'inspection_score' => $this->inspection_score,
+            'score' => $this->inspection_score,
+            'inspection_type' => $this->inspection_type,
+            'inspection_status' => $this->inspection_status ?? 'pending',
+            'inspection_date' => $this->inspection_date,
+            'inspection_location' => $this->inspection_location,
+            'inspector_id' => $this->inspector_id,
+            'inspector' => $this->whenLoaded('inspector', fn () => $this->inspector ? [
+                'id' => $this->inspector->id,
+                'name' => $this->inspector->name,
+                'username' => $this->inspector->username,
+            ] : null),
+            'inspector_notes' => $this->inspector_notes,
+            'is_approved' => (bool) ($this->is_approved ?? false),
+            'approved_by' => $this->approved_by,
+            'approved_at' => $this->approved_at,
+            'rejection_reason' => $this->rejection_reason,
             'primary_image_url' => $this->primary_image_url,
             'img' => $this->primary_image_url,
             'media' => MediaResource::collection($this->whenLoaded('media', $this->media, fn () => $this->media)),
@@ -49,8 +71,12 @@ class CarResource extends JsonResource
             'updated_at' => $this->updated_at,
             'seller' => $this->whenLoaded('seller', fn () => [
                 'id' => $this->seller->id,
-                'name' => $this->seller->name,
-                'email' => $this->seller->email,
+                'username' => $this->seller->username,
+                'avatar_url' => $this->seller->avatar_url,
+                'is_kyc_verified' => (bool) ($this->seller->is_kyc_verified && $this->seller->kyc_status === 'approved'),
+                'kyc_status' => $this->seller->kyc_status ?? 'not_submitted',
+                'role' => $this->seller->role instanceof BackedEnum ? $this->seller->role->value : $this->seller->role,
+                'rating' => (float) ($this->seller->rating ?? 5.0),
             ]),
         ];
     }

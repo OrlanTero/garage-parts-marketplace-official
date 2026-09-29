@@ -31,10 +31,25 @@ class PartTest extends TestCase
         ];
     }
 
-    public function test_seller_can_create_draft_and_publish_to_marketplace(): void
+    public function test_dealer_cannot_create_parts(): void
     {
-        $seller = User::factory()->create(['role' => 'seller']);
-        $headers = $this->sellerToken($seller);
+        $dealer = User::factory()->kycVerified()->create(['role' => 'dealer']);
+        $headers = $this->sellerToken($dealer);
+
+        // Car parts are sold exclusively by the house garage.
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertForbidden()
+            ->assertJsonPath('code', 'house_catalog_only');
+    }
+
+    public function test_house_garage_can_create_and_publish_parts(): void
+    {
+        $house = User::factory()->kycVerified()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
+        $headers = $this->sellerToken($house);
 
         $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
             ->assertCreated()
@@ -54,19 +69,71 @@ class PartTest extends TestCase
         $this->getJson("/api/v1/marketplace/parts/{$partId}")->assertOk();
     }
 
-    public function test_parts_seller_can_create_and_publish_parts(): void
+    public function test_admin_creates_parts_onto_house_catalog(): void
     {
-        $partsSeller = User::factory()->create(['role' => 'parts_seller']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $house = User::factory()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
+
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $this->sellerToken($admin))
+            ->assertCreated()
+            ->assertJsonPath('data.seller.id', $house->id);
+    }
+
+    public function test_admin_draft_appears_in_catalog_list_but_not_marketplace(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $house = User::factory()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
+        $headers = $this->sellerToken($admin);
+
+        $partId = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft')
+            ->json('data.id');
+
+        // Hidden from the public marketplace…
+        $this->getJson('/api/v1/marketplace/parts')->assertOk()->assertJsonCount(0, 'data');
+
+        // …but visible in the house-catalog management list, all + draft.
+        $this->getJson('/api/v1/seller/parts', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?status=draft', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?status=active', $headers)->assertOk()->assertJsonCount(0, 'data');
+
+        // Search + category filters work on the management list.
+        $this->getJson('/api/v1/seller/parts?q=Bosch', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?q=nothing-matches-this', $headers)->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/seller/parts?category=brakes', $headers)->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/seller/parts?category=suspension', $headers)->assertOk()->assertJsonCount(0, 'data');
+
+        // Publishing flips it onto the marketplace.
+        $this->postJson("/api/v1/seller/parts/{$partId}/publish", [], $headers)->assertOk();
+        $this->getJson('/api/v1/marketplace/parts')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_standard_seller_cannot_create_parts(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $this->sellerToken($seller))
+            ->assertForbidden();
+    }
+
+    public function test_parts_seller_cannot_create_parts(): void
+    {
+        $partsSeller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
         $headers = $this->sellerToken($partsSeller);
 
-        $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
-            ->assertCreated()
-            ->assertJsonPath('data.status', 'draft');
-
-        $partId = $create->json('data.id');
-        $this->postJson("/api/v1/seller/parts/{$partId}/publish", [], $headers)
-            ->assertOk()
-            ->assertJsonPath('data.status', 'active');
+        // Car parts are sold exclusively by the house garage.
+        $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertForbidden()
+            ->assertJsonPath('code', 'house_catalog_only');
     }
 
     public function test_buyer_cannot_create_parts(): void
@@ -105,8 +172,8 @@ class PartTest extends TestCase
 
     public function test_owner_only_update_and_sold_flow(): void
     {
-        $owner = User::factory()->create(['role' => 'seller']);
-        $other = User::factory()->create(['role' => 'seller']);
+        $owner = User::factory()->create(['role' => 'parts_seller']);
+        $other = User::factory()->create(['role' => 'parts_seller']);
         $part = Part::factory()->for($owner, 'seller')->active()->create();
 
         // Non-owner cannot update.
@@ -123,9 +190,33 @@ class PartTest extends TestCase
         $this->getJson("/api/v1/marketplace/parts/{$part->id}")->assertForbidden();
     }
 
+    public function test_seller_set_status_covers_full_manageable_list(): void
+    {
+        $seller = User::factory()->kycVerified()->create(['role' => 'parts_seller']);
+        $headers = $this->sellerToken($seller);
+        $part = Part::factory()->for($seller, 'seller')->create(['status' => 'draft']);
+
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'active'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'active');
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'archived'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'archived');
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'active'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'active');
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'sold'], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'sold');
+
+        $other = User::factory()->create(['role' => 'parts_seller']);
+        $this->postJson("/api/v1/seller/parts/{$part->id}/status", ['status' => 'draft'], $this->sellerToken($other))
+            ->assertForbidden();
+    }
+
     public function test_part_supports_multiple_images_and_marketplace_serialization(): void
     {
-        $seller = User::factory()->create(['role' => 'seller']);
+        $seller = User::factory()->kycVerified()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
         $headers = $this->sellerToken($seller);
 
         $payload = array_merge($this->partPayload(), [
@@ -156,5 +247,33 @@ class PartTest extends TestCase
             ->assertJsonCount(2, 'data.images')
             ->assertJsonCount(2, 'data.image_urls')
             ->assertJsonPath('data.primary_image_url', 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3');
+    }
+
+    public function test_part_is_accessible_via_uuid_in_marketplace_and_seller_routes(): void
+    {
+        $partsSeller = User::factory()->kycVerified()->create([
+            'role' => 'dealer',
+            'username' => \App\Models\User::HOUSE_USERNAME,
+            'email' => \App\Models\User::HOUSE_EMAIL,
+        ]);
+        $headers = $this->sellerToken($partsSeller);
+
+        $create = $this->postJson('/api/v1/seller/parts', $this->partPayload(), $headers)
+            ->assertCreated();
+
+        $uuid = $create->json('data.uuid');
+        $this->assertNotEmpty($uuid);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $uuid);
+
+        // Publish using UUID
+        $this->postJson("/api/v1/seller/parts/{$uuid}/publish", [], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
+
+        // Fetch via UUID on public marketplace
+        $this->getJson("/api/v1/marketplace/parts/{$uuid}")
+            ->assertOk()
+            ->assertJsonPath('data.uuid', $uuid)
+            ->assertJsonPath('data.title', 'Bosch Front Brake Pads Set');
     }
 }

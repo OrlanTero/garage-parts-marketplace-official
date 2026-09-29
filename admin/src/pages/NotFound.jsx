@@ -1,7 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { FileQuestion, ArrowLeft } from 'lucide-react'
 
 export default function NotFound() {
+  const location = useLocation()
+
   return (
     <div
       style={{
@@ -46,9 +48,23 @@ export default function NotFound() {
           404 — Section Not Found
         </h1>
 
-        <p style={{ color: 'var(--admin-text-secondary)', fontSize: 14, marginBottom: 24 }}>
+        <p style={{ color: 'var(--admin-text-secondary)', fontSize: 14, marginBottom: 12 }}>
           The requested administrative view does not exist or has been relocated.
         </p>
+
+        <code
+          style={{
+            display: 'inline-block',
+            padding: '6px 10px',
+            marginBottom: 24,
+            backgroundColor: 'var(--admin-bg-subtle, #F1F5F9)',
+            color: 'var(--admin-text-primary)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: 12,
+          }}
+        >
+          {location.pathname}
+        </code>
 
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <Link to="/" className="btn btn-primary">

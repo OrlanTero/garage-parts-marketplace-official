@@ -41,6 +41,7 @@ export default function CarCard({
 
   // Normalize data across API responses and featured mockup objects
   const id = car.id
+  const linkId = car.uuid || car.id
   const title = car.title || `${car.year ? car.year + ' ' : ''}${car.brand || car.make || ''} ${car.model || ''}`.trim() || 'Verified Vehicle'
   const brand = car.brand || car.make || ''
   const model = car.model || ''
@@ -90,8 +91,8 @@ export default function CarCard({
               <ShieldCheck size={12} /> {score}
             </span>
           )}
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={`car-wishlist-btn ${saved ? 'active' : ''}`}
             onClick={handleWishlist}
             aria-label="Save to Wishlist"
@@ -110,7 +111,7 @@ export default function CarCard({
           </div>
 
           <h3 className="car-card-title">
-            <Link to={`/marketplace/${id}`}>{title}</Link>
+            <Link to={`/marketplace/${linkId}`}>{title}</Link>
           </h3>
 
           <div className="car-card-specs">
@@ -133,7 +134,7 @@ export default function CarCard({
               {origPriceDisplay && <span className="car-price-orig">{origPriceDisplay}</span>}
             </div>
             <div className="car-card-actions">
-              <Link to={`/marketplace/${id}`} className="btn btn-primary car-view-btn">
+              <Link to={`/marketplace/${linkId}`} className="btn btn-primary car-view-btn">
                 <span>View Specs</span>
                 <ArrowRight size={14} />
               </Link>
@@ -160,6 +161,7 @@ export default function CarCard({
             <ShieldCheck size={12} /> {score}
           </span>
         )}
+
         <button 
           type="button" 
           className={`car-wishlist-btn ${saved ? 'active' : ''}`}
@@ -180,7 +182,7 @@ export default function CarCard({
         </div>
 
         <h3 className="car-card-title">
-          <Link to={`/marketplace/${id}`}>{title}</Link>
+          <Link to={`/marketplace/${linkId}`}>{title}</Link>
         </h3>
 
         <div className="car-card-specs">
@@ -196,7 +198,7 @@ export default function CarCard({
             <span className="car-price-main">{priceDisplay}</span>
             {origPriceDisplay && <span className="car-price-orig">{origPriceDisplay}</span>}
           </div>
-          <Link to={`/marketplace/${id}`} className="btn btn-primary car-view-btn">
+          <Link to={`/marketplace/${linkId}`} className="btn btn-primary car-view-btn">
             <span>View Specs</span>
             <ArrowRight size={14} />
           </Link>

@@ -69,12 +69,12 @@ Only `status=active` cars are listed. Paginated: `{ data: CarResource[], links, 
 
 | # | Method | URI | Body | Success |
 |---|--------|-----|------|---------|
-| 17 | GET | `/api/v1/seller/cars` | query `status?`, `per_page?`, `page?` | `200` paginated seller cars |
-| 18 | POST | `/api/v1/seller/cars` | `{ title, brand, model, year, price, original_price?, mileage_km?, body_style?, fuel_type?, transmission?, condition?, tag?, color?, vin?, city?, location?, rating?, inspection_score?, description?, images?: [...] }` | `201 { data: CarResource(draft) }` |
+| 17 | GET | `/api/v1/seller/cars` | query `status?` (`draft\|pending_inspection\|inspected\|active\|rejected\|sold\|archived`), `per_page?`, `page?` | `200` paginated seller cars |
+| 18 | POST | `/api/v1/seller/cars` | `{ title, brand, model, year, price, original_price?, mileage_km?, body_style?, fuel_type?, transmission?, condition?, tag?, color?, vin?, city?, location?, rating?, inspection_score?, description?, images?: [...] }` | `201 { data: CarResource(draft) }` — requires verified KYC (`403 kyc_verification_required`, staff exempt) |
 | 19 | GET | `/api/v1/seller/cars/{car}` | — | `200` Car details (owner or admin) |
 | 20 | PUT | `/api/v1/seller/cars/{car}` | Full car payload + `images` | `200` Updated car resource |
 | 21 | PATCH | `/api/v1/seller/cars/{car}` | Partial fields (e.g. `price`, `city`, `tag`) | `200` Updated car resource |
-| 22 | POST | `/api/v1/seller/cars/{car}/publish` | — | `200` draft/archived → `active` (+`published_at`) |
+| 22 | POST | `/api/v1/seller/cars/{car}/publish` | — | `200` draft/archived → `active` (+`published_at`) — requires verified KYC |
 | 23 | POST | `/api/v1/seller/cars/{car}/unpublish` | — | `200` active → `draft` |
 | 24 | POST | `/api/v1/seller/cars/{car}/sold` | — | `200` active → `sold` (+`sold_at`) |
 | 25 | DELETE | `/api/v1/seller/cars/{car}` | — | `200 { message }` (soft delete) |
@@ -106,18 +106,101 @@ Only `status=active` parts are listed. Paginated: `{ data: PartResource[], links
 | # | Method | URI | Body | Success |
 |---|--------|-----|------|---------|
 | 28 | GET | `/api/v1/seller/parts` | query `status?`, `per_page?`, `page?` | `200` paginated seller parts |
-| 29 | POST | `/api/v1/seller/parts` | `{ title, category, brand?, part_number?, compatibility?, condition?, tag?, quantity?, price, original_price?, free_shipping?, description?, city?, location?, rating?, reviews_count?, images?: [...] }` | `201 { data: PartResource(draft) }` |
+| 29 | POST | `/api/v1/seller/parts` | `{ title, category, brand?, part_number?, compatibility?, condition?, tag?, quantity?, price, original_price?, free_shipping?, description?, city?, location?, rating?, reviews_count?, images?: [...] }` | `201 { data: PartResource(draft) }` — requires verified KYC (`403 kyc_verification_required`, staff exempt) |
 | 30 | GET | `/api/v1/seller/parts/{part}` | — | `200` Part details (owner or admin) |
 | 31 | PUT | `/api/v1/seller/parts/{part}` | Full part payload + `images` | `200` Updated part resource |
 | 32 | PATCH | `/api/v1/seller/parts/{part}` | Partial fields (e.g. `price`, `quantity`, `free_shipping`) | `200` Updated part resource |
-| 33 | POST | `/api/v1/seller/parts/{part}/publish` | — | `200` draft/archived → `active` (+`published_at`) |
+| 33 | POST | `/api/v1/seller/parts/{part}/publish` | — | `200` draft/archived → `active` (+`published_at`) — requires verified KYC |
 | 34 | POST | `/api/v1/seller/parts/{part}/unpublish` | — | `200` active → `draft` |
 | 35 | POST | `/api/v1/seller/parts/{part}/sold` | — | `200` active → `sold` (+`sold_at`) |
 | 36 | DELETE | `/api/v1/seller/parts/{part}` | — | `200 { message }` (soft delete) |
 
 ---
 
-## 8. Multi-Media Payload Format
+## 8. Saved & Favorites (Wishlist & Garage)
+
+| # | Method | URI | Auth | Body / Query | Purpose |
+|---|--------|-----|------|--------------|---------|
+| 37 | GET | `/api/v1/favorites/ids` | Sanctum | — | Fast array of favorited car and part IDs |
+| 38 | POST | `/api/v1/favorites/toggle` | Sanctum | `{ type: "car"\|"part", id }` | Toggle bookmark on item |
+| 39 | GET | `/api/v1/favorites` | Sanctum | `?type=car\|part` | Full list of saved items with media and count |
+| 40 | DELETE | `/api/v1/favorites/clear` | Sanctum | — | Clear all user bookmarks |
+
+---
+
+## 9. Media & High-Resolution File Storage (Local / AWS EFS)
+
+| # | Method | URI | Auth | Body | Purpose |
+|---|--------|-----|------|------|---------|
+| 41 | POST | `/api/v1/media/upload` | Sanctum | multipart `file` or `files[]`, `type`, `caption?`, `is_primary?` | Upload image/document to storage disk |
+| 42 | GET | `/api/v1/media/{media}` | Sanctum | — | Get metadata and public URL of media file |
+| 43 | DELETE | `/api/v1/media/{media}` | Sanctum | — | Remove media asset and delete physical file |
+
+---
+
+## 10. Checkout & Orders
+
+| # | Method | URI | Auth | Body | Purpose |
+|---|--------|-----|------|------|---------|
+| 44 | POST | `/api/v1/orders` | Optional | `{ customer_name, customer_email, customer_phone, shipping_address, notes?, items: [{ part_id, quantity }], agent_referral_code? }` | Place order for marketplace items |
+| 45 | GET | `/api/v1/orders/{identifier}` | Optional | — | Public lookup by order number or UUID |
+| 46 | GET | `/api/v1/orders` | Sanctum | — | User order history (customer or seller orders) |
+
+---
+
+## 11. Sales Agent Portal
+
+| # | Method | URI | Auth | Body | Purpose |
+|---|--------|-----|------|------|---------|
+| 47 | GET | `/api/v1/agents/verify/{code}` | no | — | Verify agent referral code validity |
+| 48 | GET | `/api/v1/agent/stats` | Sanctum | — | Agent sales performance, referrals & commission stats |
+| 49 | POST | `/api/v1/agent/profile` | Sanctum | `{ bio?, commission_payout_details? }` | Update agent bio & payout preferences |
+
+---
+
+## 12. Seller KYC & Verification Badging
+
+| # | Method | URI | Auth | Body | Purpose |
+|---|--------|-----|------|------|---------|
+| 50 | GET | `/api/v1/kyc/status` | Sanctum | — | Retrieve current user's KYC verification credentials & status |
+| 51 | POST | `/api/v1/kyc/submit` | Sanctum | multipart or JSON `{ document_type, document_number, document_file?, document_url?, selfie_file?, selfie_url?, notes? }` | Submit government ID credentials for compliance verification |
+| 52 | GET | `/api/v1/admin/kyc-verifications` | Sanctum + Staff | `?status=pending\|approved\|rejected\|all` | Queue of seller & dealer KYC submissions |
+| 53 | POST | `/api/v1/admin/kyc-verifications/{user}/approve` | Sanctum + Staff | — | Approve seller KYC and grant official Verified Badge |
+| 54 | POST | `/api/v1/admin/kyc-verifications/{user}/reject` | Sanctum + Staff | `{ reason }` | Reject KYC submission with compliance feedback |
+
+---
+
+## 13. Buyer-to-Seller Upgrade Applications & Seller Dashboard
+
+Buyers apply for a `seller` / `dealer` / `parts_seller` upgrade; staff approve (role granted atomically) or reject with reason. **Security gates:** approval requires a verified KYC badge (`422 kyc_verification_required` otherwise); listing create/publish is blocked for unverified seller-role accounts (`403 kyc_verification_required`, staff exempt).
+
+| # | Method | URI | Auth | Body | Purpose |
+|---|--------|-----|------|------|---------|
+| 55 | POST | `/api/v1/seller-applications` | Sanctum (buyer only) | `{ requested_role: seller\|dealer\|parts_seller, shop_name, contact_phone, city, address?, reason? }` | Submit upgrade application (one pending per buyer) |
+| 56 | GET | `/api/v1/seller-applications` | Sanctum | `?per_page?` | Own applications + `eligibility` flags (`can_apply`, `kyc_verified`, `pending_application`) |
+| 57 | POST | `/api/v1/seller-applications/{application}/withdraw` | Sanctum (owner) | — | Withdraw own pending application |
+| 58 | GET | `/api/v1/seller/summary` | Sanctum + Seller roles | — | Per-status inventory counts (cars incl. `pending_inspection`/`inspected`, parts, `pending_moderation`) |
+| 59 | GET | `/api/v1/admin/seller-applications` | Sanctum + Staff | `?status=pending\|approved\|rejected\|withdrawn\|all`, `?requested_role=`, `?q=` | Upgrade review queue + stats |
+| 60 | POST | `/api/v1/admin/seller-applications/{application}/approve` | Sanctum + Staff | `{ review_notes? }` | Approve + atomically grant requested role (requires verified KYC) |
+| 61 | POST | `/api/v1/admin/seller-applications/{application}/reject` | Sanctum + Staff | `{ reason, review_notes? }` | Reject with formal reason; buyer role kept, re-apply allowed |
+
+---
+
+## 14. Chat & Direct Messaging (1:1 + PII Safety Engine)
+
+| # | Method | URI | Auth | Body | Purpose |
+|---|--------|-----|------|------|---------|
+| 62 | GET | `/api/v1/chat/unread-count` | Sanctum | — | Total count of unread incoming messages |
+| 63 | GET | `/api/v1/chat/conversations` | Sanctum | `?per_page=15` | User inbox conversations with listing context |
+| 64 | POST | `/api/v1/chat/conversations` | Sanctum | `{ recipient_id, initial_message?, listing_type?, listing_id? }` | Start or resolve unique 1:1 conversation thread |
+| 65 | GET | `/api/v1/chat/conversations/{conversation}` | Sanctum | — | Conversation details & pinned listing card |
+| 66 | GET | `/api/v1/chat/conversations/{conversation}/messages` | Sanctum | `?per_page=30` | Chronological paginated message history |
+| 67 | POST | `/api/v1/chat/conversations/{conversation}/messages` | Sanctum | `{ body, listing_type?, listing_id? }` | Send message (PII filter auto-redacts sensitive info) |
+| 68 | POST | `/api/v1/chat/conversations/{conversation}/read` | Sanctum | — | Mark unread messages in conversation as read |
+
+---
+
+## 15. Multi-Media Payload Format
 
 Both Cars and Parts support array payloads for `images` or `media`:
 ```json
@@ -139,25 +222,26 @@ Serialized output in `CarResource` and `PartResource` provides:
 
 ---
 
-## 9. Realtime WebSocket & Broadcasting (Laravel Reverb)
+## 16. Realtime WebSocket & Broadcasting (Laravel Reverb)
 
 Broadcasting driver: Laravel Reverb (`ws://localhost:8080`, Pusher protocol v7).
 
 | # | Method | URI | Auth | Body / Channels | Purpose |
 |---|--------|-----|------|-----------------|---------|
-| 37 | POST | `/api/v1/broadcasting/auth` | Sanctum | `{ socket_id, channel_name }` | Authorize private and presence WebSocket subscriptions |
+| 69 | POST | `/api/v1/broadcasting/auth` | Sanctum | `{ socket_id, channel_name }` | Authorize private and presence WebSocket subscriptions |
 
 ### Channel Authorization Matrix:
 - `marketplace.parts` *(Public)*: Live part listings, updates, and sold events (`part.created`, `part.updated`, `part.status_changed`, `part.sold`).
 - `marketplace.cars` *(Public)*: Live car listings, updates, and sold events (`car.created`, `car.updated`, `car.status_changed`, `car.sold`).
 - `parts.{id}`, `cars.{id}` *(Public)*: Single inventory item live price, status, and media updates.
-- `private-user.{id}` *(Private Sanctum)*: Direct user notifications and personal transaction events (`notification.sent`, `part.created`, `car.created`).
+- `private-user.{id}` *(Private Sanctum)*: Direct user notifications and personal transaction events (`notification.sent`, `part.created`, `car.created`, `message.sent`).
 - `private-seller.{id}` *(Private Sanctum + Role: seller, admin)*: Seller inventory activity and real-time order alerts.
+- `private-conversation.{id}` *(Private Sanctum)*: 1:1 direct conversation chat stream (`message.sent`, `message.read`).
 - `presence-marketplace` *(Presence Sanctum)*: Live browsing counter and active user presence state.
 
 ---
 
-## 10. Nginx Caching & Edge Performance Layer
+## 17. Nginx Caching & Edge Performance Layer
 
 FastCGI microcaching rules configured under `deploy/nginx/`:
 

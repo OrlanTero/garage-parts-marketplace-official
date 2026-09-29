@@ -18,6 +18,7 @@ export function usePrivateChannel(channelName, eventHandlers = {}, enabled = tru
     if (!channelName || !enabled || !isAuthenticated) return
 
     const echo = getEcho()
+    if (!echo) return undefined
     const channel = echo.private(channelName)
 
     const registeredEvents = Object.keys(handlersRef.current)

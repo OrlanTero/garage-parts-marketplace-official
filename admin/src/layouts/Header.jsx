@@ -4,7 +4,6 @@ import {
   Menu,
   Search,
   Activity,
-  Bell,
   LogOut,
   User,
   Shield,
@@ -16,13 +15,13 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { healthApi } from '../api/health.js'
+import NotificationBell from '../components/NotificationBell.jsx'
 
 export function Header({ setMobileOpen }) {
   const { user, logout, logoutAll } = useAuth()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [healthStatus, setHealthStatus] = useState('checking') // checking | online | offline
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const dropdownRef = useRef(null)
 
   // Poll health status once on mount
@@ -51,7 +50,6 @@ export function Header({ setMobileOpen }) {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false)
-        setNotificationsOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -72,6 +70,7 @@ export function Header({ setMobileOpen }) {
 
   return (
     <header
+      className="admin-header"
       style={{
         height: 'var(--header-height)',
         backgroundColor: 'var(--admin-bg-header)',
@@ -87,7 +86,7 @@ export function Header({ setMobileOpen }) {
       }}
     >
       {/* Left: Mobile Trigger & Quick Search */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 500 }}>
+      <div className="admin-header-left" style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, maxWidth: 500 }}>
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -106,6 +105,7 @@ export function Header({ setMobileOpen }) {
         </button>
 
         <div
+          className="admin-header-search"
           style={{
             position: 'relative',
             width: '100%',
@@ -145,48 +145,50 @@ export function Header({ setMobileOpen }) {
       </div>
 
       {/* Right: Status Pill & Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} ref={dropdownRef}>
+      <div className="admin-header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }} ref={dropdownRef}>
+        <NotificationBell />
         {/* System Health Status Indicator */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            borderRadius: 'var(--radius-pill)',
-            backgroundColor:
-              healthStatus === 'online'
-                ? 'var(--admin-success-bg)'
-                : healthStatus === 'checking'
-                ? 'var(--admin-bg-subtle)'
-                : 'var(--admin-danger-bg)',
-            border: `1px solid ${
-              healthStatus === 'online'
-                ? '#A7F3D0'
-                : healthStatus === 'checking'
-                ? 'var(--admin-border)'
-                : '#FECACA'
-            }`,
-            fontSize: 12,
-            fontWeight: 600,
-            color:
-              healthStatus === 'online'
-                ? '#047857'
-                : healthStatus === 'checking'
-                ? 'var(--admin-text-muted)'
-                : '#B91C1C',
-          }}
-          title="Backend API Cluster Health"
-        >
-          {healthStatus === 'online' ? (
-            <CheckCircle2 size={14} />
-          ) : healthStatus === 'checking' ? (
-            <RefreshCw size={14} className="animate-spin" />
-          ) : (
-            <AlertCircle size={14} />
-          )}
-          <span>{healthStatus === 'online' ? 'API Online' : healthStatus === 'checking' ? 'Checking...' : 'API Degraded'}</span>
-        </div>
+        {/*<div*/}
+        {/*  className="admin-health-pill"*/}
+        {/*  style={{*/}
+        {/*    display: 'inline-flex',*/}
+        {/*    alignItems: 'center',*/}
+        {/*    gap: 6,*/}
+        {/*    padding: '6px 12px',*/}
+        {/*    borderRadius: 'var(--radius-pill)',*/}
+        {/*    backgroundColor:*/}
+        {/*      healthStatus === 'online'*/}
+        {/*        ? 'var(--admin-success-bg)'*/}
+        {/*        : healthStatus === 'checking'*/}
+        {/*        ? 'var(--admin-bg-subtle)'*/}
+        {/*        : 'var(--admin-danger-bg)',*/}
+        {/*    border: `1px solid ${*/}
+        {/*      healthStatus === 'online'*/}
+        {/*        ? '#A7F3D0'*/}
+        {/*        : healthStatus === 'checking'*/}
+        {/*        ? 'var(--admin-border)'*/}
+        {/*        : '#FECACA'*/}
+        {/*    }`,*/}
+        {/*    fontSize: 12,*/}
+        {/*    fontWeight: 600,*/}
+        {/*    color:*/}
+        {/*      healthStatus === 'online'*/}
+        {/*        ? '#047857'*/}
+        {/*        : healthStatus === 'checking'*/}
+        {/*        ? 'var(--admin-text-muted)'*/}
+        {/*        : '#B91C1C',*/}
+        {/*  }}*/}
+        {/*  title="Backend API Cluster Health"*/}
+        {/*>*/}
+        {/*  {healthStatus === 'online' ? (*/}
+        {/*    <CheckCircle2 size={14} />*/}
+        {/*  ) : healthStatus === 'checking' ? (*/}
+        {/*    <RefreshCw size={14} className="animate-spin" />*/}
+        {/*  ) : (*/}
+        {/*    <AlertCircle size={14} />*/}
+        {/*  )}*/}
+        {/*  <span className="admin-health-pill-text">{healthStatus === 'online' ? 'API Online' : healthStatus === 'checking' ? 'Checking...' : 'API Degraded'}</span>*/}
+        {/*</div>*/}
 
         {/* User Dropdown */}
         <div style={{ position: 'relative' }}>
@@ -221,7 +223,7 @@ export function Header({ setMobileOpen }) {
             >
               {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
             </div>
-            <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
+            <div className="admin-header-user-text" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--admin-text-primary)', lineHeight: 1.2 }}>
                 {user?.name || 'Admin'}
               </span>

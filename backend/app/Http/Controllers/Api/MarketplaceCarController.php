@@ -24,11 +24,14 @@ class MarketplaceCarController extends Controller
             'transmission' => ['sometimes', 'string', 'max:30'],
             'condition' => ['sometimes', 'string', 'max:30'],
             'city' => ['sometimes', 'string', 'max:120'],
+            'seller_id' => ['sometimes', 'integer'],
+            'seller_username' => ['sometimes', 'string', 'max:80'],
             'min_price' => ['sometimes', 'numeric', 'min:0'],
             'max_price' => ['sometimes', 'numeric', 'min:0'],
             'min_year' => ['sometimes', 'integer', 'min:1900'],
             'max_year' => ['sometimes', 'integer', 'min:1900'],
             'max_mileage' => ['sometimes', 'integer', 'min:0'],
+            'in_stock' => ['sometimes', 'boolean'],
             'sort' => ['sometimes', 'in:newest,price_asc,price_desc,mileage_asc,year_desc'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ]);
@@ -38,10 +41,24 @@ class MarketplaceCarController extends Controller
         return CarResource::collection($paginator);
     }
 
-    public function show(Car $car)
+    public function show(Request $request, Car $car)
     {
-        $this->authorize('view', $car);
+        // Public route, optional auth: resolve a Bearer token when present
+        // so owners / thread participants / order owners keep read access
+        // to sold (unlisted) cars. Guests still see active listings only.
+        // NOTE: Gate ignores $request->setUserResolver, so authorize
+        // explicitly for the resolved user.
+        $user = $request->user();
+        if (!$user && $request->bearerToken()) {
+            $user = \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+        }
+        if ($user) {
+            $request->setUserResolver(fn () => $user);
+            \Illuminate\Support\Facades\Gate::forUser($user)->authorize('view', $car);
+        } else {
+            $this->authorize('view', $car);
+        }
 
-        return new CarResource($car->loadMissing(['seller:id,name', 'media']));
+        return new CarResource($car->loadMissing(['seller:id,name,username,avatar_url,is_kyc_verified,kyc_status,role', 'media'])->loadCount('heldOrders'));
     }
 }

@@ -18,7 +18,7 @@ import {
   CheckCircle2,
   Lock
 } from 'lucide-react'
-import { CAR_FILTER_META } from '../api/cars.js'
+import { useTaxonomy, groupBrandsByRegion, specOptions, specLabel } from '../api/taxonomy.js'
 import { useMarketplaceCars } from '../marketplace/useMarketplaceCars.js'
 import CarCard from '../components/CarCard.jsx'
 import './Marketplace.css'
@@ -49,14 +49,22 @@ export default function Marketplace() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialSearch = searchParams.get('search') || ''
   const initialBrand = searchParams.get('brand') || ''
+  const initialSeller = searchParams.get('seller_username') || searchParams.get('seller') || ''
 
   const { cars: apiCars, meta, filters, setFilter, page, setPage, loading, error, reload } = useMarketplaceCars({
     search: initialSearch,
-    brand: initialBrand
+    brand: initialBrand,
+    seller_username: initialSeller,
   })
 
   const [activePreset, setActivePreset] = useState('all')
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'list'
+
+  // Live brand catalog from backend taxonomy (replaces hardcoded brand list).
+  const { brands: liveBrands, specs } = useTaxonomy()
+  const brandGroups = useMemo(() => groupBrandsByRegion(liveBrands), [liveBrands])
+  const bodyStyles = useMemo(() => specOptions(specs, 'body_styles'), [specs])
+  const transmissions = useMemo(() => specOptions(specs, 'transmissions'), [specs])
 
   // Sync URL search param if changed externally
   useEffect(() => {
@@ -126,6 +134,7 @@ export default function Marketplace() {
   const activeFilterList = useMemo(() => {
     const list = []
     if (filters.search) list.push({ key: 'search', label: `Search: "${filters.search}"`, clear: () => setFilter('search', '') })
+    if (filters.seller_username) list.push({ key: 'seller_username', label: `Builder: @${filters.seller_username}`, clear: () => setFilter('seller_username', '') })
     if (filters.brand) list.push({ key: 'brand', label: `Brand: ${filters.brand}`, clear: () => setFilter('brand', '') })
     if (filters.body_style) list.push({ key: 'body_style', label: `Body: ${filters.body_style}`, clear: () => setFilter('body_style', '') })
     if (filters.transmission) list.push({ key: 'transmission', label: `Trans: ${filters.transmission}`, clear: () => setFilter('transmission', '') })
@@ -224,17 +233,15 @@ export default function Marketplace() {
               aria-label="Filter by Brand"
             >
               <option value="">All Makes / Brands</option>
-              <option value="Toyota">Toyota</option>
-              <option value="Nissan">Nissan</option>
-              <option value="Honda">Honda</option>
-              <option value="Mazda">Mazda</option>
-              <option value="Mitsubishi">Mitsubishi</option>
-              <option value="Subaru">Subaru</option>
-              <option value="Ford">Ford</option>
-              <option value="Mercedes-Benz">Mercedes-Benz</option>
-              <option value="BMW">BMW</option>
-              <option value="Porsche">Porsche</option>
-              <option value="Datsun">Datsun</option>
+              {brandGroups.map((group) => (
+                <optgroup key={group.key} label={group.region}>
+                  {group.brands.map((brand) => (
+                    <option key={brand.id} value={brand.name}>
+                      {brand.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
 
             {/* Body Style Dropdown */}
@@ -245,9 +252,9 @@ export default function Marketplace() {
               aria-label="Filter by Body Style"
             >
               <option value="">Body Style</option>
-              {CAR_FILTER_META.bodyStyles.map((b) => (
+              {bodyStyles.map((b) => (
                 <option key={b} value={b}>
-                  {b.charAt(0).toUpperCase() + b.slice(1)}
+                  {specLabel(b)}
                 </option>
               ))}
             </select>
@@ -260,9 +267,9 @@ export default function Marketplace() {
               aria-label="Filter by Transmission"
             >
               <option value="">Transmission</option>
-              {CAR_FILTER_META.transmissions.map((t) => (
+              {transmissions.map((t) => (
                 <option key={t} value={t}>
-                  {t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  {specLabel(t)}
                 </option>
               ))}
             </select>

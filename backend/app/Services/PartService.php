@@ -21,9 +21,14 @@ class PartService
     public function create(User $seller, array $data): Part
     {
         $images = $data['images'] ?? $data['media'] ?? null;
-        unset($data['images'], $data['media']);
+        $fitment = $data['compatible_model_ids'] ?? null;
+        unset($data['images'], $data['media'], $data['compatible_model_ids']);
 
         $part = Part::create([...$data, 'seller_id' => $seller->id]);
+
+        if (is_array($fitment)) {
+            $part->compatibleModels()->sync($fitment);
+        }
 
         if (is_array($images)) {
             $this->syncMedia($part, $images);
@@ -40,9 +45,14 @@ class PartService
     public function update(Part $part, array $data): Part
     {
         $images = $data['images'] ?? $data['media'] ?? null;
-        unset($data['status'], $data['seller_id'], $data['published_at'], $data['sold_at'], $data['images'], $data['media']);
+        $fitment = $data['compatible_model_ids'] ?? null;
+        unset($data['status'], $data['seller_id'], $data['published_at'], $data['sold_at'], $data['images'], $data['media'], $data['compatible_model_ids']);
 
         $part->fill($data)->save();
+
+        if (is_array($fitment)) {
+            $part->compatibleModels()->sync($fitment);
+        }
 
         if (is_array($images)) {
             $this->syncMedia($part, $images);
@@ -152,7 +162,8 @@ class PartService
     {
         return Part::query()
             ->listed()
-            ->with(['seller:id,name', 'media'])
+            ->with(['seller:id,name,username,avatar_url,is_kyc_verified,kyc_status,role', 'media'])
+            ->withCount('heldOrders')
             ->filter($filters)
             ->paginate(min(max($perPage, 1), 50));
     }

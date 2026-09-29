@@ -14,11 +14,11 @@ Route::get('/', function () {
 Route::get('/storage/{path}', function (string $path) {
     $disk = config('filesystems.default', 'public');
     
-    if ($disk === 'public' || $disk === 'local') {
-        if (!Storage::disk('public')->exists($path)) {
+    if ($disk === 'public' || $disk === 'local' || $disk === 'efs') {
+        if (!Storage::disk($disk)->exists($path)) {
             abort(404);
         }
-        return Storage::disk('public')->response($path);
+        return Storage::disk($disk)->response($path);
     }
 
     return redirect(Storage::disk($disk)->url($path));

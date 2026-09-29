@@ -193,6 +193,172 @@ input, select, textarea {
 }
 
 /* ==========================================================================
+   Admin Buttons (`.admin-btn`) — primary action system used across
+   management pages. Pairs with `.btn` but tuned for the admin theme:
+   gradient rust primary, bordered secondary, danger/success/ghost variants.
+   ========================================================================== */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease,
+    box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.admin-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(146, 68, 36, 0.25);
+}
+
+.admin-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+.admin-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.admin-btn svg {
+  flex-shrink: 0;
+}
+
+.admin-btn-primary {
+  background: linear-gradient(135deg, var(--color-rust) 0%, #6d3018 100%);
+  border-color: rgba(109, 48, 24, 0.6);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(146, 68, 36, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a64f2b 0%, var(--color-rust) 100%);
+  box-shadow: 0 5px 14px rgba(146, 68, 36, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.admin-btn-secondary {
+  background: #ffffff;
+  border-color: var(--admin-border);
+  color: var(--admin-text-secondary);
+  box-shadow: var(--shadow-card);
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  background: var(--admin-bg-subtle);
+  border-color: #cbd5e1;
+  color: var(--admin-text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-hover);
+}
+
+.admin-btn-danger {
+  background: var(--admin-danger-bg);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}
+
+.admin-btn-danger:hover:not(:disabled) {
+  background: var(--admin-danger);
+  border-color: var(--admin-danger);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.admin-btn-success {
+  background: var(--admin-success-bg);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+
+.admin-btn-success:hover:not(:disabled) {
+  background: var(--admin-success);
+  border-color: var(--admin-success);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+.admin-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--admin-text-secondary);
+  box-shadow: none;
+}
+
+.admin-btn-ghost:hover:not(:disabled) {
+  background: var(--admin-bg-subtle);
+  color: var(--admin-text-primary);
+}
+
+.admin-btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.admin-btn-lg {
+  padding: 12px 22px;
+  font-size: 14px;
+  border-radius: var(--radius-md);
+}
+
+.admin-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--admin-border);
+  background: #ffffff;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-btn-icon:hover:not(:disabled) {
+  background: var(--admin-bg-subtle);
+  border-color: #cbd5e1;
+  color: var(--admin-text-primary);
+}
+
+.admin-btn-icon:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Form labels used across admin pages */
+.admin-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+/* Loading spinner helper (used as className="spin") */
+.spin {
+  animation: gpmSpin 0.9s linear infinite;
+}
+
+/* ==========================================================================
    Badges & Pills
    ========================================================================== */
 .badge {
@@ -489,4 +655,263 @@ input, select, textarea {
   .admin-content {
     padding: 20px 16px;
   }
+
+  /* Hamburger trigger (inline display:none on desktop) */
+  .mobile-toggle-btn {
+    display: block !important;
+  }
+
+  /* Sidebar becomes an off-canvas drawer; in-flow otherwise */
+  .admin-app > aside:not(.mobile-open) {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    z-index: 60;
+  }
+
+  .admin-app > aside.mobile-open {
+    transform: none !important;
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Header condenses: icon-only health pill, no username block */
+  .admin-header {
+    padding: 0 16px !important;
+  }
+
+  .admin-header-left {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .admin-header-search {
+    min-width: 0;
+  }
+
+  .admin-header-right {
+    gap: 10px !important;
+  }
+
+  .admin-health-pill-text,
+  .admin-header-user-text {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  /*
+   * Retrofit: pages build modal/drawer info grids with inline
+   * `gridTemplateColumns: '1fr 1fr'`. Collapse them to one column
+   * on phones (desktop rendering untouched).
+   */
+  .modal-body div[style*='1fr 1fr'],
+  .admin-drawer div[style*='1fr 1fr'] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-backdrop,
+  .auth-modal-overlay,
+  .admin-drawer-backdrop {
+    padding: 12px;
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-title {
+    font-size: 1.05rem;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-moderation-split {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-login-card {
+    padding: 28px 20px !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* ==========================================================================
+   Modals, Drawers & Popups
+   ========================================================================== */
+@keyframes gpmSpin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: gpmSpin 0.9s linear infinite;
+}
+
+.modal-backdrop, .auth-modal-overlay, .admin-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 15, 29, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  animation: modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-container, .modal-content, .auth-modal-container {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  position: relative;
+  animation: modalSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--admin-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.modal-close:hover {
+  background: var(--admin-bg-subtle);
+  color: var(--admin-text-primary);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 18px 24px;
+  border-top: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+/* Slide-in Drawers */
+.admin-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-left: 1px solid var(--admin-border);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 1001;
+  animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.admin-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+}
+
+.admin-drawer-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  margin: 0;
+}
+
+.admin-drawer-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.admin-drawer-footer {
+  padding: 18px 24px;
+  border-top: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
 }

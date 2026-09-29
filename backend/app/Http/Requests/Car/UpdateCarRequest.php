@@ -30,6 +30,8 @@ class UpdateCarRequest extends FormRequest
         return [
             // NOTE: status is NOT mass-assignable — use publish/unpublish/sold endpoints.
             'title' => ['sometimes', 'string', 'max:255'],
+            'brand_id' => ['sometimes', 'nullable', 'integer', 'exists:brands,id'],
+            'model_id' => ['sometimes', 'nullable', 'integer', 'exists:car_models,id'],
             'brand' => ['sometimes', 'string', 'max:80'],
             'model' => ['sometimes', 'string', 'max:80'],
             'year' => ['sometimes', 'integer', 'min:1900', "max:{$nextYear}"],
@@ -40,6 +42,7 @@ class UpdateCarRequest extends FormRequest
             'fuel_type' => ['sometimes', 'string', Rule::enum(FuelType::class)],
             'transmission' => ['sometimes', 'string', Rule::enum(Transmission::class)],
             'condition' => ['sometimes', 'string', Rule::enum(CarCondition::class)],
+            'quantity' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'tag' => ['sometimes', 'nullable', 'string', 'max:100'],
             'color' => ['sometimes', 'nullable', 'string', 'max:50'],
             'vin' => ['sometimes', 'nullable', 'string', 'size:17', Rule::unique('cars', 'vin')->ignore($carId)],

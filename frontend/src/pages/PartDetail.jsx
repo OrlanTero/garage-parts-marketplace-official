@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { 
   Truck, 
   Star, 
@@ -12,10 +12,22 @@ import {
   CheckCircle2, 
   ShoppingCart,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Share2,
+  Tag,
+  Building2,
+  Store,
+  FileText
 } from 'lucide-react'
 import { marketplaceParts } from '../api/parts.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import { useAuth } from '../auth/AuthContext.jsx'
+import { useChat } from '../context/ChatContext.jsx'
+import ListingStatusPicker from '../components/ListingStatusPicker.jsx'
+import ShareModal from '../components/ShareModal.jsx'
+import ReviewSection from '../components/ReviewSection.jsx'
+import NotifyMeButton from '../components/NotifyMeButton.jsx'
+import { getActiveReferralCode } from '../utils/referral.js'
 import './Details.css'
 
 const CATEGORY_PLACEHOLDERS = {
@@ -39,12 +51,28 @@ function formatPrice(val) {
 
 export default function PartDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { isPartSaved, togglePartFavorite } = useFavorites()
+  const { user } = useAuth()
+  const { openDrawerWithListing } = useChat()
   const [part, setPart] = useState(null)
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const activeReferralCode = getActiveReferralCode()
 
-  const isSaved = isPartSaved(id)
+  // Own listing: the seller gets manage controls, never buy buttons.
+  const isOwner = Boolean(
+    user?.id && part?.seller?.id && Number(user.id) === Number(part.seller.id),
+  )
+  const reloadPart = () => {
+    marketplaceParts
+      .show(id)
+      .then((data) => setPart(data))
+      .catch(() => {})
+  }
+
+  const isSaved = isPartSaved(part?.id || id)
 
   useEffect(() => {
     marketplaceParts
@@ -53,7 +81,11 @@ export default function PartDetail() {
         setPart(data)
         setSelectedImgIdx(0)
       })
-      .catch((e) => setError(e.response?.status === 404 ? 'Part not found or no longer listed.' : e.message))
+      .catch((e) => setError(
+        e.response?.status === 404 || e.response?.status === 403
+          ? 'This listing is no longer available on the marketplace.'
+          : e.message,
+      ))
   }, [id])
 
   if (error) {
@@ -107,8 +139,11 @@ export default function PartDetail() {
     ['Category', catName],
     ['Manufacturer / Brand', part.brand || 'Genuine OEM / Aftermarket'],
     ['Manufacturer Part #', part.part_number || '—'],
+    ...(part.mpn ? [['MPN', part.mpn]] : []),
+    ...(part.barcode ? [['Barcode', part.barcode]] : []),
     ['Condition', part.condition ? (part.condition === 'new' ? 'Brand New in Box' : 'Japanese Surplus Mint') : '—'],
     ['Stock Quantity', part.quantity != null ? `${part.quantity} Unit(s) Available` : 'In Stock'],
+    ...(part.lifecycle_status && part.lifecycle_status !== 'active' ? [['Catalog Status', String(part.lifecycle_status).toUpperCase()]] : []),
     ['Freight Delivery', freeShip ? 'Free Insured Crated Shipping' : 'Calculated at Checkout'],
     ['Hub Location', location],
   ]
@@ -227,20 +262,142 @@ export default function PartDetail() {
                 </div>
               </div>
 
+              {/* Referring Agent Banner (buyers only) */}
+              {activeReferralCode && !isOwner && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  color: '#10b981'
+                }}>
+                  <span>🤝</span>
+                  <div>
+                    Referred by Sales Agent <strong>{activeReferralCode}</strong>. Your purchase supports an accredited garage partner.
+                  </div>
+                </div>
+              )}
+
+              {isOwner ? (
+                <>
+                  <div style={{
+                    background: 'rgba(124, 58, 237, 0.1)',
+                    border: '1px solid rgba(124, 58, 237, 0.4)',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    marginBottom: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 13,
+                    color: '#c4b5fd',
+                  }}>
+                    <Store size={16} />
+                    <div>
+                      <strong>This is your listing.</strong> Buyers see the public view — you get manage controls.
+                    </div>
+                  </div>
+                  <div className="detail-actions-row">
+                    <ListingStatusPicker
+                      listingType="part"
+                      listingId={part.id}
+                      value={part.status}
+                      onChanged={reloadPart}
+                      onError={(err) => alert(err?.response?.data?.message || 'Failed to update listing status.')}
+                      className="btn btn-primary"
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <Link
+                      to={`/messages?listing=part:${part.id}`}
+                      className="btn btn-secondary"
+                      title="Open every buyer inquiry on this listing"
+                    >
+                      <MessageSquare size={16} />
+                      <span>Inquiries</span>
+                    </Link>
+                    <Link
+                      to="/my-listings?tab=requests"
+                      className="btn btn-secondary"
+                      title="Paid orders and buyer requests on your listings"
+                    >
+                      <FileText size={16} />
+                      <span>Orders</span>
+                    </Link>
+                    <Link
+                      to="/my-listings"
+                      className="btn btn-secondary"
+                      title="Manage all your listings"
+                    >
+                      <Store size={16} />
+                      <span>Manage</span>
+                    </Link>
+                  </div>
+                </>
+              ) : (
               <div className="detail-actions-row">
-                <button 
-                  type="button" 
+                {(() => {
+                  const st = String(part.status?.value || part.status || '').toLowerCase()
+                  return (st === 'sold' || (part.quantity != null && Number(part.quantity) <= 0))
+                    ? <NotifyMeButton listingType="part" listingId={part.id} />
+                    : null
+                })()}
+                <button
+                  type="button"
                   className="btn btn-primary"
-                  onClick={() => alert(`Order placed for ${title}! The seller has been notified for dispatch.`)}
+                  disabled={String(part.status?.value || part.status || '').toLowerCase() === 'sold' || (part.quantity != null && Number(part.quantity) <= 0)}
+                  onClick={() => navigate(`/checkout?part_id=${part.uuid || part.id}`)}
+                  title={String(part.status?.value || part.status || '').toLowerCase() === 'sold' || (part.quantity != null && Number(part.quantity) <= 0) ? 'This part is currently unavailable' : 'Buy at list price'}
                 >
                   <ShoppingCart size={16} />
-                  <span>Buy Now / Direct Checkout</span>
+                  <span>Buy Now</span>
                 </button>
-                <button 
-                  type="button" 
-                  className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
-                  onClick={() => togglePartFavorite(part)}
-                  title={isSaved ? 'Remove from Saved' : 'Save Part'}
+
+                {part.seller && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part' })}
+                    title="Inquire directly with the verified parts seller"
+                  >
+                    <MessageSquare size={16} />
+                    <span>Inquire</span>
+                  </button>
+                )}
+                {part.seller && (
+                  <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={part.quantity != null && Number(part.quantity) <= 0}
+                      onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part', openOffer: true })}
+                      title="Open chat and propose your price on this part"
+                  >
+                    <Tag size={16} />
+                    <span>Make an Offer</span>
+                  </button>
+                )}
+
+              </div>
+              )}
+
+              <div className="detail-actions-row">
+                <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShareModalOpen(true)}
+                    title="Share product link & earn 5% sales commission"
+                >
+                  <Share2 size={16} />
+                </button>
+                <button
+                    type="button"
+                    className={`btn btn-secondary ${isSaved ? 'active' : ''}`}
+                    onClick={() => togglePartFavorite(part)}
+                    title={isSaved ? 'Remove from Saved' : 'Save Part'}
                 >
                   <Heart size={16} fill={isSaved ? '#d8622c' : 'none'} color={isSaved ? '#d8622c' : 'currentColor'} />
                 </button>
@@ -260,26 +417,83 @@ export default function PartDetail() {
               </div>
             </div>
 
+            {/* Buyer Reviews — username + avatar identity only */}
+            <ReviewSection itemType="part" itemId={part.id} listingTitle={title} />
+
             {/* Seller Contact Card */}
             {part.seller && (
               <div className="detail-seller-card">
                 <div className="detail-seller-info">
                   <div className="detail-seller-avatar">
-                    {part.seller.name ? part.seller.name.charAt(0).toUpperCase() : 'S'}
+                    {part.seller.avatar_url ? (
+                      <img src={part.seller.avatar_url} alt={part.seller.username || 'Seller'} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <span>{part.seller.username ? part.seller.username.charAt(0).toUpperCase() : 'S'}</span>
+                    )}
                   </div>
                   <div>
-                    <div className="detail-seller-name">{part.seller.name}</div>
+                    <div className="detail-seller-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>@{part.seller.username || 'seller'}</span>
+                      {part.seller.is_kyc_verified && (
+                        <ShieldCheck size={16} style={{ color: '#10b981' }} title="KYC Verified Seller" />
+                      )}
+                    </div>
                     <div className="detail-seller-sub">Verified Parts Supplier · {location}</div>
                   </div>
                 </div>
-                <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>
-                  ✓ Verified Shop
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Link
+                    to={`/showroom?seller=${part.seller.username || part.seller.id}`}
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 12px', fontSize: 13 }}
+                    title="Visit Builder's Garage Showroom"
+                  >
+                    <Building2 size={14} />
+                    <span>Showroom</span>
+                  </Link>
+                  {!isOwner && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: 13 }}
+                      onClick={() => openDrawerWithListing({ seller: part.seller, listing: part, listingType: 'part' })}
+                    >
+                      <MessageSquare size={14} />
+                      <span>Chat</span>
+                    </button>
+                  )}
+                  {part.seller.is_kyc_verified ? (
+                    <span className="badge" style={{ background: '#dcfce7', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <ShieldCheck size={13} />
+                      <span>KYC Verified</span>
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--color-text-muted)' }}>
+                      Verified Supplier
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Product Share & Agent Referral Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        item={{
+          id: part.id,
+          uuid: part.uuid,
+          type: 'part',
+          title: title,
+          price: part.price,
+          image: currentImgUrl,
+          brand: part.brand,
+          path: `/parts/${part.uuid || part.id}`
+        }}
+      />
     </div>
   )
 }

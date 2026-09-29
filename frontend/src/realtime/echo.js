@@ -12,6 +12,34 @@ let currentConnectionState = 'disconnected' // 'connecting' | 'connected' | 'dis
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+/**
+ * Kill-switch for local dev without a Reverb/Pusher server.
+ * Set VITE_REALTIME_ENABLED=false in .env to stop all WebSocket attempts
+ * (chat keeps working via API polling/focus-refresh fallbacks).
+ * Defaults to enabled so existing Reverb setups keep working.
+ */
+export function isRealtimeEnabled() {
+  try {
+    const override = localStorage.getItem('gpm_realtime_enabled')
+    if (override === 'false') return false
+    if (override === 'true') return true
+  } catch {
+    // storage unavailable — fall through to build-time flag
+  }
+  const raw = import.meta.env.VITE_REALTIME_ENABLED
+  if (raw === undefined || raw === null || raw === '') return true
+  return String(raw).toLowerCase() !== 'false' && String(raw) !== '0'
+}
+
+/** Runtime override for the Settings → Preferences toggle (reload to apply). */
+export function setRealtimeEnabled(value) {
+  try {
+    localStorage.setItem('gpm_realtime_enabled', value ? 'true' : 'false')
+  } catch {
+    // ignore
+  }
+}
+
 function notifyConnectionState(state) {
   currentConnectionState = state
   connectionListeners.forEach((listener) => {
@@ -24,6 +52,7 @@ function notifyConnectionState(state) {
 }
 
 export function getEcho() {
+  if (!isRealtimeEnabled()) return null
   if (echoInstance) return echoInstance
 
   const pusherKey = import.meta.env.VITE_PUSHER_APP_KEY
@@ -33,8 +62,10 @@ export function getEcho() {
   const wsHost = import.meta.env.VITE_REVERB_HOST || (pusherKey ? undefined : '127.0.0.1')
   const scheme = (import.meta.env.VITE_REVERB_SCHEME || (pusherKey ? 'https' : 'http')).toLowerCase()
   const isHttps = scheme === 'https' || scheme === 'wss'
-  const defaultPort = isHttps ? 443 : 8080
-  const wsPort = Number(import.meta.env.VITE_REVERB_PORT || defaultPort)
+  // Laravel docs standard: same env port for ws/wss, scheme-appropriate
+  // default when unset (80 ws / 443 wss).
+  const wsPort = Number(import.meta.env.VITE_REVERB_PORT || 80)
+  const wssPort = Number(import.meta.env.VITE_REVERB_PORT || 443)
 
   notifyConnectionState('connecting')
 
@@ -74,6 +105,7 @@ export function getEcho() {
       cluster: pusherCluster,
       forceTLS: true,
       enabledTransports: ['ws', 'wss'],
+      disableStats: true,
       authorizer,
     })
   } else {
@@ -81,10 +113,11 @@ export function getEcho() {
       broadcaster: 'reverb',
       key,
       wsHost,
-      wsPort: isHttps ? 80 : wsPort,
-      wssPort: isHttps ? wsPort : 443,
+      wsPort,
+      wssPort,
       forceTLS: isHttps,
-      enabledTransports: ['ws', 'wss'],
+      enabledTransports: isHttps ? ['wss'] : ['ws'],
+      disableStats: true,
       authorizer,
     })
   }

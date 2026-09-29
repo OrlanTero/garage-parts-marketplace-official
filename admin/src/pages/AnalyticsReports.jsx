@@ -165,7 +165,7 @@ export default function AnalyticsReports() {
               icon={PieChart}
             />
             <AccordionBody id="brand-perf">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 14 }}>
                 {TOP_MAKES.map((make, idx) => (
                   <div
                     key={idx}
