@@ -76,6 +76,21 @@ class SystemMaintenanceTest extends TestCase
             ]);
     }
 
+    public function test_migrate_seed_rejects_invalid_seeder_choice(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $token = $admin->createToken('admin-token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->postJson('/api/v1/system/migrate-seed', ['seeder' => 'bogus']);
+
+        $response->assertStatus(422);
+    }
+
     public function test_non_admin_user_is_rejected(): void
     {
         $buyer = User::factory()->create([

@@ -149,7 +149,13 @@ class SystemMaintenanceController extends Controller
     }
 
     /**
-     * Run both migrations and seeders in sequence.
+     * Run migrations and seeders in sequence.
+     *
+     * Params (all optional):
+     * - fresh=1 → migrate:fresh (WIPE everything first). Default: migrate.
+     * - seeder=demo|core|none → which dataset to seed. Default: demo
+     *   (full DatabaseSeeder). `core` seeds CoreSeeder only (empty
+     *   marketplace), `none` skips seeding.
      */
     public function migrateAndSeed(Request $request): JsonResponse
     {
@@ -160,16 +166,42 @@ class SystemMaintenanceController extends Controller
             ], 401);
         }
 
+        $fresh = filter_var($request->input('fresh', false), FILTER_VALIDATE_BOOLEAN);
+        $seeder = strtolower((string) $request->input('seeder', 'demo'));
+        if (!in_array($seeder, ['demo', 'core', 'none'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid seeder. Use demo, core, or none.',
+            ], 422);
+        }
+
         try {
             $migrateOutput = new BufferedOutput();
-            $migrateExit = Artisan::call('migrate', ['--force' => true], $migrateOutput);
+            if ($fresh) {
+                $migrateExit = Artisan::call('migrate:fresh', ['--force' => true], $migrateOutput);
+                $migrateCommand = 'migrate:fresh --force';
+            } else {
+                $migrateExit = Artisan::call('migrate', ['--force' => true], $migrateOutput);
+                $migrateCommand = 'migrate --force';
+            }
 
+            $seedExit = 0;
+            $seedCommand = 'skipped';
             $seedOutput = new BufferedOutput();
-            $seedExit = Artisan::call('db:seed', ['--force' => true], $seedOutput);
+            if ($seeder !== 'none') {
+                $params = ['--force' => true];
+                if ($seeder === 'core') {
+                    $params['--class'] = 'Database\\Seeders\\CoreSeeder';
+                }
+                $seedExit = Artisan::call('db:seed', $params, $seedOutput);
+                $seedCommand = 'db:seed --force' . ($seeder === 'core' ? ' --class=CoreSeeder' : '');
+            }
 
             return response()->json([
                 'status' => ($migrateExit === 0 && $seedExit === 0) ? 'success' : 'partial_or_failed',
-                'command' => 'migrate + db:seed',
+                'command' => $migrateCommand . ' + ' . $seedCommand,
+                'fresh' => $fresh,
+                'seeder' => $seeder,
                 'migrate_exit_code' => $migrateExit,
                 'migrate_output' => $migrateOutput->fetch(),
                 'seed_exit_code' => $seedExit,
