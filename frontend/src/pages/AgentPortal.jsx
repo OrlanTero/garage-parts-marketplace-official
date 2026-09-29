@@ -6,14 +6,25 @@ import { buildShareableUrl, getSocialShareLinks } from '../utils/referral.js'
 import './AgentPortal.css'
 
 export default function AgentPortal() {
-  const { user } = useAuth()
+  const { user, refresh } = useAuth()
   const [stats, setStats] = useState(null)
+  const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(false)
   const [tagline, setTagline] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [subscribing, setSubscribing] = useState(false)
+  const [subscribeMsg, setSubscribeMsg] = useState(null)
+
+  // Mock payment checkout state
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payMethod, setPayMethod] = useState('gcash')
+  const [payAccountName, setPayAccountName] = useState('')
+  const [payAccountNumber, setPayAccountNumber] = useState('')
+  const [payError, setPayError] = useState(null)
+  const [receipt, setReceipt] = useState(null)
 
   // Custom Link Generator state
   const [customPath, setCustomPath] = useState('/parts')
@@ -33,9 +44,14 @@ export default function AgentPortal() {
     async function loadStats() {
       try {
         setLoading(true)
+        setSubscribeMsg(null)
         if (user) {
-          const data = await agentsApi.getStats()
+          const [data, sub] = await Promise.all([
+            agentsApi.getStats().catch(() => null),
+            agentsApi.getSubscription().catch(() => null),
+          ])
           setStats(data)
+          setSubscription(sub)
           if (data?.agent?.tagline) {
             setTagline(data.agent.tagline)
           }
@@ -49,6 +65,73 @@ export default function AgentPortal() {
     }
     loadStats()
   }, [user])
+
+  const isActive = stats?.agent?.is_active ?? subscription?.is_active ?? false
+  const kycVerified = stats?.agent?.is_kyc_verified ?? subscription?.is_kyc_verified ?? user?.is_kyc_verified ?? false
+  const fee = subscription?.fee ?? stats?.agent?.subscription_fee ?? 100
+  const reward = subscription?.referral_reward ?? stats?.agent?.referral_reward ?? 50
+  const expiresAt = subscription?.expires_at ?? stats?.agent?.subscription_expires_at ?? null
+
+  const payMethodLabel = payMethod === 'gcash' ? 'GCash' : payMethod === 'maya' ? 'Maya' : 'Card'
+  const payMethodPrefix = payMethod === 'gcash' ? 'GCASH' : payMethod === 'maya' ? 'MAYA' : 'CARD'
+
+  const openPayModal = () => {
+    setPayError(null)
+    setReceipt(null)
+    setPayAccountName(user?.name || '')
+    setPayAccountNumber('')
+    setShowPayModal(true)
+  }
+
+  const closePayModal = () => {
+    if (subscribing) return
+    setShowPayModal(false)
+    setPayError(null)
+  }
+
+  // Mock payment checkout — simulates a payment gateway, then activates
+  // the subscription. No real charge is made.
+  const handleMockPay = async (e) => {
+    if (e) e.preventDefault()
+    setPayError(null)
+    if (!payAccountName.trim()) {
+      setPayError('Enter the mock account holder name.')
+      return
+    }
+    if (payAccountNumber.replace(/\D/g, '').length < 6) {
+      setPayError(`Enter a mock ${payMethodLabel} account/card number (min 6 digits).`)
+      return
+    }
+    try {
+      setSubscribing(true)
+      setSubscribeMsg(null)
+      // Simulate gateway processing delay
+      await new Promise((r) => setTimeout(r, 1200))
+      const ref = `${payMethodPrefix}-AGENT-${Date.now().toString().slice(-6)}`
+      const res = await agentsApi.subscribe({
+        payment_method: payMethod,
+        payment_reference: ref,
+        mock_account_name: payAccountName.trim(),
+        mock_account_number: payAccountNumber.trim(),
+      })
+      const [data, sub] = await Promise.all([agentsApi.getStats(), agentsApi.getSubscription()])
+      setStats(data)
+      setSubscription(sub)
+      if (refresh) await refresh()
+      setReceipt({
+        reference: res?.subscription?.payment_reference || ref,
+        amount: res?.subscription?.amount ?? fee,
+        method: res?.subscription?.payment_method || payMethod,
+        expires_at: res?.subscription?.expires_at || res?.agent?.expires_at || null,
+      })
+      setSubscribeMsg({ ok: true, text: 'Subscription activated for 1 year. Your referral code is now live.' })
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Mock payment failed. Complete KYC verification first.'
+      setPayError(msg)
+    } finally {
+      setSubscribing(false)
+    }
+  }
 
   const handleCopy = async (url, setCopyState) => {
     try {
@@ -91,9 +174,64 @@ export default function AgentPortal() {
           <div className="agent-hero-badge">💼 Sales Agent & Partner Program</div>
           <h1 className="agent-hero-title">Monetize Your Automotive Network</h1>
           <p className="agent-hero-subtitle">
-            Share products or car listings on Facebook, social media, and automotive communities. Earn <strong>5.0% commission</strong> on every verified sales order.
+            Become a verified Sales Agent with <strong>KYC + ₱{fee}/year subscription</strong>. Share products or car
+            listings on Facebook and communities — earn <strong>5.0% commission</strong> per sale, plus{' '}
+            <strong>₱{reward} to your wallet</strong> for every referred signup who also becomes an agent.
           </p>
         </div>
+
+        {/* Subscription gate */}
+        {user && !loading && (
+          <div className="agent-identity-card" style={{ borderColor: isActive ? '#10b981' : '#f59e0b' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 22 }}>{isActive ? '✅' : '🔒'}</span>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontWeight: 800 }}>
+                  {isActive ? 'Agent subscription ACTIVE' : 'Agent subscription required'}
+                  {isActive && expiresAt ? ` — valid until ${new Date(expiresAt).toLocaleDateString()}` : ''}
+                </div>
+                <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>
+                  1) KYC: {kycVerified ? 'verified ✓' : 'not verified — submit in Settings → KYC'}{' '}
+                  · 2) Fee: ₱{fee}/year {subscription?.status ? `(${subscription.status})` : ''}
+                  {subscription?.referred_by ? ` · Referred by ${subscription.referred_by.agent_code}` : ''}
+                </div>
+              </div>
+              {!isActive && (
+                <button
+                  type="button"
+                  className="master-link-btn-copy"
+                  disabled={!kycVerified}
+                  onClick={openPayModal}
+                  title={!kycVerified ? 'Complete KYC verification first' : `Pay ₱${fee} yearly fee`}
+                >
+                  {`Subscribe — ₱${fee}/yr`}
+                </button>
+              )}
+            </div>
+            {!kycVerified && !isActive && (
+              <div style={{ fontSize: 12, marginTop: 8, color: '#b45309' }}>
+                Verified KYC is required before activation. <Link to="/settings">Go to KYC verification →</Link>
+              </div>
+            )}
+            {subscribeMsg && (
+              <div style={{ fontSize: 13, marginTop: 8, color: subscribeMsg.ok ? '#047857' : '#b91c1c' }}>
+                {subscribeMsg.text}
+              </div>
+            )}
+            {isActive && (
+              <div style={{ fontSize: 12, marginTop: 8, opacity: 0.85 }}>
+                Recruit agents with your link below (signup with ?ref={agentCode}). You earn ₱{reward} wallet credit
+                for each recruit who completes KYC + pays the fee.
+                {stats?.performance?.recruited_active_agents != null && (
+                  <> Recruited: <strong>{stats.performance.recruited_active_agents}/{stats.performance.recruited_agents}</strong> active.</>
+                )}
+                {stats?.performance?.referral_earnings > 0 && (
+                  <> Referral earnings: <strong>{stats.performance.formatted_referral_earnings}</strong>.</>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Agent Profile & Main Referral Link Card */}
         <div className="agent-identity-card">
@@ -360,6 +498,154 @@ export default function AgentPortal() {
             </div>
           </div>
         </div>
+
+        {/* Mock payment checkout modal */}
+        {showPayModal && (
+          <div
+            className="auth-modal-backdrop"
+            onClick={closePayModal}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Agent subscription mock payment"
+            style={{ position: 'fixed', inset: 0, zIndex: 60 }}
+          >
+            <div
+              className="agent-identity-card"
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: 480, margin: '8vh auto', position: 'relative' }}
+            >
+              {!receipt ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 20 }}>💳</span>
+                    <h3 style={{ margin: 0 }}>Agent Subscription — Mock Payment</h3>
+                  </div>
+                  <p style={{ fontSize: 12, opacity: 0.8, margin: '0 0 12px 0' }}>
+                    Test checkout only — no real charge is made. The fee is credited to garage revenue.
+                  </p>
+
+                  <div style={{ background: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Sales Agent Plan (1 year)</span>
+                      <strong>₱{Number(fee).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span>Agent</span>
+                      <span className="font-mono">{agentCode}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontWeight: 800 }}>
+                      <span>Total due</span>
+                      <span>₱{Number(fee).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    {['gcash', 'maya', 'card'].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setPayMethod(m)}
+                        className={`quick-social-btn ${payMethod === m ? '' : ''}`}
+                        style={{
+                          flex: 1,
+                          fontWeight: payMethod === m ? 800 : 400,
+                          outline: payMethod === m ? '2px solid #10b981' : '1px solid #ddd',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {m === 'gcash' ? 'GCash' : m === 'maya' ? 'Maya' : 'Card'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleMockPay}>
+                    <label style={{ fontSize: 12, fontWeight: 700 }}>Account holder name</label>
+                    <input
+                      type="text"
+                      className="agent-tagline-input"
+                      style={{ width: '100%', margin: '4px 0 10px 0' }}
+                      placeholder="e.g. Juan Dela Cruz"
+                      value={payAccountName}
+                      onChange={(e) => setPayAccountName(e.target.value)}
+                    />
+                    <label style={{ fontSize: 12, fontWeight: 700 }}>
+                      {payMethod === 'card' ? 'Mock card number' : `Mock ${payMethodLabel} number`}
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="agent-tagline-input font-mono"
+                      style={{ width: '100%', margin: '4px 0 12px 0' }}
+                      placeholder={payMethod === 'card' ? '4111 1111 1111 1111' : '0917-000-0000'}
+                      value={payAccountNumber}
+                      onChange={(e) => setPayAccountNumber(e.target.value)}
+                    />
+                    {payError && (
+                      <div style={{ fontSize: 13, color: '#b91c1c', marginBottom: 10 }}>{payError}</div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="generated-link-btn"
+                        onClick={closePayModal}
+                        disabled={subscribing}
+                        style={{ flex: 1, cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="master-link-btn-copy"
+                        disabled={subscribing}
+                        style={{ flex: 2 }}
+                      >
+                        {subscribing ? 'Processing mock payment…' : `Pay ₱${fee} (mock)`}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 40 }}>✅</div>
+                    <h3 style={{ margin: '8px 0 4px 0' }}>Payment successful (mock)</h3>
+                    <p style={{ fontSize: 13, opacity: 0.85, margin: 0 }}>
+                      Your Sales Agent subscription is active for 1 year.
+                    </p>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: '10px 12px', margin: '12px 0', fontSize: 13 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Reference</span>
+                      <strong className="font-mono">{receipt.reference}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span>Method</span>
+                      <span>{receipt.method}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span>Amount</span>
+                      <strong>₱{Number(receipt.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    {receipt.expires_at && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                        <span>Valid until</span>
+                        <span>{new Date(receipt.expires_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="master-link-btn-copy"
+                    onClick={closePayModal}
+                    style={{ width: '100%' }}
+                  >
+                    Done — start earning
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

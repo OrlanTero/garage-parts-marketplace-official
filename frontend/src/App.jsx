@@ -270,7 +270,8 @@ export default function App() {
               {unreadCount > 0 && <span className="action-badge action-badge--chat">{unreadCount}</span>}
             </Link>
 
-            {/*<ThemeToggle />*/}
+            {/* Day / night theme toggle */}
+            <ThemeToggle />
 
             {isAuthenticated && <NotificationBell />}
 

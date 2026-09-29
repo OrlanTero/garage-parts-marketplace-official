@@ -20,6 +20,9 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role' => ['sometimes', 'string', Rule::in(UserRole::selfSelectable())],
+            'referral_code' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'ref' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'agent_code' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
     }
 }

@@ -213,9 +213,11 @@ Route::prefix('v1')->group(function () {
             Route::post('/{application}/withdraw', [SellerApplicationController::class, 'withdraw'])->name('withdraw');
         });
 
-        // Sales Agent Portal & Performance
+        // Sales Agent Portal & Performance (yearly subscription + KYC gated)
         Route::prefix('agent')->name('api.agent.')->group(function () {
             Route::get('/stats', [AgentController::class, 'stats'])->name('stats');
+            Route::get('/subscription', [AgentController::class, 'subscription'])->name('subscription');
+            Route::post('/subscribe', [AgentController::class, 'subscribe'])->name('subscribe');
             Route::post('/profile', [AgentController::class, 'updateProfile'])->name('profile');
         });
 

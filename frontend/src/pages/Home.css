@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Modernized Homepage Styles (Garage Parts Marketplace)
    Inspired by clean, modern lifestyle retail with high-utility automotive aesthetics
    ========================================================================== */
@@ -160,7 +160,7 @@
 }
 
 .finder-tab.active {
-  background: #ffffff;
+  background: var(--card-bg);
   color: var(--color-rust);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -190,7 +190,7 @@
   padding: 10px 14px;
   border-radius: var(--radius-md);
   border: 1.5px solid var(--color-border);
-  background: #ffffff;
+  background: var(--card-bg);
   font-family: var(--font-body);
   font-size: 13.5px;
   color: var(--color-heading);
@@ -357,7 +357,7 @@
    ========================================================================= */
 
 .section-pillars {
-  background: #ffffff;
+  background: var(--card-bg);
   border-top: 1px solid var(--color-border-subtle);
   border-bottom: 1px solid var(--color-border);
   padding: 36px 0;
@@ -477,7 +477,7 @@
   padding: 8px 18px;
   border-radius: var(--radius-pill);
   border: 1.5px solid var(--color-border);
-  background: #ffffff;
+  background: var(--card-bg);
   color: var(--color-metal);
   font-family: var(--font-body);
   font-size: 13.5px;
@@ -609,7 +609,7 @@
    ========================================================================== */
 
 .section--vehicles {
-  background: #ffffff;
+  background: var(--card-bg);
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
 }
@@ -621,7 +621,7 @@
 }
 
 .modern-car-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -703,7 +703,7 @@
 
 .car-wishlist-btn:hover {
   transform: scale(1.1);
-  background: #ffffff;
+  background: var(--card-bg);
 }
 
 .car-wishlist-btn.active {
@@ -853,7 +853,7 @@
 }
 
 .modern-part-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 14px;
@@ -1064,7 +1064,7 @@
    ========================================================================== */
 
 .section--showroom {
-  background: #ffffff;
+  background: var(--card-bg);
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
 }
@@ -1268,7 +1268,7 @@
 }
 
 .step-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 24px 20px;
@@ -1338,7 +1338,7 @@
    ========================================================================== */
 
 .section--testimonials {
-  background: #ffffff;
+  background: var(--card-bg);
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
 }
@@ -1441,7 +1441,7 @@
 }
 
 .faq-item {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -1883,7 +1883,7 @@
 }
 
 .modal-content {
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: var(--radius-xl);
   padding: 28px;
   max-width: 480px;

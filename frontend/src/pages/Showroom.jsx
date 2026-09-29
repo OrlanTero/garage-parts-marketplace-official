@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Building2,
@@ -515,7 +515,7 @@ export default function Showroom() {
               className={`showroom-tab-btn ${activeTab === 'verified' ? 'active' : ''}`}
               onClick={() => setActiveTab('verified')}
             >
-              <ShieldCheck size={14} style={{ color: '#10b981' }} />
+              <ShieldCheck size={14} style={{ color: 'var(--color-success)' }} />
               <span>KYC Verified Garages</span>
             </button>
           </div>
@@ -1017,7 +1017,7 @@ export default function Showroom() {
                                     key={i}
                                     size={14}
                                     fill={i < rev.rating ? '#f59e0b' : 'none'}
-                                    stroke={i < rev.rating ? '#f59e0b' : '#94a3b8'}
+                                    stroke={i < rev.rating ? '#f59e0b' : 'var(--color-text-muted)'}
                                   />
                                 ))}
                               </div>

@@ -33,6 +33,10 @@ class AdminFundsController extends Controller
 
         $partCommissionsTotal = (float) (clone $completedTxns)->where('stream_type', 'part_sale_commission')->sum('net_amount');
 
+        // Garage revenue from yearly Sales Agent subscriptions (seller_id = house garage).
+        $agentSubscriptionsTotal = (float) (clone $completedTxns)->where('stream_type', 'agent_subscription')->sum('net_amount');
+        $agentSubscriptionsCount = (int) (clone $completedTxns)->where('stream_type', 'agent_subscription')->count();
+
         $pendingFunds = (float) PlatformTransaction::query()->where('status', 'pending')->sum('net_amount');
 
         // Recent 6 Months Trend
@@ -57,11 +61,19 @@ class AdminFundsController extends Controller
                 ->whereMonth('created_at', $month)
                 ->sum('net_amount');
 
+            $agentSubs = (float) PlatformTransaction::query()
+                ->completed()
+                ->where('stream_type', 'agent_subscription')
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->sum('net_amount');
+
             $monthlyTrend[] = [
                 'month' => $monthLabel,
                 'car_commissions' => $carComm,
                 'parking_fees' => $parkFee,
-                'total' => $carComm + $parkFee,
+                'agent_subscriptions' => $agentSubs,
+                'total' => $carComm + $parkFee + $agentSubs,
             ];
         }
 
@@ -91,6 +103,8 @@ class AdminFundsController extends Controller
                     'parking_fees_total' => $parkingFeesTotal,
                     'parking_bays_count' => $parkingBaysCount,
                     'part_commissions_total' => $partCommissionsTotal,
+                    'agent_subscriptions_total' => $agentSubscriptionsTotal,
+                    'agent_subscriptions_count' => $agentSubscriptionsCount,
                     'pending_funds' => $pendingFunds,
                     'commission_rate' => 5.0,
                     'currency' => 'PHP',
@@ -287,6 +301,8 @@ class AdminFundsController extends Controller
         $totalNetRevenue = (float) $transactions->sum('net_amount');
         $carCommissions = (float) $transactions->where('stream_type', 'car_sale_commission')->sum('net_amount');
         $parkingFees = (float) $transactions->where('stream_type', 'parking_fee')->sum('net_amount');
+        $agentSubscriptions = (float) $transactions->where('stream_type', 'agent_subscription')->sum('net_amount');
+        $agentSubscriptionsCount = $transactions->where('stream_type', 'agent_subscription')->count();
         $carDealsCount = $transactions->where('stream_type', 'car_sale_commission')->count();
 
         return response()->json([
@@ -301,6 +317,8 @@ class AdminFundsController extends Controller
                     'car_commissions_total' => $carCommissions,
                     'car_deals_count' => $carDealsCount,
                     'parking_fees_total' => $parkingFees,
+                    'agent_subscriptions_total' => $agentSubscriptions,
+                    'agent_subscriptions_count' => $agentSubscriptionsCount,
                     'commission_rate' => 5.0,
                 ],
                 'transactions' => $transactions,

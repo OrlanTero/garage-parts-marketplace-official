@@ -1,4 +1,4 @@
-.become-seller-page {
+﻿.become-seller-page {
   background: var(--color-background);
   min-height: 60vh;
 }
@@ -33,7 +33,7 @@
 }
 
 .become-card {
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -229,12 +229,12 @@
 .become-card input,
 .become-card textarea {
   padding: 10px 14px;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--input-border);
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: 14px;
-  background: #fff;
-  color: var(--color-text);
+  background: var(--input-bg);
+  color: var(--input-text);
 }
 
 .become-card input:focus,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ShieldCheck, ShieldX, ArrowLeft } from 'lucide-react'
 import { ordersApi } from '../api/orders.js'
@@ -35,50 +35,50 @@ export default function VerifyTransaction() {
   return (
     <div style={{ maxWidth: 560, margin: '60px auto', padding: '0 20px 80px 20px', textAlign: 'center' }}>
       {loading ? (
-        <p style={{ color: '#94a3b8' }}>Verifying transaction…</p>
+        <p style={{ color: 'var(--color-text-muted)' }}>Verifying transaction…</p>
       ) : result?.valid ? (
-        <div style={{ background: '#161922', border: '1px solid #10b981', borderRadius: 12, padding: 32 }}>
-          <ShieldCheck size={48} color="#10b981" style={{ marginBottom: 12 }} />
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px 0', color: '#10b981' }}>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--color-success)', borderRadius: 12, padding: 32 }}>
+          <ShieldCheck size={48} color="var(--color-success)" style={{ marginBottom: 12 }} />
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px 0', color: 'var(--color-success)' }}>
             Valid Transaction
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: 13, margin: '0 0 20px 0' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 13, margin: '0 0 20px 0' }}>
             This receipt was issued by Garage Parts Marketplace.
           </p>
           <div style={{ textAlign: 'left', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Order</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>Order</span>
               <strong style={{ fontFamily: 'monospace' }}>{result.order_number}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Item</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>Item</span>
               <strong>{result.item_name}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Total</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>Total</span>
               <strong style={{ color: '#d8622c' }}>{result.formatted_total}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Order status</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>Order status</span>
               <strong style={{ textTransform: 'capitalize' }}>{result.status}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Payment</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>Payment</span>
               <strong style={{ textTransform: 'capitalize' }}>{(result.payment_status || '').replace('_', ' ')}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Seller</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>Seller</span>
               <strong>{result.seller_name}</strong>
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ background: '#161922', border: '1px solid #ef4444', borderRadius: 12, padding: 32 }}>
-          <ShieldX size={48} color="#ef4444" style={{ marginBottom: 12 }} />
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px 0', color: '#ef4444' }}>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--color-error)', borderRadius: 12, padding: 32 }}>
+          <ShieldX size={48} color="var(--color-error)" style={{ marginBottom: 12 }} />
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px 0', color: 'var(--color-error)' }}>
             Invalid Transaction
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: 14, margin: 0 }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 14, margin: 0 }}>
             This code does not match any genuine transaction. Do not proceed with payment or release.
           </p>
         </div>

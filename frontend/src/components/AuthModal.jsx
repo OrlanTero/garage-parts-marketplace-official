@@ -47,6 +47,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
     role: 'buyer',
     password: '',
     password_confirmation: '',
+    referral_code: (() => { try { return localStorage.getItem('gpm_referral_agent_code') || '' } catch { return '' } })(),
     agree: true,
   })
   const [showRegPw, setShowRegPw] = useState(false)
@@ -148,6 +149,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
         password: regForm.password,
         password_confirmation: regForm.password_confirmation,
         role: regForm.role,
+        referral_code: (regForm.referral_code || '').trim().toUpperCase(),
       })
       if (onSuccess) onSuccess()
       onClose()
@@ -483,6 +485,19 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
                     </button>
                   </div>
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label className="field-label" htmlFor="modal-reg-ref">Referral Code (optional — agent who invited you)</label>
+                <input
+                  id="modal-reg-ref"
+                  type="text"
+                  className="field-input"
+                  placeholder="e.g. AGT-JUAN-XXXX"
+                  value={regForm.referral_code}
+                  onChange={(e) => setRegForm({ ...regForm, referral_code: e.target.value.toUpperCase() })}
+                  style={{ fontFamily: 'monospace' }}
+                />
               </div>
 
               <div className="terms-checkbox-wrap">

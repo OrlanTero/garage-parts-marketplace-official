@@ -8,9 +8,8 @@ import { FavoritesProvider } from './context/FavoritesContext.jsx'
 import { ChatProvider } from './context/ChatContext.jsx'
 import { NotificationProvider } from './context/NotificationContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
-import './styles.css'
-import './theme/theme.css'
-import './styles/themes.css'
+// Single style entry point — all global styles live in src/styles/ (see index.css).
+import './styles/index.css'
 import './components/Modal.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(

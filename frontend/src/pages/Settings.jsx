@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   User as UserIcon,
@@ -26,21 +26,21 @@ import KycVerificationModal from '../components/KycVerificationModal.jsx'
 
 const inputStyle = {
   width: '100%',
-  background: '#0f1117',
-  border: '1px solid #2d3748',
+  background: 'var(--color-surface-inset)',
+  border: '1px solid var(--input-border)',
   borderRadius: 8,
   padding: '12px 14px',
-  color: '#f8fafc',
+  color: 'var(--color-heading)',
   fontSize: 14,
   outline: 'none',
   boxSizing: 'border-box',
 }
 
-const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }
+const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }
 
 const cardStyle = {
-  background: '#161922',
-  border: '1px solid #1e293b',
+  background: 'var(--card-bg)',
+  border: '1px solid var(--card-border)',
   borderRadius: 12,
   padding: 24,
   marginBottom: 20,
@@ -48,8 +48,8 @@ const cardStyle = {
 
 function Alert({ kind, children, onClose }) {
   const colors = kind === 'error'
-    ? { border: '#ef4444', bg: 'rgba(239,68,68,0.08)', color: '#f87171' }
-    : { border: '#10b981', bg: 'rgba(16,185,129,0.08)', color: '#10b981' }
+    ? { border: 'var(--color-error)', bg: 'rgba(239,68,68,0.08)', color: '#f87171' }
+    : { border: 'var(--color-success)', bg: 'rgba(16,185,129,0.08)', color: 'var(--color-success)' }
   return (
     <div style={{ border: `1px solid ${colors.border}`, background: colors.bg, color: colors.color, borderRadius: 8, padding: '12px 16px', fontSize: 13, marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
       <span>{children}</span>
@@ -162,16 +162,16 @@ function ProfileTab({ user, refresh }) {
   return (
     <div style={cardStyle}>
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0' }}>Update Profile</h2>
-      <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px 0' }}>
+      <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 20px 0' }}>
         Your username and avatar are what buyers and sellers see on reviews, offers, and chat — your real name stays private there.
       </p>
       {error && <Alert kind="error" onClose={() => setError('')}>{error}</Alert>}
       {notice && <Alert kind="success" onClose={() => setNotice('')}>{notice}</Alert>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
         {shownAvatar ? (
-          <img src={shownAvatar} alt="Avatar preview" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #2d3748' }} />
+          <img src={shownAvatar} alt="Avatar preview" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--input-border)' }} />
         ) : (
-          <span style={{ width: 72, height: 72, borderRadius: '50%', background: '#1e293b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+          <span style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--card-border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
             <UserIcon size={30} />
           </span>
         )}
@@ -186,7 +186,7 @@ function ProfileTab({ user, refresh }) {
             </button>
           )}
         </div>
-        <span style={{ fontSize: 12, color: '#64748b' }}>JPEG, PNG or WebP · max 5 MB</span>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>JPEG, PNG or WebP · max 5 MB</span>
       </div>
       <form onSubmit={handleSave}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 14 }}>
@@ -352,7 +352,7 @@ function AddressTab({ user }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0' }}>Address Book</h2>
-          <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Pinpoint each address on the map for precise courier drop-offs.</p>
+          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>Pinpoint each address on the map for precise courier drop-offs.</p>
         </div>
         <button type="button" className="btn btn-primary btn-sm" onClick={openAdd}>
           <Plus size={14} /> Add Address
@@ -363,11 +363,11 @@ function AddressTab({ user }) {
       {notice && <Alert kind="success" onClose={() => setNotice('')}>{notice}</Alert>}
 
       {loading ? (
-        <div style={{ color: '#94a3b8', fontSize: 13, padding: 24, textAlign: 'center' }}>Loading addresses…</div>
+        <div style={{ color: 'var(--color-text-muted)', fontSize: 13, padding: 24, textAlign: 'center' }}>Loading addresses…</div>
       ) : addresses.length === 0 ? (
-        <div style={{ ...cardStyle, textAlign: 'center', color: '#94a3b8' }}>
+        <div style={{ ...cardStyle, textAlign: 'center', color: 'var(--color-text-muted)' }}>
           <MapPin size={32} style={{ marginBottom: 8 }} />
-          <div style={{ fontWeight: 700, color: '#f8fafc', marginBottom: 4 }}>No saved addresses yet</div>
+          <div style={{ fontWeight: 700, color: 'var(--color-heading)', marginBottom: 4 }}>No saved addresses yet</div>
           <div style={{ fontSize: 13, marginBottom: 14 }}>Add Home, Office, or Garage pins to check out faster.</div>
           <button type="button" className="btn btn-primary btn-sm" onClick={openAdd}>
             <Plus size={14} /> Add Your First Address
@@ -376,33 +376,33 @@ function AddressTab({ user }) {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginBottom: 8 }}>
           {addresses.map((addr) => (
-            <div key={addr.id} style={{ ...cardStyle, marginBottom: 0, borderColor: addr.is_default ? '#d8622c' : '#1e293b' }}>
+            <div key={addr.id} style={{ ...cardStyle, marginBottom: 0, borderColor: addr.is_default ? '#d8622c' : 'var(--card-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', background: addr.is_default ? 'rgba(216,98,44,0.15)' : '#1e293b', color: addr.is_default ? '#fb923c' : '#94a3b8', padding: '4px 10px', borderRadius: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', background: addr.is_default ? 'rgba(216,98,44,0.15)' : 'var(--card-border)', color: addr.is_default ? 'var(--color-accent)' : 'var(--color-text-muted)', padding: '4px 10px', borderRadius: 12 }}>
                   {addr.label}
                 </span>
                 {addr.is_default && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#eab308' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--color-warning)' }}>
                     <Star size={12} /> Default
                   </span>
                 )}
               </div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{addr.recipient_name}</div>
-              <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6, margin: '4px 0' }}>
+              <div style={{ fontSize: 13, color: 'var(--color-text)', lineHeight: 1.6, margin: '4px 0' }}>
                 {addr.address_line}
                 {[addr.city, addr.postal_code].filter(Boolean).length > 0 && (
                   <>, {[addr.city, addr.postal_code].filter(Boolean).join(' ')}</>
                 )}
               </div>
-              {addr.phone && <div style={{ fontSize: 12, color: '#94a3b8' }}>{addr.phone}</div>}
+              {addr.phone && <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{addr.phone}</div>}
               {addr.has_pin ? (
-                <div style={{ fontSize: 11, color: '#10b981', fontFamily: 'monospace', marginTop: 6 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-success)', fontFamily: 'monospace', marginTop: 6 }}>
                   📍 {Number(addr.latitude).toFixed(5)}, {Number(addr.longitude).toFixed(5)}
                 </div>
               ) : (
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>No map pin yet</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 6 }}>No map pin yet</div>
               )}
-              {addr.landmark && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, fontStyle: 'italic' }}>“{addr.landmark}”</div>}
+              {addr.landmark && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4, fontStyle: 'italic' }}>“{addr.landmark}”</div>}
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(addr)}>
                   <Pencil size={13} /> Edit
@@ -464,7 +464,7 @@ function AddressTab({ user }) {
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={14} /> Map Pin {form.latitude !== '' && <span style={{ color: '#10b981', fontWeight: 700 }}>(pinned ✓)</span>}
+                    <MapPin size={14} /> Map Pin {form.latitude !== '' && <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>(pinned ✓)</span>}
                   </label>
                   <DeliveryMapPicker
                     height={280}
@@ -473,7 +473,7 @@ function AddressTab({ user }) {
                     onConfirm={handlePin}
                   />
                 </div>
-                {error && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8 }}>{error}</div>}
+                {error && <div style={{ color: 'var(--color-error)', fontSize: 12, marginBottom: 8 }}>{error}</div>}
                 <button type="submit" disabled={saving} className="btn btn-primary" style={{ width: '100%' }}>
                   {saving ? 'Saving…' : editing ? 'Save Changes' : 'Add Address'}
                 </button>
@@ -537,13 +537,13 @@ function KycTab({ user, refresh }) {
         <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ShieldCheck size={18} /> KYC Verification
         </h2>
-        <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 16px 0' }}>
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 16px 0' }}>
           Verified sellers unlock listing, badges, and faster payouts.
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'var(--color-surface-inset)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '14px 16px' }}>
           <span style={{
             fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
-            color: verified ? '#10b981' : status === 'pending' ? '#eab308' : status === 'rejected' ? '#ef4444' : '#94a3b8',
+            color: verified ? 'var(--color-success)' : status === 'pending' ? 'var(--color-warning)' : status === 'rejected' ? 'var(--color-error)' : 'var(--color-text-muted)',
           }}>
             {verified ? '✓ Verified' : status.replace(/_/g, ' ')}
           </span>
@@ -562,7 +562,7 @@ function KycTab({ user, refresh }) {
 
       <div style={cardStyle}>
         <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0' }}>Change Password</h2>
-        <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 16px 0' }}>Requires your current password.</p>
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 16px 0' }}>Requires your current password.</p>
         {error && <Alert kind="error" onClose={() => setError('')}>{error}</Alert>}
         {notice && <Alert kind="success" onClose={() => setNotice('')}>{notice}</Alert>}
         <form onSubmit={handlePassword}>
@@ -588,7 +588,7 @@ function KycTab({ user, refresh }) {
 
       <div style={cardStyle}>
         <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0' }}>Sessions</h2>
-        <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 16px 0' }}>Signed in on a shared device? Kill every session at once.</p>
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 16px 0' }}>Signed in on a shared device? Kill every session at once.</p>
         <button type="button" className="btn btn-secondary btn-sm" onClick={handleLogoutAll}>
           <LogOut size={14} /> Log Out All Devices
         </button>
@@ -637,13 +637,13 @@ function PrefsTab() {
   return (
     <div style={cardStyle}>
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px 0' }}>Preferences</h2>
-      <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px 0' }}>Device-level settings stored in this browser.</p>
+      <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 20px 0' }}>Device-level settings stored in this browser.</p>
       {notice && <Alert kind="success" onClose={() => setNotice('')}>{notice}</Alert>}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px', marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'var(--color-surface-inset)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Live chat & marketplace updates</div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>WebSocket connection for instant messages. Turn off on slow networks.</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>WebSocket connection for instant messages. Turn off on slow networks.</div>
         </div>
         <button
           type="button"
@@ -652,7 +652,7 @@ function PrefsTab() {
           onClick={toggleRealtime}
           style={{
             width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
-            background: realtime ? '#10b981' : '#334155', position: 'relative', transition: 'background 0.15s',
+            background: realtime ? 'var(--color-success)' : 'var(--input-border)', position: 'relative', transition: 'background 0.15s',
           }}
         >
           <span style={{
@@ -662,10 +662,10 @@ function PrefsTab() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px', marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'var(--color-surface-inset)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '14px 16px', marginBottom: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Appearance theme</div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>Day / night surfaces across the marketplace. System follows your device.</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Day / night surfaces across the marketplace. System follows your device.</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {[
@@ -680,9 +680,9 @@ function PrefsTab() {
               aria-pressed={mode === id}
               style={{
                 fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 999, cursor: 'pointer',
-                border: mode === id ? '1px solid #d8622c' : '1px solid #2d3748',
+                border: mode === id ? '1px solid #d8622c' : '1px solid var(--input-border)',
                 background: mode === id ? 'rgba(216, 98, 44, 0.15)' : 'transparent',
-                color: mode === id ? '#fb923c' : '#94a3b8',
+                color: mode === id ? 'var(--color-accent)' : 'var(--color-text-muted)',
               }}
             >
               {label}
@@ -690,12 +690,12 @@ function PrefsTab() {
           ))}
         </div>
       </div>
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>Currently showing: <strong style={{ color: '#cbd5e1' }}>{resolved} theme</strong></div>
+      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>Currently showing: <strong style={{ color: 'var(--color-text)' }}>{resolved} theme</strong></div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'var(--color-surface-inset)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '14px 16px', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Cached catalog & chat data</div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>Taxonomy and inbox snapshots stored for instant loads.</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Taxonomy and inbox snapshots stored for instant loads.</div>
         </div>
         <button type="button" className="btn btn-secondary btn-sm" onClick={clearCaches}>
           <RefreshCw size={14} /> Clear Caches
@@ -723,10 +723,10 @@ export default function Settings() {
   if (!isAuthenticated) {
     return (
       <div style={{ maxWidth: 640, margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
-        <SlidersHorizontal size={36} style={{ color: '#64748b', marginBottom: 12 }} />
+        <SlidersHorizontal size={36} style={{ color: 'var(--color-text-muted)', marginBottom: 12 }} />
         <h2>Account Settings</h2>
-        <p style={{ color: '#94a3b8' }}>
-          Please <Link to="/login" style={{ color: '#fb923c', fontWeight: 700 }}>log in</Link> to
+        <p style={{ color: 'var(--color-text-muted)' }}>
+          Please <Link to="/login" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>log in</Link> to
           manage your profile, addresses, and security.
         </p>
       </div>
@@ -738,8 +738,8 @@ export default function Settings() {
       <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
         <SlidersHorizontal size={24} /> Account Settings
       </h1>
-      <p style={{ color: '#94a3b8', fontSize: 14, margin: '0 0 24px 0' }}>
-        Signed in as <strong style={{ color: '#e2e8f0' }}>@{user?.username || 'member'}</strong> · {user?.email}
+      <p style={{ color: 'var(--color-text-muted)', fontSize: 14, margin: '0 0 24px 0' }}>
+        Signed in as <strong style={{ color: 'var(--color-text)' }}>@{user?.username || 'member'}</strong> · {user?.email}
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>

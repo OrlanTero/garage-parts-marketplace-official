@@ -36,6 +36,13 @@ class User extends Authenticatable
         'commission_rate',
         'is_agent',
         'agent_tagline',
+        'referred_by_user_id',
+        'agent_subscription_status',
+        'agent_subscribed_at',
+        'agent_expires_at',
+        'agent_last_payment_at',
+        'agent_last_payment_amount',
+        'referral_reward_paid_at',
         'kyc_status',
         'is_kyc_verified',
         'kyc_document_type',
@@ -71,6 +78,11 @@ class User extends Authenticatable
             'showroom_activated_at' => 'datetime',
             'kyc_submitted_at' => 'datetime',
             'kyc_verified_at' => 'datetime',
+            'agent_subscribed_at' => 'datetime',
+            'agent_expires_at' => 'datetime',
+            'agent_last_payment_at' => 'datetime',
+            'agent_last_payment_amount' => 'decimal:2',
+            'referral_reward_paid_at' => 'datetime',
         ];
     }
 
@@ -96,7 +108,10 @@ class User extends Authenticatable
                 $user->commission_rate = 5.00;
             }
             if ($user->is_agent === null) {
-                $user->is_agent = true;
+                $user->is_agent = false;
+            }
+            if (empty($user->agent_subscription_status)) {
+                $user->agent_subscription_status = 'inactive';
             }
             if (empty($user->kyc_status)) {
                 $user->kyc_status = 'not_submitted';
@@ -169,6 +184,54 @@ class User extends Authenticatable
     public function isKycVerified(): bool
     {
         return (bool) $this->is_kyc_verified && $this->kyc_status === 'approved';
+    }
+
+    /**
+     * Active Sales Agent = verified KYC + active (non-expired) yearly subscription.
+     */
+    public function isAgentActive(): bool
+    {
+        if (! $this->isKycVerified()) {
+            return false;
+        }
+        if (($this->agent_subscription_status ?? 'inactive') !== 'active') {
+            return false;
+        }
+        if ($this->agent_expires_at && $this->agent_expires_at->isPast()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Lazily flip stale `active` subscriptions to `expired` on read.
+     */
+    public function refreshIfStaleSubscription(): static
+    {
+        if (($this->agent_subscription_status ?? null) === 'active'
+            && $this->agent_expires_at
+            && $this->agent_expires_at->isPast()) {
+            $this->forceFill(['agent_subscription_status' => 'expired'])->save();
+            $this->refresh();
+        }
+
+        return $this;
+    }
+
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referred_by_user_id');
+    }
+
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by_user_id');
+    }
+
+    public function agentSubscriptions(): HasMany
+    {
+        return $this->hasMany(AgentSubscription::class)->latest();
     }
 
     /** House garage account (GAP Valenzuela Main) — sole parts catalog owner. */

@@ -18,7 +18,8 @@ class SellerWalletController extends Controller
 {
     /**
      * Wallet balance math for a seller.
-     * Earned = completed seller payouts + settled referral commissions.
+     * Earned = completed seller payouts + settled referral commissions
+     *          + agent referral rewards (₱50 per recruited active agent).
      * Locked = open (pending/approved) withdrawals. Available = earned −
      * locked − paid out. Rejected withdrawals and refunds never touch the
      * balance (payouts only exist on completion).
@@ -36,6 +37,12 @@ class SellerWalletController extends Controller
         $earned += (float) PlatformTransaction::query()
             ->where('user_id', $user->id)
             ->where('stream_type', 'agent_commission')
+            ->where('status', 'completed')
+            ->sum('net_amount');
+
+        $earned += (float) PlatformTransaction::query()
+            ->where('user_id', $user->id)
+            ->where('stream_type', 'agent_referral_reward')
             ->where('status', 'completed')
             ->sum('net_amount');
 
@@ -65,7 +72,8 @@ class SellerWalletController extends Controller
         $payouts = PlatformTransaction::query()
             ->where(function ($q) use ($user) {
                 $q->where(fn ($sq) => $sq->where('seller_id', $user->id)->where('stream_type', 'seller_payout'))
-                    ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_commission'));
+                    ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_commission'))
+                    ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_referral_reward'));
             })
             ->where('status', 'completed')
             ->with(['order:id,order_number,item_name,item_type,status'])
@@ -106,7 +114,8 @@ class SellerWalletController extends Controller
             $payouts = PlatformTransaction::query()
                 ->where(function ($q) use ($user) {
                     $q->where(fn ($sq) => $sq->where('seller_id', $user->id)->where('stream_type', 'seller_payout'))
-                        ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_commission'));
+                        ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_commission'))
+                        ->orWhere(fn ($sq) => $sq->where('user_id', $user->id)->where('stream_type', 'agent_referral_reward'));
                 })
                 ->with(['order:id,order_number,item_name,item_type'])
                 ->latest()
@@ -114,8 +123,12 @@ class SellerWalletController extends Controller
                 ->get()
                 ->map(fn (PlatformTransaction $t) => [
                     'id' => $t->stream_type . '-' . $t->id,
-                    'kind' => $t->stream_type === 'agent_commission' ? 'commission' : 'payout',
-                    'title' => $t->title ?? (($t->stream_type === 'agent_commission' ? 'Agent Commission — ' : 'Seller Payout — ') . ($t->order?->item_name ?? $t->order?->order_number ?? '')),
+                    'kind' => $t->stream_type === 'agent_commission' ? 'commission' : ($t->stream_type === 'agent_referral_reward' ? 'referral_reward' : 'payout'),
+                    'title' => $t->title ?? ((match ($t->stream_type) {
+                        'agent_commission' => 'Agent Commission — ',
+                        'agent_referral_reward' => 'Referral Reward — ',
+                        default => 'Seller Payout — ',
+                    }) . ($t->order?->item_name ?? $t->order?->order_number ?? '')),
                     'detail' => $t->order?->order_number,
                     'item_type' => $t->order?->item_type ?? $t->metadata['item_type'] ?? null,
                     'amount' => (float) $t->net_amount,

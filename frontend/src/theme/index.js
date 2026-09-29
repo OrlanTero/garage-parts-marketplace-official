@@ -2,7 +2,7 @@ import { theme } from './tokens.js'
 
 /**
  * Theme is CSS-variable driven — no runtime provider needed.
- * Import this file once at the app root so variables are always present.
+ * Global CSS lives in src/styles/index.css (imported once in main.jsx).
  * JS consumers can still read `theme` tokens for canvas/SVG.
  */
 

@@ -15,12 +15,35 @@ class AuthService
 {
     public function register(array $data): User
     {
-        return User::create([
+        // Agent recruitment referral: ?ref=AGENT-CODE captured at signup.
+        // Any valid agent_code qualifies as referrer; the ₱50 wallet reward
+        // is only paid later when this user ALSO becomes an active agent
+        // (verified KYC + paid yearly subscription).
+        $referralInput = trim((string) ($data['referral_code'] ?? $data['ref'] ?? $data['agent_code'] ?? ''));
+        $referredById = null;
+        if ($referralInput !== '') {
+            $referrer = User::where('agent_code', $referralInput)->first();
+            if ($referrer && empty($data['__skip_self_referral_check'])) {
+                $referredById = $referrer->id;
+            }
+        }
+
+        $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => $data['password'], // 'hashed' cast handles bcrypt
             'role' => $data['role'] ?? UserRole::Buyer->value,
+            'referred_by_user_id' => $referredById,
+            'is_agent' => false,
+            'agent_subscription_status' => 'inactive',
         ]);
+
+        // Guard against self-referral on code collision (agent_code is random, but be safe).
+        if ($referredById && (int) $referredById === (int) $user->id) {
+            $user->forceFill(['referred_by_user_id' => null])->save();
+        }
+
+        return $user->refresh();
     }
 
     /** @throws ValidationException on bad credentials */

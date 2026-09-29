@@ -20,10 +20,15 @@ function unwrapSession(payload) {
 
 export const sessionManager = {
   // --- Credential flows ---
-  register: ({ name, email, password, password_confirmation, role = 'buyer' }) =>
-    client
-      .post('/auth/register', { name, email, password, password_confirmation, role })
-      .then((r) => unwrapSession(r.data)),
+  register: ({ name, email, password, password_confirmation, role = 'buyer', referral_code = '' }) => {
+    const payload = { name, email, password, password_confirmation, role }
+    // Agent recruitment referral (?ref=CODE) — stored as referred_by_user_id.
+    try {
+      const stored = referral_code || localStorage.getItem('gpm_referral_agent_code') || ''
+      if (stored && stored.trim()) payload.referral_code = stored.trim().toUpperCase()
+    } catch { /* storage unavailable */ }
+    return client.post('/auth/register', payload).then((r) => unwrapSession(r.data))
+  },
 
   login: ({ email, password, device_name }) =>
     client.post('/auth/login', { email, password, device_name }).then((r) => unwrapSession(r.data)),

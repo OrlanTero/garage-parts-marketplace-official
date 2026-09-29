@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Showroom & Verified Builders Hub CSS
    High-utility, modern automotive marketplace styling for the Garage Showroom.
    ========================================================================== */
@@ -151,7 +151,8 @@
   position: sticky;
   top: 70px;
   z-index: 30;
-  background: rgba(245, 242, 235, 0.95);
+  background: var(--topbar-bg-translucent);
+  background: color-mix(in srgb, var(--color-background) 94%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
   padding: 16px 0;
@@ -181,7 +182,7 @@
 .showroom-search-box input {
   width: 100%;
   padding: 12px 16px 12px 42px;
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-pill);
   font-size: 14px;
@@ -213,7 +214,7 @@
 .showroom-sort-box select {
   width: 100%;
   padding: 11px 16px;
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-pill);
   font-size: 13.5px;
@@ -240,7 +241,7 @@
   padding: 8px 16px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-border);
-  background: #ffffff;
+  background: var(--card-bg);
   color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
@@ -300,7 +301,7 @@
 
 /* Individual Seller Card */
 .seller-showroom-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -320,7 +321,7 @@
 /* Card Header Banner */
 .seller-card-header {
   padding: 24px 24px 18px;
-  background: linear-gradient(180deg, #faf7f2 0%, #ffffff 100%);
+  background: var(--gradient-warm-card);
   border-bottom: 1px solid var(--color-border-subtle);
   position: relative;
 }
@@ -358,7 +359,7 @@
   right: -2px;
   width: 24px;
   height: 24px;
-  background: #10b981;
+  background: var(--color-success);
   color: #ffffff;
   border: 2px solid #ffffff;
   border-radius: 50%;
@@ -402,19 +403,19 @@
 }
 
 .seller-role-badge.builder {
-  background: #fbeee7;
-  color: var(--color-rust);
+  background: var(--color-orange-light);
+  color: var(--color-accent);
   border: 1px solid rgba(146, 68, 36, 0.2);
 }
 
 .seller-role-badge.dealer {
-  background: #edf2f5;
-  color: var(--color-steel);
+  background: var(--color-info-bg);
+  color: var(--color-info);
   border: 1px solid rgba(44, 66, 80, 0.2);
 }
 
 .seller-role-badge.parts_seller {
-  background: #e8f5ec;
+  background: var(--color-success-bg);
   color: var(--color-success);
   border: 1px solid rgba(27, 135, 63, 0.2);
 }
@@ -450,7 +451,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   border-bottom: 1px solid var(--color-border-subtle);
-  background: #ffffff;
+  background: var(--card-bg);
 }
 
 .seller-kpi-item {
@@ -606,7 +607,7 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 80px 24px;
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
 }
@@ -640,7 +641,7 @@
 }
 
 .showcase-modal {
-  background: #ffffff;
+  background: var(--card-bg);
   width: min(1140px, 96vw);
   max-height: 90vh;
   border-radius: var(--radius-xl);
@@ -649,7 +650,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--card-border);
 }
 
 /* Showcase Banner Header */
@@ -998,7 +999,7 @@
   gap: 8px;
   font-size: 12.5px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #a0aec0; /* fixed light gray — parent highlight card is dark in both themes */
   margin-bottom: 8px;
 }
 
@@ -1022,7 +1023,7 @@
 .highlight-price-label {
   font-size: 10.5px;
   font-weight: 700;
-  color: #94a3b8;
+  color: #a0aec0; /* fixed light gray — parent highlight card is dark in both themes */
   letter-spacing: 0.04em;
 }
 
@@ -1036,12 +1037,12 @@
 /* Official Seller Card styling */
 .seller-showroom-card.seller-card-official {
   border: 2px solid rgba(216, 98, 44, 0.4);
-  background: linear-gradient(180deg, #fffcf9 0%, #ffffff 100%);
+  background: linear-gradient(180deg, var(--color-orange-light) 0%, var(--card-bg) 100%);
   box-shadow: 0 4px 16px -2px rgba(216, 98, 44, 0.12);
 }
 
 .seller-role-badge.official {
-  background: #ffedd5;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-border);
 }

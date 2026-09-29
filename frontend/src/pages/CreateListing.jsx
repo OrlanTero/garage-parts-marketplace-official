@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Car,
@@ -746,7 +746,7 @@ export default function CreateListing({ defaultType = 'car' }) {
           {/* Vehicle Inspection Lifecycle Notice */}
           {listingType === 'car' && (
             <div className="role-warning-banner" style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.25)', color: '#065f46' }}>
-              <CheckCircle2 size={20} style={{ flexShrink: 0, color: '#10b981' }} />
+              <CheckCircle2 size={20} style={{ flexShrink: 0, color: 'var(--color-success)' }} />
               <div>
                 <strong>Mandatory Inspection Verification:</strong> Submitted car builds are reviewed and scheduled for inspection (<strong>Garage Drop-off</strong> or <strong>Mobile On-site Visit</strong>). Once verified by an inspector and approved by admin, your vehicle will be published live to the marketplace.
               </div>
@@ -1070,7 +1070,7 @@ export default function CreateListing({ defaultType = 'car' }) {
                           style={{
                             flex: 1, padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
                             fontSize: 13, fontWeight: 700,
-                            border: inspectionType === opt.id ? '2px solid var(--color-rust, #d8622c)' : '1px solid var(--color-border, #e2e8f0)',
+                            border: inspectionType === opt.id ? '2px solid var(--color-rust, #d8622c)' : '1px solid var(--color-border)',
                             background: inspectionType === opt.id ? 'rgba(216, 98, 44, 0.08)' : 'transparent',
                             color: 'inherit',
                           }}
@@ -1210,10 +1210,10 @@ export default function CreateListing({ defaultType = 'car' }) {
                 {carData.images && carData.images.length > 0 ? (
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 6px' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-heading)' }}>
                         Uploaded Vehicle Photos ({carData.images.length})
                       </span>
-                      <span style={{ fontSize: 12, color: '#64748b' }}>
+                      <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                         Tip: Hover thumbnail to set as Primary Cover
                       </span>
                     </div>
@@ -1247,7 +1247,7 @@ export default function CreateListing({ defaultType = 'car' }) {
                     </div>
                   </>
                 ) : (
-                  <div style={{ padding: '24px 0', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                  <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13 }}>
                     No photos added yet. Drag and drop photos above or load a quick demo preset.
                   </div>
                 )}
@@ -1637,10 +1637,10 @@ export default function CreateListing({ defaultType = 'car' }) {
                 {partData.images && partData.images.length > 0 ? (
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 6px' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-heading)' }}>
                         Uploaded Part Photos ({partData.images.length})
                       </span>
-                      <span style={{ fontSize: 12, color: '#64748b' }}>
+                      <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                         Tip: Hover thumbnail to set as Primary Cover
                       </span>
                     </div>
@@ -1674,7 +1674,7 @@ export default function CreateListing({ defaultType = 'car' }) {
                     </div>
                   </>
                 ) : (
-                  <div style={{ padding: '24px 0', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                  <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13 }}>
                     No photos added yet. Drag and drop photos above or load a quick demo preset.
                   </div>
                 )}
@@ -1688,7 +1688,7 @@ export default function CreateListing({ defaultType = 'car' }) {
           <div className="preview-card-wrapper">
             <div className="preview-header">
               <span className="preview-pill">Live Marketplace Card Preview</span>
-              <Eye size={16} color="#64748b" />
+              <Eye size={16} color="var(--color-text-muted)" />
             </div>
 
             <div className="preview-body">

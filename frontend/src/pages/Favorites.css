@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Saved Builds & Favorites Page Styles
    ========================================================================== */
 
@@ -113,7 +113,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  background: #ffffff;
+  background: var(--card-bg);
   padding: 14px 20px;
   border-radius: 12px;
   border: 1px solid var(--color-border, #e2e8f0);
@@ -140,7 +140,7 @@
   border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: #475569;
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -148,7 +148,7 @@
 
 .favorites-tab-btn:hover {
   background: #e2e8f0;
-  color: #1e293b;
+  color: var(--color-heading);
 }
 
 .favorites-tab-btn.active {
@@ -191,7 +191,7 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #94a3b8;
+  color: var(--input-icon);
   pointer-events: none;
 }
 
@@ -199,10 +199,10 @@
   width: 100%;
   padding: 8px 12px 8px 36px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border);
   font-size: 13px;
-  background: #ffffff;
-  color: #1e293b;
+  background: var(--card-bg);
+  color: var(--color-heading);
   outline: none;
   transition: border-color 0.2s ease;
 }
@@ -215,11 +215,11 @@
 .favorites-sort-select {
   padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border);
   font-size: 13px;
   font-weight: 600;
-  background: #ffffff;
-  color: #334155;
+  background: var(--card-bg);
+  color: var(--color-text);
   cursor: pointer;
   outline: none;
 }
@@ -230,16 +230,16 @@
 
 .favorites-view-toggle {
   display: flex;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .view-btn {
   padding: 8px 10px;
-  background: #ffffff;
+  background: var(--card-bg);
   border: none;
-  color: #64748b;
+  color: var(--color-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -248,8 +248,8 @@
 }
 
 .view-btn:hover {
-  background: #f8fafc;
-  color: #1e293b;
+  background: var(--color-surface-subtle);
+  color: var(--color-heading);
 }
 
 .view-btn.active {
@@ -262,7 +262,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: #fff1f2;
+  background: var(--color-error-bg);
   border: 1px solid #fecdd3;
   border-radius: 8px;
   color: #e11d48;
@@ -310,20 +310,20 @@
   gap: 8px;
   font-size: 18px;
   font-weight: 800;
-  color: #1e293b;
+  color: var(--color-heading);
   margin: 0;
 }
 
 .favorites-section-count {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 /* Empty States */
 .favorites-empty-card {
-  background: #ffffff;
-  border: 1px dashed #cbd5e1;
+  background: var(--card-bg);
+  border: 1px dashed var(--color-border);
   border-radius: 16px;
   padding: 64px 24px;
   text-align: center;
@@ -339,7 +339,7 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: #fff7ed;
+  background: var(--color-warning-bg);
   border: 1.5px solid #ffedd5;
   display: flex;
   align-items: center;
@@ -352,13 +352,13 @@
   font-family: var(--font-display, inherit);
   font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--color-heading);
   margin: 0;
 }
 
 .favorites-empty-text {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-text-muted);
   max-width: 440px;
   margin: 0;
   line-height: 1.6;
@@ -398,14 +398,14 @@
 }
 
 .favorites-btn-secondary {
-  background: #f8fafc;
-  color: #1e293b;
-  border: 1px solid #cbd5e1;
+  background: var(--color-surface-subtle);
+  color: var(--color-heading);
+  border: 1px solid var(--color-border);
 }
 
 .favorites-btn-secondary:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
+  background: var(--color-surface-inset);
+  border-color: var(--input-border-hover);
 }
 
 @media (max-width: 768px) {

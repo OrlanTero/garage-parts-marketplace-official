@@ -70,5 +70,26 @@ class PlatformSettingSeeder extends Seeder
             'variables',
             'Order quantity at/above which parts freight is free (0 = disabled; subtotal threshold still applies).',
         );
+
+        PlatformSetting::set(
+            'agent_subscription_fee',
+            '100',
+            'variables',
+            'Yearly Sales Agent subscription fee in PHP. Required with verified KYC to activate agent privileges.',
+        );
+
+        PlatformSetting::set(
+            'agent_referral_reward',
+            '50',
+            'variables',
+            'Wallet reward in PHP paid to the referrer when their referred signup also becomes an active Sales Agent (KYC + paid fee).',
+        );
+
+        PlatformSetting::set(
+            'agent_subscription_duration_days',
+            '365',
+            'variables',
+            'Sales Agent subscription validity in days (default 365 = 1 year).',
+        );
     }
 }

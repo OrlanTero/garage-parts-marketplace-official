@@ -1,5 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
+/**
+ * Theme manager — day / night / system.
+ *
+ * - Persists to localStorage key `gpm_theme`.
+ * - Resolves `system` via prefers-color-scheme.
+ * - Applies <html data-theme="day|night"> + color-scheme + theme-color meta.
+ * - index.html sets the same attribute pre-paint to avoid a flash.
+ *
+ * Usage: const { mode, resolved, isNight, setMode, toggle } = useTheme()
+ */
+
+export const THEMES = ['day', 'night', 'system']
 const STORAGE_KEY = 'gpm_theme' // 'day' | 'night' | 'system'
 const ATTR = 'data-theme'
 
@@ -9,7 +21,7 @@ function systemTheme() {
   try {
     if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'night'
   } catch {
-    // ignore
+    // ignore — fall through to day
   }
   return 'day'
 }
@@ -19,7 +31,7 @@ function readStored() {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw === 'day' || raw === 'night' || raw === 'system') return raw
   } catch {
-    // ignore
+    // private mode etc.
   }
   return 'system'
 }
@@ -27,6 +39,16 @@ function readStored() {
 function applyTheme(resolved) {
   try {
     document.documentElement.setAttribute(ATTR, resolved)
+    // Tell the browser which color-scheme form controls/scrollbars use.
+    document.documentElement.style.colorScheme = resolved === 'night' ? 'dark' : 'light'
+    // Keep mobile browser chrome in sync.
+    let meta = document.querySelector('meta[name="theme-color"]')
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'theme-color')
+      document.head.appendChild(meta)
+    }
+    meta.setAttribute('content', resolved === 'night' ? '#101216' : '#f5f2eb')
   } catch {
     // ignore
   }

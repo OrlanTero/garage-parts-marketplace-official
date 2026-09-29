@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Parts & Accessories Marketplace Page Styles
    ========================================================================== */
 
@@ -126,7 +126,7 @@
 }
 
 .parts-toolbar {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 16px 20px;
@@ -194,7 +194,7 @@
 
 /* Part Skeleton Card */
 .part-skeleton-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 14px;

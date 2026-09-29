@@ -61,6 +61,8 @@ class PlatformTransaction extends Model
                     'parking_fee' => 'PARK-FEE',
                     'part_sale_commission' => 'COMM-PART',
                     'reservation_fee' => 'RSV-FEE',
+                    'agent_subscription' => 'AGENT-SUB',
+                    'agent_referral_reward' => 'AGENT-RWD',
                     default => 'TXN',
                 };
                 $transaction->transaction_number = $prefix . '-' . date('Y') . '-' . strtoupper(Str::random(6));
@@ -362,6 +364,97 @@ class PlatformTransaction extends Model
         }
 
         return $txn;
+    }
+
+    /**
+     * Record a yearly Sales Agent subscription fee payment.
+     * Garage revenue: the fee is credited to the house garage account
+     * (seller_id = house user) so it shows in garage treasury reports.
+     * Idempotent per subscription id via metadata lookup.
+     */
+    public static function recordAgentSubscriptionFee(User $user, AgentSubscription $subscription): self
+    {
+        $existing = self::where('stream_type', 'agent_subscription')
+            ->whereJsonContains('metadata->agent_subscription_id', $subscription->id)
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $garageId = User::house()?->id;
+
+        return self::create([
+            'stream_type' => 'agent_subscription',
+            'direction' => 'credit',
+            'gross_amount' => (float) $subscription->amount,
+            'fee_rate' => 0,
+            'net_amount' => (float) $subscription->amount,
+            'currency' => 'PHP',
+            'payment_method' => $subscription->payment_method ?? 'gcash',
+            'payment_reference' => $subscription->payment_reference ?? ('AGENT-SUB-' . $subscription->id),
+            'reference_number' => $subscription->payment_reference ?? $subscription->uuid,
+            'status' => 'completed',
+            'user_id' => $user->id,
+            'seller_id' => $garageId,
+            'title' => "Sales Agent Subscription — {$user->name}",
+            'description' => 'Yearly Sales Agent subscription fee of ₱' . number_format((float) $subscription->amount, 2)
+                . ' credited to garage revenue.',
+            'metadata' => [
+                'agent_subscription_id' => $subscription->id,
+                'agent_code' => $user->agent_code,
+                'garage_revenue' => true,
+                'mock_account_name' => $subscription->metadata['mock_account_name'] ?? null,
+                'mock_account_last4' => isset($subscription->metadata['mock_account_number'])
+                    ? substr(preg_replace('/\D/', '', (string) $subscription->metadata['mock_account_number']), -4)
+                    : null,
+                'starts_at' => $subscription->starts_at?->toIso8601String(),
+                'expires_at' => $subscription->expires_at?->toIso8601String(),
+            ],
+            'settled_at' => now(),
+        ]);
+    }
+
+    /**
+     * Credit a ₱50 (parameterized) referral reward to the referrer's wallet
+     * when their referred user qualifies as an active Sales Agent.
+     * Idempotent per referred user id.
+     */
+    public static function recordAgentReferralReward(User $referrer, User $referred, ?AgentSubscription $subscription = null): self
+    {
+        $existing = self::where('stream_type', 'agent_referral_reward')
+            ->whereJsonContains('metadata->referred_user_id', $referred->id)
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $amount = round((float) \App\Models\PlatformSetting::get('agent_referral_reward', 50), 2);
+
+        return self::create([
+            'stream_type' => 'agent_referral_reward',
+            'direction' => 'credit',
+            'gross_amount' => $amount,
+            'fee_rate' => 0,
+            'net_amount' => $amount,
+            'currency' => 'PHP',
+            'payment_method' => 'wallet',
+            'payment_reference' => 'AGENT-RWD-' . $referred->id . '-' . date('Ymd'),
+            'reference_number' => $referred->agent_code ?? ('USER-' . $referred->id),
+            'status' => 'completed',
+            'user_id' => $referrer->id,
+            'seller_id' => null,
+            'title' => "Agent Referral Reward — @{$referred->username}",
+            'description' => 'Referral reward of ₱' . number_format($amount, 2)
+                . " — @{$referred->username} became an active Sales Agent with your referral code.",
+            'metadata' => [
+                'referred_user_id' => $referred->id,
+                'referred_agent_code' => $referred->agent_code,
+                'referrer_agent_code' => $referrer->agent_code,
+                'agent_subscription_id' => $subscription?->id,
+                'reward_config' => $amount,
+            ],
+            'settled_at' => now(),
+        ]);
     }
 
     /**

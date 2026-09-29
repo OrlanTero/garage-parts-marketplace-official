@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\Part;
 use App\Models\PlatformTransaction;
 use App\Models\Warehouse;
+use App\Services\AgentService;
 use App\Services\DeliveryFeeService;
 use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
@@ -328,16 +329,24 @@ class OrderController extends Controller
                     || ($buyerEmail !== '' && strtolower((string) ($agentUser->email ?? '')) === $buyerEmail);
             }
 
-            if ($agentUser && !$isSelfDeal) {
+            // Only ACTIVE agents (verified KYC + paid yearly subscription)
+            // earn order commissions. Inactive/expired codes are ignored so
+            // stats stay honest and unverified agents earn nothing.
+            $isAgentActive = $agentUser ? AgentService::isActive($agentUser) : false;
+
+            if ($agentUser && !$isSelfDeal && $isAgentActive) {
                 $agentId = $agentUser->id;
                 $agentCode = $agentUser->agent_code;
                 $agentName = $agentUser->name;
                 $commissionRate = (float) ($agentUser->commission_rate ?? 5.00);
                 $commissionAmount = round(($unitPrice * $quantity) * ($commissionRate / 100), 2);
-            } elseif (!$isSelfDeal) {
+            } elseif (!$agentUser && !$isSelfDeal) {
+                // Unknown code: preserve legacy attribution stub (no payee).
                 $agentCode = $agentCodeInput;
                 $commissionAmount = round(($unitPrice * $quantity) * (5.00 / 100), 2);
             }
+            // Known but INACTIVE agents (no KYC / no subscription / expired):
+            // drop attribution entirely — no code, no commission.
         }
 
         $orderNumber = 'SO-' . date('Y') . '-' . strtoupper(Str::random(6));

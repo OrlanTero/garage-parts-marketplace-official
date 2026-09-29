@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   ShieldCheck, 
@@ -452,11 +452,11 @@ export default function Checkout() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <Link 
           to={partId ? `/parts/${partId}` : carId ? `/marketplace/${carId}` : '/parts'} 
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#94a3b8', fontSize: 14, textDecoration: 'none' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--color-text-muted)', fontSize: 14, textDecoration: 'none' }}
         >
           <ArrowLeft size={16} /> Return to listing
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#10b981', fontWeight: 600 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--color-success)', fontWeight: 600 }}>
           <ShieldCheck size={16} /> 256-Bit Encrypted Marketplace Checkout
         </div>
       </div>
@@ -467,23 +467,23 @@ export default function Checkout() {
           Secure Checkout & Sales Order Generation
         </h1>
         {dealLocked && (
-          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#10b981' }}>Deal checkout — agreed price locked.</strong>{' '}
+          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid var(--color-success)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: 'var(--color-text)', lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--color-success)' }}>Deal checkout — agreed price locked.</strong>{' '}
             You negotiated this price in chat{dealSeller ? <> with <strong>@{dealSeller}</strong></> : null}; the seller-issued link applies it automatically and can be used once.
           </div>
         )}
         {isPartOrder ? (
-          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#10b981' }}>Direct payment — order confirmed on checkout.</strong>{' '}
+          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: 'var(--color-text)', lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--color-success)' }}>Direct payment — order confirmed on checkout.</strong>{' '}
             Parts are not held in escrow. Your payment confirms the order immediately and the seller prepares dispatch. Delivery completes the order.
           </div>
         ) : (
-          <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
-            <strong style={{ color: '#60a5fa' }}>Payment is held & secured — order not complete yet.</strong>{' '}
+          <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: 'var(--color-text)', lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--color-info-text)' }}>Payment is held & secured — order not complete yet.</strong>{' '}
             Your payment goes into platform escrow when you check out. It is released to the seller only after the car is delivered and you accept it on inspection. Rejected delivery opens a dispute → refund path.
           </div>
         )}
-        <p style={{ color: '#94a3b8', fontSize: 15, margin: 0 }}>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 15, margin: 0 }}>
           {isPartOrder
             ? 'Please enter your delivery destination and mandatory vehicle identification details (Chassis Number and VIN) to verify exact mechanical fitment and serialize your official sales order.'
             : 'Please enter your delivery destination to serialize your official vehicle sales order. The vehicle\u2019s own VIN is recorded automatically from its verified listing.'}
@@ -493,7 +493,7 @@ export default function Checkout() {
       {generalError && (
         <div style={{ 
           background: 'rgba(239, 68, 68, 0.1)', 
-          border: '1px solid #ef4444', 
+          border: '1px solid var(--color-error)', 
           color: '#f87171', 
           padding: '14px 18px', 
           borderRadius: 8, 
@@ -517,7 +517,7 @@ export default function Checkout() {
             {/* SECTION 1: VEHICLE IDENTIFICATION & FITMENT DETAILS (PART ORDERS ONLY) */}
             {isPartOrder && (
             <div style={{ 
-              background: '#161922', 
+              background: 'var(--card-bg)', 
               border: '1px solid #d8622c', 
               borderRadius: 12, 
               padding: 24,
@@ -546,7 +546,7 @@ export default function Checkout() {
                 </div>
                 <span style={{ 
                   background: 'rgba(216, 98, 44, 0.2)', 
-                  color: '#fb923c', 
+                  color: 'var(--color-accent)', 
                   fontSize: 11, 
                   fontWeight: 700, 
                   padding: '4px 10px', 
@@ -558,7 +558,7 @@ export default function Checkout() {
                 </span>
               </div>
 
-              <p style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
                 To guarantee 100% bolt-on compatibility and serialize your official sales order documentation, our master depot engineers cross-reference the chassis number and VIN with original factory schematics.
               </p>
 
@@ -566,8 +566,8 @@ export default function Checkout() {
 
                 {/* Chassis Number */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
-                    Vehicle Chassis / Frame Number <span style={{ color: '#ef4444' }}>*</span>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
+                    Vehicle Chassis / Frame Number <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -577,11 +577,11 @@ export default function Checkout() {
                     placeholder="e.g. JZA80-0012948 / S15-0928174"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: errors.chassis_number ? '1px solid #ef4444' : '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: errors.chassis_number ? '1px solid var(--color-error)' : '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       fontFamily: 'monospace',
                       textTransform: 'uppercase',
@@ -589,11 +589,11 @@ export default function Checkout() {
                     }}
                   />
                   {errors.chassis_number ? (
-                    <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: 'var(--color-error)', fontSize: 12, marginTop: 4 }}>
                       {Array.isArray(errors.chassis_number) ? errors.chassis_number[0] : errors.chassis_number}
                     </div>
                   ) : (
-                    <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: 11, marginTop: 4 }}>
                       Found on vehicle chassis plate, engine bay stamp, or registration card.
                     </div>
                   )}
@@ -601,8 +601,8 @@ export default function Checkout() {
 
                 {/* VIN */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
-                    Vehicle Identification Number (VIN) <span style={{ color: '#ef4444' }}>*</span>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
+                    Vehicle Identification Number (VIN) <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -612,11 +612,11 @@ export default function Checkout() {
                     placeholder="e.g. 1N4AL3AP8JC123456"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: errors.vin ? '1px solid #ef4444' : '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: errors.vin ? '1px solid var(--color-error)' : '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       fontFamily: 'monospace',
                       textTransform: 'uppercase',
@@ -624,11 +624,11 @@ export default function Checkout() {
                     }}
                   />
                   {errors.vin ? (
-                    <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: 'var(--color-error)', fontSize: 12, marginTop: 4 }}>
                       {Array.isArray(errors.vin) ? errors.vin[0] : errors.vin}
                     </div>
                   ) : (
-                    <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: 11, marginTop: 4 }}>
                       17-character international standard or JDM serialization.
                     </div>
                   )}
@@ -636,7 +636,7 @@ export default function Checkout() {
 
                 {/* Vehicle Make / Model / Year */}
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
                     Target Vehicle Make, Model & Year (Optional)
                   </label>
                   <input
@@ -647,11 +647,11 @@ export default function Checkout() {
                     placeholder="e.g. 1999 Nissan Silvia S15 Spec-R / 1998 Toyota Supra RZ"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       outline: 'none',
                     }}
@@ -664,15 +664,15 @@ export default function Checkout() {
 
             {/* SECTION 2: CUSTOMER & DELIVERY ADDRESS */}
             <div style={{ 
-              background: '#161922', 
-              border: '1px solid #1e293b', 
+              background: 'var(--card-bg)', 
+              border: '1px solid var(--card-border)', 
               borderRadius: 12, 
               padding: 24 
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
                 <div style={{ 
                   background: 'rgba(59, 130, 246, 0.15)', 
-                  color: '#60a5fa', 
+                  color: 'var(--color-info-text)', 
                   width: 36, 
                   height: 36, 
                   borderRadius: 8, 
@@ -684,7 +684,7 @@ export default function Checkout() {
                 </div>
                 <div>
                   <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Customer & Delivery Destination</h2>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
                     Official recipient information for freight logistics and sales order dispatch
                   </div>
                 </div>
@@ -695,9 +695,9 @@ export default function Checkout() {
                 {/* Destination source — saved cards or manual entry */}
                 {savedAddresses.length > 0 && (
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}>
                     <span>Deliver to</span>
-                    <Link to="/settings?tab=addresses" style={{ fontSize: 12, color: '#fb923c', fontWeight: 600 }}>Manage addresses</Link>
+                    <Link to="/settings?tab=addresses" style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 600 }}>Manage addresses</Link>
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
                     {savedAddresses.map((a) => {
@@ -709,20 +709,20 @@ export default function Checkout() {
                           onClick={() => chooseSavedAddress(a.id)}
                           style={{
                             textAlign: 'left',
-                            background: selected ? 'rgba(216, 98, 44, 0.08)' : '#0f1117',
-                            border: selected ? '1px solid #d8622c' : '1px solid #2d3748',
+                            background: selected ? 'rgba(216, 98, 44, 0.08)' : 'var(--color-surface-inset)',
+                            border: selected ? '1px solid #d8622c' : '1px solid var(--input-border)',
                             borderRadius: 10,
                             padding: '12px 14px',
                             cursor: 'pointer',
-                            color: '#f8fafc',
+                            color: 'var(--color-heading)',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
-                            <MapPin size={13} color={selected ? '#d8622c' : '#94a3b8'} />
+                            <MapPin size={13} color={selected ? '#d8622c' : 'var(--color-text-muted)'} />
                             {a.is_default ? '★ ' : ''}{a.label}
-                            {a.latitude != null && <span style={{ fontSize: 11, color: '#10b981' }}>· pinned</span>}
+                            {a.latitude != null && <span style={{ fontSize: 11, color: 'var(--color-success)' }}>· pinned</span>}
                           </div>
-                          <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
                             {a.full_address || a.address_line}
                           </div>
                         </button>
@@ -733,11 +733,11 @@ export default function Checkout() {
                       onClick={() => { setDestMode('new'); setSelectedAddressId('') }}
                       style={{
                         background: destMode === 'new' ? 'rgba(216, 98, 44, 0.08)' : 'transparent',
-                        border: destMode === 'new' ? '1px solid #d8622c' : '1px dashed #2d3748',
+                        border: destMode === 'new' ? '1px solid #d8622c' : '1px dashed var(--input-border)',
                         borderRadius: 10,
                         padding: '12px 14px',
                         cursor: 'pointer',
-                        color: destMode === 'new' ? '#fb923c' : '#94a3b8',
+                        color: destMode === 'new' ? 'var(--color-accent)' : 'var(--color-text-muted)',
                         fontSize: 13,
                         fontWeight: 600,
                       }}
@@ -750,8 +750,8 @@ export default function Checkout() {
 
                 {/* Full Name */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
-                    Customer / Recipient Full Name <span style={{ color: '#ef4444' }}>*</span>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
+                    Customer / Recipient Full Name <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -761,17 +761,17 @@ export default function Checkout() {
                     placeholder="e.g. Kenji Takahashi"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: errors.buyer_name ? '1px solid #ef4444' : '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: errors.buyer_name ? '1px solid var(--color-error)' : '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       outline: 'none',
                     }}
                   />
                   {errors.buyer_name && (
-                    <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: 'var(--color-error)', fontSize: 12, marginTop: 4 }}>
                       {Array.isArray(errors.buyer_name) ? errors.buyer_name[0] : errors.buyer_name}
                     </div>
                   )}
@@ -779,8 +779,8 @@ export default function Checkout() {
 
                 {/* Email */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
-                    Email Address for Sales Order PDF <span style={{ color: '#ef4444' }}>*</span>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
+                    Email Address for Sales Order PDF <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <input
                     type="email"
@@ -790,17 +790,17 @@ export default function Checkout() {
                     placeholder="e.g. kenji@tokyogarage.jp"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: errors.buyer_email ? '1px solid #ef4444' : '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: errors.buyer_email ? '1px solid var(--color-error)' : '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       outline: 'none',
                     }}
                   />
                   {errors.buyer_email && (
-                    <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: 'var(--color-error)', fontSize: 12, marginTop: 4 }}>
                       {Array.isArray(errors.buyer_email) ? errors.buyer_email[0] : errors.buyer_email}
                     </div>
                   )}
@@ -808,7 +808,7 @@ export default function Checkout() {
 
                 {/* Contact Phone */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
                     Contact Phone / Mobile Number
                   </label>
                   <input
@@ -819,11 +819,11 @@ export default function Checkout() {
                     placeholder="e.g. +63 917 123 4567"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       outline: 'none',
                     }}
@@ -832,7 +832,7 @@ export default function Checkout() {
 
                 {/* City */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
                     City / Municipality
                   </label>
                   <input
@@ -843,11 +843,11 @@ export default function Checkout() {
                     placeholder="e.g. Makati City, Metro Manila"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       outline: 'none',
                     }}
@@ -856,8 +856,8 @@ export default function Checkout() {
 
                 {/* Street Address */}
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
-                    Complete Street Address / Garage Workshop Destination <span style={{ color: '#ef4444' }}>*</span>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
+                    Complete Street Address / Garage Workshop Destination <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <textarea
                     rows={2}
@@ -867,18 +867,18 @@ export default function Checkout() {
                     placeholder="Unit / House No., Street, Barangay, Landmark (e.g. 3-14-2 Minatomirai, Nishi-ku or Unit 4B Chino Roces Ave)"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: errors.shipping_address ? '1px solid #ef4444' : '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: errors.shipping_address ? '1px solid var(--color-error)' : '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       outline: 'none',
                       resize: 'vertical',
                     }}
                   />
                   {errors.shipping_address && (
-                    <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: 'var(--color-error)', fontSize: 12, marginTop: 4 }}>
                       {Array.isArray(errors.shipping_address) ? errors.shipping_address[0] : errors.shipping_address}
                     </div>
                   )}
@@ -886,7 +886,7 @@ export default function Checkout() {
 
                 {/* Postal Code */}
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
                     Postal / ZIP Code
                   </label>
                   <input
@@ -897,11 +897,11 @@ export default function Checkout() {
                     placeholder="e.g. 1200"
                     style={{
                       width: '100%',
-                      background: '#0f1117',
-                      border: '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       outline: 'none',
                     }}
@@ -911,11 +911,11 @@ export default function Checkout() {
                 {/* Precise drop-off pin (parts freight) — always visible, no extra step */}
                 {isPartOrder && (
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}>
                     <MapPin size={14} />
                     <span>Drop-off Pin</span>
                     {formData.delivery_latitude !== '' && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-success)' }}>
                         {Number(formData.delivery_latitude).toFixed(5)}, {Number(formData.delivery_longitude).toFixed(5)}
                       </span>
                     )}
@@ -942,8 +942,8 @@ export default function Checkout() {
 
                 {/* Save this destination for later (logged-in buyers) */}
                 {user && (
-                <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: '#0f1117', border: '1px solid #1e293b', borderRadius: 8, padding: '12px 14px' }}>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0', cursor: 'pointer' }}>
+                <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: 'var(--color-surface-inset)', border: '1px solid var(--card-border)', borderRadius: 8, padding: '12px 14px' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text)', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={saveToBook}
@@ -957,7 +957,7 @@ export default function Checkout() {
                       value={bookLabel}
                       onChange={(e) => setBookLabel(e.target.value)}
                       aria-label="Address book label"
-                      style={{ background: '#161922', border: '1px solid #2d3748', borderRadius: 8, padding: '8px 10px', color: '#f8fafc', fontSize: 13, outline: 'none' }}
+                      style={{ background: 'var(--card-bg)', border: '1px solid var(--input-border)', borderRadius: 8, padding: '8px 10px', color: 'var(--color-heading)', fontSize: 13, outline: 'none' }}
                     >
                       {ADDRESS_LABELS.map((l) => (
                         <option key={l} value={l}>{l}</option>
@@ -972,8 +972,8 @@ export default function Checkout() {
 
             {/* SECTION 3: SALES AGENT & REFERRAL PARTNER (OPTIONAL) */}
             <div style={{ 
-              background: '#161922', 
-              border: agentInfo ? '1px solid #10b981' : '1px solid #1e293b', 
+              background: 'var(--card-bg)', 
+              border: agentInfo ? '1px solid var(--color-success)' : '1px solid var(--card-border)', 
               borderRadius: 12, 
               padding: 24,
               transition: 'border-color 0.2s ease' 
@@ -982,7 +982,7 @@ export default function Checkout() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ 
                     background: 'rgba(249, 115, 22, 0.15)', 
-                    color: '#f97316', 
+                    color: 'var(--color-accent)', 
                     width: 36, 
                     height: 36, 
                     borderRadius: 8, 
@@ -994,7 +994,7 @@ export default function Checkout() {
                   </div>
                   <div>
                     <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Sales Agent / Referral Partner</h2>
-                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
                       Support your referring tuning shop, advisor, or garage affiliate
                     </div>
                   </div>
@@ -1002,7 +1002,7 @@ export default function Checkout() {
                 {agentInfo && (
                   <span style={{ 
                     background: 'rgba(16, 185, 129, 0.15)', 
-                    color: '#10b981', 
+                    color: 'var(--color-success)', 
                     fontSize: 12, 
                     fontWeight: 700, 
                     padding: '4px 10px', 
@@ -1014,7 +1014,7 @@ export default function Checkout() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
                   Sales Agent Referral Code (Optional)
                 </label>
                 <div style={{ display: 'flex', gap: 10 }}>
@@ -1026,11 +1026,11 @@ export default function Checkout() {
                     placeholder="e.g. AGT-ANTON or YOUR_AGENT_CODE"
                     style={{
                       flex: 1,
-                      background: '#0f1117',
-                      border: agentInfo ? '1px solid #10b981' : '1px solid #2d3748',
+                      background: 'var(--color-surface-inset)',
+                      border: agentInfo ? '1px solid var(--color-success)' : '1px solid var(--input-border)',
                       borderRadius: 8,
                       padding: '12px 14px',
-                      color: '#f8fafc',
+                      color: 'var(--color-heading)',
                       fontSize: 14,
                       fontFamily: 'monospace',
                       textTransform: 'uppercase',
@@ -1040,7 +1040,7 @@ export default function Checkout() {
                 </div>
 
                 {verifyingAgent && (
-                  <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>
+                  <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 6 }}>
                     Checking agent code...
                   </div>
                 )}
@@ -1059,10 +1059,10 @@ export default function Checkout() {
                   }}>
                     <span style={{ fontSize: 16 }}>🤝</span>
                     <div>
-                      <div style={{ fontWeight: 700, color: '#10b981' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--color-success)' }}>
                         Accredited Agent: {agentInfo.name} ({agentInfo.agent_code})
                       </div>
-                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
                         {agentInfo.tagline || 'Official Garage Parts Sales Specialist'} · 5% Sales Commission Accredited
                       </div>
                     </div>
@@ -1070,7 +1070,7 @@ export default function Checkout() {
                 )}
 
                 {!agentInfo && formData.agent_code && !verifyingAgent && (
-                  <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>
+                  <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 6 }}>
                     Sales attribution code <strong>{formData.agent_code}</strong> will be recorded on your sales order.
                   </div>
                 )}
@@ -1079,8 +1079,8 @@ export default function Checkout() {
 
             {/* SECTION 4: PAYMENT — PAY FIRST (MOCK SETTLEMENT) */}
             <div style={{
-              background: '#161922',
-              border: mockPaid ? '1px solid #10b981' : '1px solid #1e293b',
+              background: 'var(--card-bg)',
+              border: mockPaid ? '1px solid var(--color-success)' : '1px solid var(--card-border)',
               borderRadius: 12,
               padding: 24,
               transition: 'border-color 0.2s ease'
@@ -1088,7 +1088,7 @@ export default function Checkout() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <div style={{
                   background: mockPaid ? 'rgba(16, 185, 129, 0.15)' : 'rgba(216, 98, 44, 0.15)',
-                  color: mockPaid ? '#10b981' : '#d8622c',
+                  color: mockPaid ? 'var(--color-success)' : '#d8622c',
                   width: 36,
                   height: 36,
                   borderRadius: 8,
@@ -1100,7 +1100,7 @@ export default function Checkout() {
                 </div>
                 <div>
                   <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Payment Settlement</h2>
-                  <div style={{ fontSize: 12, color: mockPaid ? '#10b981' : '#eab308', marginTop: 2, fontWeight: 600 }}>
+                  <div style={{ fontSize: 12, color: mockPaid ? 'var(--color-success)' : 'var(--color-warning)', marginTop: 2, fontWeight: 600 }}>
                     {mockPaid ? 'Paid — order will be created as a complete sales order' : 'Pay now — checkout completes only after settlement'}
                   </div>
                 </div>
@@ -1120,8 +1120,8 @@ export default function Checkout() {
                     style={{
                       fontSize: 13, fontWeight: 600, padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
                       background: formData.payment_method === m.id ? 'rgba(216, 98, 44, 0.15)' : 'transparent',
-                      border: formData.payment_method === m.id ? '1px solid #d8622c' : '1px solid #2d3748',
-                      color: formData.payment_method === m.id ? '#fb923c' : '#94a3b8',
+                      border: formData.payment_method === m.id ? '1px solid #d8622c' : '1px solid var(--input-border)',
+                      color: formData.payment_method === m.id ? 'var(--color-accent)' : 'var(--color-text-muted)',
                     }}
                   >
                     {m.label}
@@ -1129,14 +1129,14 @@ export default function Checkout() {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: '#0f1117', border: '1px solid #1e293b', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'var(--color-surface-inset)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '14px 16px' }}>
                 <div style={{ flex: '1 1 200px' }}>
-                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Amount due</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Amount due</div>
                   <div style={{ fontSize: 22, fontWeight: 900, color: '#d8622c', fontFamily: 'var(--font-display, inherit)' }}>
                     {formatCurrency(grandTotal)}
                   </div>
                   {mockPaid && (
-                    <div style={{ fontSize: 11, color: '#10b981', fontFamily: 'monospace', marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: 'var(--color-success)', fontFamily: 'monospace', marginTop: 2 }}>
                       Ref: {mockRef} · MOCK — real gateway plugs in later
                     </div>
                   )}
@@ -1146,7 +1146,7 @@ export default function Checkout() {
                   onClick={handleMockPay}
                   disabled={payProcessing || mockPaid}
                   style={{
-                    background: mockPaid ? '#10b981' : '#d8622c',
+                    background: mockPaid ? 'var(--color-success)' : '#d8622c',
                     color: '#fff', border: 'none', borderRadius: 8, padding: '12px 22px',
                     fontSize: 14, fontWeight: 700, cursor: (payProcessing || mockPaid) ? 'default' : 'pointer',
                     display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -1161,12 +1161,12 @@ export default function Checkout() {
 
             {/* SECTION 4: NOTES & FITMENT INSTRUCTIONS */}
             <div style={{ 
-              background: '#161922', 
-              border: '1px solid #1e293b', 
+              background: 'var(--card-bg)', 
+              border: '1px solid var(--card-border)', 
               borderRadius: 12, 
               padding: 24 
             }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 6 }}>
                 Special Fitment Notes / Dispatch Instructions
               </label>
               <textarea
@@ -1177,11 +1177,11 @@ export default function Checkout() {
                 placeholder="Include custom vehicle setup, requested courier notes, or specific mechanics requests..."
                 style={{
                   width: '100%',
-                  background: '#0f1117',
-                  border: '1px solid #2d3748',
+                  background: 'var(--color-surface-inset)',
+                  border: '1px solid var(--input-border)',
                   borderRadius: 8,
                   padding: '12px 14px',
-                  color: '#f8fafc',
+                  color: 'var(--color-heading)',
                   fontSize: 14,
                   outline: 'none',
                   resize: 'vertical',
@@ -1194,34 +1194,34 @@ export default function Checkout() {
           {/* Right Column: Order Summary & Sales Order Generator */}
           <div style={{ position: 'sticky', top: 24 }}>
             <div style={{ 
-              background: '#161922', 
-              border: '1px solid #1e293b', 
+              background: 'var(--card-bg)', 
+              border: '1px solid var(--card-border)', 
               borderRadius: 12, 
               padding: 24,
               boxShadow: '0 8px 30px rgba(0,0,0,0.4)' 
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1e293b', paddingBottom: 16, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--card-border)', paddingBottom: 16, marginBottom: 16 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Package size={18} color="#d8622c" /> Order Summary
                 </h3>
-                <span style={{ fontSize: 12, color: '#94a3b8' }}>1 Item</span>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>1 Item</span>
               </div>
 
               {/* Item Card Preview */}
               {loadingItem ? (
-                <div style={{ padding: '24px 0', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13 }}>
                   Loading order item details...
                 </div>
               ) : item ? (
-                <div style={{ display: 'flex', gap: 14, marginBottom: 20, borderBottom: '1px solid #1e293b', paddingBottom: 20 }}>
+                <div style={{ display: 'flex', gap: 14, marginBottom: 20, borderBottom: '1px solid var(--card-border)', paddingBottom: 20 }}>
                   <div style={{ 
                     width: 72, 
                     height: 72, 
                     borderRadius: 8, 
                     overflow: 'hidden', 
-                    background: '#0f1117', 
+                    background: 'var(--color-surface-inset)', 
                     flexShrink: 0,
-                    border: '1px solid #2d3748'
+                    border: '1px solid var(--input-border)'
                   }}>
                     <img 
                       src={item.primary_image_url || item.primaryImageUrl || 'https://images.unsplash.com/photo-1613214149922-f1809c99b414?auto=format&fit=crop&w=400&q=80'} 
@@ -1230,10 +1230,10 @@ export default function Checkout() {
                     />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#f8fafc', lineHeight: 1.3, marginBottom: 4 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3, marginBottom: 4 }}>
                       {item.title}
                     </div>
-                    <div style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'monospace', marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontFamily: 'monospace', marginBottom: 6 }}>
                       SKU: {item.part_number || item.vin || (item.id ? `GP-${item.id}` : 'GP-ORD-01')}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1243,19 +1243,19 @@ export default function Checkout() {
                       
                       {/* Qty Selector */}
                       {itemType !== 'car' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0f1117', border: '1px solid #2d3748', borderRadius: 6, padding: '2px 8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface-inset)', border: '1px solid var(--input-border)', borderRadius: 6, padding: '2px 8px' }}>
                           <button
                             type="button"
                             onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 14, padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 14, padding: 0 }}
                           >
                             -
                           </button>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#f8fafc' }}>{quantity}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-heading)' }}>{quantity}</span>
                           <button
                             type="button"
                             onClick={() => setQuantity(quantity + 1)}
-                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 14, padding: 0 }}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 14, padding: 0 }}
                           >
                             +
                           </button>
@@ -1268,30 +1268,30 @@ export default function Checkout() {
 
               {/* Price Calculation Breakdown */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13, marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
                   <span>Items Subtotal</span>
-                  <span style={{ color: '#f8fafc', fontWeight: 600 }}>{formatCurrency(subtotal)}</span>
+                  <span style={{ color: 'var(--color-heading)', fontWeight: 600 }}>{formatCurrency(subtotal)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
                   <span>
                     Express Freight Logistics
                     {quote?.zone && (
-                      <span style={{ display: 'block', fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                      <span style={{ display: 'block', fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
                         From GAP Valenzuela Main · {quote.zone}{quote.distance_km != null ? ` · ${quote.distance_km} km` : ''}
                       </span>
                     )}
                   </span>
-                  <span style={{ color: isFreeShipping ? '#10b981' : '#f8fafc', fontWeight: 600 }}>
+                  <span style={{ color: isFreeShipping ? 'var(--color-success)' : 'var(--color-heading)', fontWeight: 600 }}>
                     {isFreeShipping ? 'FREE (Special Promo)' : formatCurrency(shippingFee)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
                   <span>Chassis & VIN Fitment Validation</span>
-                  <span style={{ color: '#10b981', fontWeight: 600 }}>Included (₱0.00)</span>
+                  <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Included (₱0.00)</span>
                 </div>
                 
-                <div style={{ borderTop: '1px solid #1e293b', paddingTop: 12, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>Total Payable</span>
+                <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: 12, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-heading)' }}>Total Payable</span>
                   <span style={{ fontSize: 22, fontWeight: 900, color: '#d8622c', fontFamily: 'var(--font-display, inherit)' }}>
                     {formatCurrency(grandTotal)}
                   </span>
@@ -1301,7 +1301,7 @@ export default function Checkout() {
               {isOwnListing && !loadingItem && (
                 <div style={{
                   background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid #ef4444',
+                  border: '1px solid var(--color-error)',
                   color: '#f87171',
                   padding: '14px 18px',
                   borderRadius: 8,
@@ -1349,21 +1349,21 @@ export default function Checkout() {
               </button>
 
               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
-                  <CheckCircle2 size={13} color="#10b981" /> Official Sales Order document serialized instantly
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>
+                  <CheckCircle2 size={13} color="var(--color-success)" /> Official Sales Order document serialized instantly
                 </div>
                 {isPartOrder ? (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
-                      <CheckCircle2 size={13} color="#10b981" /> Chassis number & VIN recorded on official receipt
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>
+                      <CheckCircle2 size={13} color="var(--color-success)" /> Chassis number & VIN recorded on official receipt
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
-                      <CheckCircle2 size={13} color="#10b981" /> Money-back fitment guarantee policy
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>
+                      <CheckCircle2 size={13} color="var(--color-success)" /> Money-back fitment guarantee policy
                     </div>
                   </>
                 ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
-                    <CheckCircle2 size={13} color="#10b981" /> Vehicle VIN recorded from verified listing
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>
+                    <CheckCircle2 size={13} color="var(--color-success)" /> Vehicle VIN recorded from verified listing
                   </div>
                 )}
               </div>
