@@ -335,6 +335,17 @@
   font-size: 14.5px;
 }
 
+/* --- Tablet/phone: gallery + info stack (standard bp-phone — see styles/responsive.css) --- */
+@media (max-width: 640px) {
+  .detail-main-media { aspect-ratio: 4 / 3; border-radius: var(--radius-lg); }
+  .detail-thumbs-strip { gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .detail-thumbs-strip::-webkit-scrollbar { display: none; }
+  .detail-header-card,
+  .detail-specs-card,
+  .detail-seller-card { padding: 18px 16px; border-radius: var(--radius-lg); }
+  .detail-actions-row { gap: 10px; }
+}
+
 /* --- Mobile: wrap price/seller rows, stack CTAs --- */
 @media (max-width: 480px) {
   .detail-price-box {

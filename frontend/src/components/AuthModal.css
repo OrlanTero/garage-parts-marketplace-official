@@ -279,7 +279,8 @@
 }
 
 .field-input--with-icon {
-  padding-left: 40px;
+  padding-left: 40px !important;
+  /*margin-left: 40px;*/
 }
 
 .field-input--with-trailing {

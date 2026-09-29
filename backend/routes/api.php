@@ -89,8 +89,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         // Canonical
         Route::get('/auth/me', [AuthController::class, 'me'])->name('api.auth.me');
-        Route::patch('/auth/profile', [AuthController::class, 'updateProfile'])->name('api.auth.profile');
-        Route::post('/auth/password', [AuthController::class, 'changePassword'])->name('api.auth.password');
+Route::patch('/auth/profile', [AuthController::class, 'updateProfile'])->name('api.auth.profile');
+Route::post('/auth/password', [AuthController::class, 'changePassword'])->name('api.auth.password');
+Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name('api.auth.onboarding');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll'])->name('api.auth.logoutAll');
 

@@ -733,15 +733,6 @@ export default function CreateListing({ defaultType = 'car' }) {
             </div>
           )}
 
-          {/* House-Only Parts Policy */}
-          {isAuthenticated && !canSellParts && (
-            <div className="role-warning-banner" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#92400e' }}>
-              <AlertCircle size={20} style={{ flexShrink: 0 }} />
-              <div>
-                <strong>Parts Selling Policy:</strong> Car parts are sold exclusively by <strong>GAP Valenzuela Main</strong>. Your account may list vehicles & builds only.
-              </div>
-            </div>
-          )}
 
           {/* Vehicle Inspection Lifecycle Notice */}
           {listingType === 'car' && (
@@ -1184,11 +1175,7 @@ export default function CreateListing({ defaultType = 'car' }) {
                   <p className="dropzone-subtitle">
                     Supports high-resolution JPG, PNG, WEBP, AVIF up to 20MB per photo. First photo serves as Primary Cover.
                   </p>
-                  <div className="dropzone-badge-row">
-                    <span className="dropzone-pill">High-Res 4K Ready</span>
-                    <span className="dropzone-pill">Laravel Storage / S3</span>
-                    <span className="dropzone-pill">Multi-Photo Walkaround</span>
-                  </div>
+
                 </div>
 
                 {/* Upload Status Banner */}

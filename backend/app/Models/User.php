@@ -32,6 +32,8 @@ class User extends Authenticatable
         'provider',
         'provider_id',
         'avatar_url',
+        'interests',
+        'onboarding_completed_at',
         'agent_code',
         'commission_rate',
         'is_agent',
@@ -83,7 +85,15 @@ class User extends Authenticatable
             'agent_last_payment_at' => 'datetime',
             'agent_last_payment_amount' => 'decimal:2',
             'referral_reward_paid_at' => 'datetime',
+            'interests' => 'array',
+            'onboarding_completed_at' => 'datetime',
         ];
+    }
+
+    /** True when the account still has to finish the /welcome setup wizard. */
+    public function needsOnboarding(): bool
+    {
+        return $this->onboarding_completed_at === null;
     }
 
     protected static function booted(): void

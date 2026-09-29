@@ -204,17 +204,15 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </Link>
             )}
 
-            {isSeller && (
-              <Link to="/wallet" className="user-dropdown-item" onClick={handleLinkClick}>
-                <div className="user-dropdown-item-icon icon-action">
-                  <WalletIcon size={16} />
-                </div>
-                <div className="user-dropdown-item-text">
-                  <span className="user-dropdown-item-title">Seller Wallet</span>
-                  <span className="user-dropdown-item-desc">Statements, payout accounts & cash-outs</span>
-                </div>
-              </Link>
-            )}
+            <Link to="/wallet" className="user-dropdown-item" onClick={handleLinkClick}>
+              <div className="user-dropdown-item-icon icon-action">
+                <WalletIcon size={16} />
+              </div>
+              <div className="user-dropdown-item-text">
+                <span className="user-dropdown-item-title">My Wallet</span>
+                <span className="user-dropdown-item-desc">Earnings, payouts & cash-outs</span>
+              </div>
+            </Link>
 
             {isSeller && (
               <Link to="/seller-analytics" className="user-dropdown-item" onClick={handleLinkClick}>

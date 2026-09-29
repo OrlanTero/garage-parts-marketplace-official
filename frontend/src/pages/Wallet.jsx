@@ -75,6 +75,7 @@ const labelStyle = { display: 'block', fontSize: 12, fontWeight: 700, color: 'va
 
 export default function Wallet() {
   const { user, isAuthenticated } = useAuth()
+  const isSellerRole = user && ['seller', 'dealer', 'parts_seller', 'admin', 'super_admin'].includes(user.role)
   const [summary, setSummary] = useState(null)
   const [statements, setStatements] = useState([])
   const [stmtMeta, setStmtMeta] = useState(null)
@@ -189,8 +190,8 @@ export default function Wallet() {
     return (
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '64px 20px', textAlign: 'center' }}>
         <WalletIcon size={40} style={{ color: 'var(--color-text-muted)' }} />
-        <h2 style={{ color: 'var(--color-heading)' }}>Seller Wallet</h2>
-        <p style={{ color: 'var(--color-text-muted)' }}>Log in with a seller account to see your sales earnings, payout accounts, and cash-outs.</p>
+        <h2 style={{ color: 'var(--color-heading)' }}>My Wallet</h2>
+        <p style={{ color: 'var(--color-text-muted)' }}>Log in to see your earnings, referral rewards, payout accounts, and cash-outs.</p>
       </div>
     )
   }
@@ -199,13 +200,15 @@ export default function Wallet() {
     <div style={{ maxWidth: 1020, margin: '0 auto', padding: '32px 20px 80px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-heading)', margin: '0 0 4px 0' }}>Seller Wallet</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-heading)', margin: '0 0 4px 0' }}>My Wallet</h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: 13, margin: 0 }}>
-            Billing statements, payout accounts, and cash-outs for <strong style={{ color: 'var(--color-text)' }}>@{user?.username}</strong>
+            Sales earnings, referral rewards, payout accounts, and cash-outs for <strong style={{ color: 'var(--color-text)' }}>@{user?.username}</strong>
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Link to="/seller-analytics" className="btn btn-secondary btn-sm">Sales Analytics</Link>
+          {isSellerRole && (
+            <Link to="/seller-analytics" className="btn btn-secondary btn-sm">Sales Analytics</Link>
+          )}
           <button type="button" className="btn btn-secondary btn-sm" onClick={loadAll} disabled={loading}>
             <RefreshCw size={14} /> {loading ? 'Loading…' : 'Refresh'}
           </button>
@@ -213,12 +216,12 @@ export default function Wallet() {
       </div>
 
       {notice && (
-        <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--color-success)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#a7f3d0', display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ background: 'var(--color-success-bg)', border: '1px solid var(--color-success)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: 'var(--color-success)', display: 'flex', gap: 8, alignItems: 'center' }}>
           <CheckCircle2 size={16} /> {notice}
         </div>
       )}
       {error && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--color-error)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#fca5a5' }}>
+        <div style={{ background: 'var(--color-error-bg)', border: '1px solid var(--color-error)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: 'var(--color-error)' }}>
           {error}
         </div>
       )}
@@ -272,7 +275,7 @@ export default function Wallet() {
       {tab === 'statements' && (
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-            <h3 style={{ color: 'var(--color-heading)', fontSize: 15, margin: 0 }}>Ledger — sales in, cash-outs out</h3>
+            <h3 style={{ color: 'var(--color-heading)', fontSize: 15, margin: 0 }}>Ledger — sales, referrals & commissions in, cash-outs out</h3>
             <div style={{ display: 'flex', gap: 6 }}>
               {[['all', 'All'], ['payouts', 'Sales'], ['withdrawals', 'Cash-outs']].map(([id, label]) => (
                 <button
@@ -291,7 +294,13 @@ export default function Wallet() {
           ) : statements.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)', fontSize: 13 }}>
               <WalletIcon size={28} style={{ marginBottom: 8, opacity: 0.6 }} />
-              <div>No billing activity yet. Completed sales will appear here as payouts.</div>
+              <div>No earnings yet. Sales payouts, agent commissions, and referral rewards will appear here.</div>
+              {!isSellerRole && (
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 14, flexWrap: 'wrap' }}>
+                  <Link to="/agent" className="btn btn-secondary btn-sm">Earn as an agent</Link>
+                  <Link to="/become-seller" className="btn btn-secondary btn-sm">Become a seller</Link>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -458,9 +467,11 @@ export default function Wallet() {
                 ))}
               </div>
             )}
-            <Link to="/seller-analytics" style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-accent)', textDecoration: 'none', display: 'inline-block', marginTop: 12 }}>
-              View sales analytics →
-            </Link>
+            {isSellerRole && (
+              <Link to="/seller-analytics" style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-accent)', textDecoration: 'none', display: 'inline-block', marginTop: 12 }}>
+                View sales analytics →
+              </Link>
+            )}
           </div>
         </div>
       )}

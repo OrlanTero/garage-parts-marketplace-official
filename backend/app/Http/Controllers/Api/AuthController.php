@@ -92,4 +92,30 @@ class AuthController extends Controller
 
         return response()->json(['message' => 'Password updated.']);
     }
+
+    /**
+     * POST /auth/onboarding — setup wizard persistence.
+     * Saves interest picks anytime; stamps completion when { complete: true }.
+     * Everything else in the wizard (KYC, agent) is optional and skippable.
+     */
+    public function saveOnboarding(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'interests' => ['sometimes', 'array', 'max:30'],
+            'interests.*' => ['string', 'max:60'],
+            'complete' => ['sometimes', 'boolean'],
+        ]);
+
+        if (array_key_exists('interests', $data)) {
+            $user->interests = array_values(array_unique($data['interests']));
+        }
+        if (! empty($data['complete'])) {
+            $user->onboarding_completed_at = $user->onboarding_completed_at ?? now();
+        }
+        $user->save();
+
+        return response()->json(new UserResource($user->refresh()));
+    }
 }

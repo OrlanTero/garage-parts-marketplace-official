@@ -60,7 +60,7 @@ export default function ThreadQuickBar({
   const steps = isSeller ? nextSteps(activeOrder) : []
 
   return (
-    <div className="messages-hub-deal-bar" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+    <div className="messages-hub-deal-bar messages-hub-quickbar" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>
         <MessageSquareText size={13} />
         <span>
@@ -70,7 +70,7 @@ export default function ThreadQuickBar({
         </span>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="messages-hub-quick-scroll">
         {templates.map((t) => (
           <button
             key={t}
@@ -86,7 +86,7 @@ export default function ThreadQuickBar({
       </div>
 
       {steps.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="messages-hub-quick-scroll">
           {steps.map((st) => (
             <button
               key={st}

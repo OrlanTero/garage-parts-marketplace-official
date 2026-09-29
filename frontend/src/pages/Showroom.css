@@ -289,14 +289,31 @@
 
 .showroom-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
   gap: 28px;
 }
 
 @media (max-width: 640px) {
   .showroom-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
+  .showroom-main { margin-top: 24px; }
+  .showroom-controls-wrapper { top: 60px; padding: 12px 0; }
+  .seller-card-header { padding: 18px 16px 14px; }
+  .seller-avatar { width: 56px; height: 56px; font-size: 20px; }
+  .seller-card-footer { flex-direction: column; }
+  .seller-card-footer .btn { width: 100%; }
+  .garage-highlights-grid { gap: 16px; }
+  .highlight-image-box { height: 180px; }
+}
+
+@media (max-width: 480px) {
+  .seller-kpi-item { padding: 10px 8px; }
+  .seller-kpi-val { font-size: 14px; }
+  .showcase-modal-banner { padding: 28px 20px; }
+  .showcase-profile-row { gap: 14px; }
+  .showcase-large-avatar { width: 64px; height: 64px; }
 }
 
 /* Individual Seller Card */
@@ -653,6 +670,61 @@
   border: 1px solid var(--card-border);
 }
 
+/* Mobile back bar — only shown when the showcase renders as a page. */
+.showcase-mobile-bar {
+  display: none;
+}
+
+.showcase-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--color-heading);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+
+/* Mobile: showcase is a full page, not a popup. */
+@media (max-width: 768px) {
+  .showcase-modal-overlay {
+    padding: 0;
+    display: block;
+    overflow-y: auto;
+    background: var(--color-background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .showcase-modal {
+    width: 100%;
+    max-height: none;
+    min-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .showcase-close-btn {
+    display: none;
+  }
+  .showcase-mobile-bar {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 12px 16px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    background: var(--topbar-bg-translucent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-border);
+  }
+}
+
 /* Showcase Banner Header */
 .showcase-modal-banner {
   background: 
@@ -893,7 +965,7 @@
 
 .garage-highlights-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
   gap: 22px;
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Car,
@@ -96,6 +96,7 @@ function MessageSkeleton() {
 export default function Messages() {
   const { user, isAuthenticated, openLoginModal } = useAuth()
   const { unreadCount, refreshUnreadCount } = useChat()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const targetListingKey = searchParams.get('listing')
   const targetConvId = searchParams.get('conversation')
@@ -704,9 +705,25 @@ export default function Messages() {
     }
   }
 
+  // Mobile chrome (navbar + FAB) is hidden on this page — this single back
+  // button is the way back to the main layout.
+  const goBackToMain = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) navigate(-1)
+    else navigate('/')
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="messages-hub-page messages-hub-page--guest">
+        <button
+          type="button"
+          className="messages-hub-mobile-back-btn messages-hub-guest-back-btn"
+          onClick={goBackToMain}
+          title="Back"
+          aria-label="Back"
+        >
+          <ArrowLeft size={18} />
+        </button>
         <div className="messages-hub-guest-card">
           <div className="messages-hub-guest-icon">
             <MessageSquare size={36} />
@@ -742,7 +759,18 @@ export default function Messages() {
         <aside className="messages-hub-sidebar">
           <div className="messages-hub-sidebar-header">
             <div className="messages-hub-title-row">
-              <h1 className="messages-hub-title">Inbox</h1>
+              <span className="messages-hub-title-with-back">
+                <button
+                  type="button"
+                  className="messages-hub-mobile-back-btn"
+                  onClick={goBackToMain}
+                  title="Back"
+                  aria-label="Back to main"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <h1 className="messages-hub-title">Inbox</h1>
+              </span>
               {unreadCount > 0 && (
                 <span className="action-badge-inline">{unreadCount} unread</span>
               )}

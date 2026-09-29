@@ -251,7 +251,7 @@
 .parts-wanted-tag {
   display: inline-block;
   background: var(--color-orange-light);
-  color: var(--color-rust);
+  color: var(--color-accent);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
@@ -286,4 +286,20 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* Phone refinements (standard bp-phone / bp-small — see styles/responsive.css) */
+@media (max-width: 640px) {
+  .parts-container { padding-top: 20px; }
+  .parts-toolbar { padding: 14px; border-radius: var(--radius-lg); }
+  .parts-toolbar-secondary { flex-direction: column; align-items: stretch; }
+  .parts-category-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -4vw; padding-inline: 4vw; }
+  .parts-category-chips::-webkit-scrollbar { display: none; }
+  .view-controls { margin-left: 0; justify-content: space-between; }
+}
+
+@media (max-width: 480px) {
+  .parts-hero-inner { gap: 14px; }
+  .parts-wanted-banner { padding: 20px 16px; border-radius: var(--radius-lg); }
+  .parts-wanted-banner .btn { width: 100%; }
 }

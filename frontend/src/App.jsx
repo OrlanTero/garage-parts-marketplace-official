@@ -46,6 +46,8 @@ import Favorites from './pages/Favorites.jsx'
 import Messages from './pages/Messages.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
+import OAuthCallback from './pages/OAuthCallback.jsx'
+import Welcome from './pages/Welcome.jsx'
 import SearchModal from './components/SearchModal.jsx'
 import MobileQuickActions from './components/MobileQuickActions.jsx'
 import AuthModal from './components/AuthModal.jsx'
@@ -97,7 +99,8 @@ function Placeholder({ title }) {
 export default function App() {
   const { 
     isAuthenticated, 
-    user, 
+    user,
+    status: authStatus,
     logout, 
     authModal, 
     openLoginModal, 
@@ -121,6 +124,17 @@ export default function App() {
 
   const isBuyer = user?.role === 'buyer'
   const isSellerAccount = user && ['seller', 'dealer', 'parts_seller', 'admin', 'super_admin'].includes(user.role)
+
+  // Setup gate: signed-in accounts that haven't finished /welcome can't
+  // enter the app. Auth + callback + wizard routes stay accessible.
+  useEffect(() => {
+    if (authStatus === 'loading' || !isAuthenticated) return
+    if (!user?.needs_onboarding) return
+    const open = ['/welcome', '/login', '/register', '/oauth/callback']
+    if (!open.includes(location.pathname)) {
+      navigate('/welcome', { replace: true })
+    }
+  }, [authStatus, isAuthenticated, user, location.pathname, navigate])
   const navItems = [
     ...NAV.filter((item) => !(isBuyer && item.to === '/sell')),
     ...(isAuthenticated && isBuyer ? [{ to: '/become-seller', label: 'Become a Seller' }] : []),
@@ -437,25 +451,23 @@ export default function App() {
                     {isNight ? <SunIcon size={15} /> : <MoonIcon size={15} />}
                     <span>{isNight ? 'Day theme' : 'Night theme'}</span>
                   </button>
+                  <Link
+                    to="/wallet"
+                    className="mobile-drawer-quicklink"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <WalletIcon size={15} />
+                    <span>My Wallet & Cash-outs</span>
+                  </Link>
                   {!isBuyer && (
-                    <>
-                      <Link
-                        to="/wallet"
-                        className="mobile-drawer-quicklink"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <WalletIcon size={15} />
-                        <span>Seller Wallet & Cash-outs</span>
-                      </Link>
-                      <Link
-                        to="/seller-analytics"
-                        className="mobile-drawer-quicklink"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <BarChart3 size={15} />
-                        <span>Sales Analytics</span>
-                      </Link>
-                    </>
+                    <Link
+                      to="/seller-analytics"
+                      className="mobile-drawer-quicklink"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <BarChart3 size={15} />
+                      <span>Sales Analytics</span>
+                    </Link>
                   )}
                 </div>
 
@@ -572,6 +584,8 @@ export default function App() {
           <Route path="/about" element={<Placeholder title="About Garage Marketplace" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/welcome" element={<Welcome />} />
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
           <Route path="*" element={<div style={{ padding: 48, textAlign: 'center' }}><h2>Page Not Found</h2><p>The page you are looking for does not exist. <Link to="/">Return to Homepage</Link></p></div>} />
         </Routes>
       </main>

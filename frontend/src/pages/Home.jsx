@@ -24,6 +24,7 @@ import {
 import { marketplaceCars } from '../api/cars.js'
 import { marketplaceParts } from '../api/parts.js'
 import { useTaxonomy, groupBrandsByRegion, categoryDisplay, formatCount } from '../api/taxonomy.js'
+import { applyCarPreset, applyPartPreset } from '../utils/catalogFilters.js'
 import CarCard from '../components/CarCard.jsx'
 import PartCard from '../components/PartCard.jsx'
 import CategoryCard from '../components/CategoryCard.jsx'
@@ -158,22 +159,43 @@ export default function Home() {
       .finally(() => setIsLoadingParts(false))
   }, [])
 
-  // Scroll Reveal Observer
+  // Scroll Reveal Observer — also picks up late-mounted nodes (API-loaded
+  // cards render after mount, so a one-shot query would leave them hidden).
   useEffect(() => {
-    const elements = document.querySelectorAll('.reveal')
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add('in')
+            observer.unobserve(entry.target)
           }
         })
       },
       { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
     )
 
-    elements.forEach((el) => observer.observe(el))
-    return () => observer.disconnect()
+    const watch = (root) => {
+      root.querySelectorAll('.reveal:not(.in)').forEach((el) => observer.observe(el))
+    }
+    watch(document)
+
+    const mutations = new MutationObserver((records) => {
+      records.forEach((record) => {
+        record.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return
+          if (node.classList?.contains('reveal') && !node.classList.contains('in')) {
+            observer.observe(node)
+          }
+          node.querySelectorAll?.('.reveal:not(.in)').forEach((el) => observer.observe(el))
+        })
+      })
+    })
+    mutations.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      mutations.disconnect()
+      observer.disconnect()
+    }
   }, [])
 
   const handleFinderSubmit = (e) => {
@@ -196,22 +218,9 @@ export default function Home() {
     }, 3000)
   }
 
-  const filteredCars = carFilter === 'all' 
-    ? liveCars 
-    : liveCars.filter(c => {
-        if (c.category) return c.category === carFilter
-        if (carFilter === 'jdm') return ['nissan', 'toyota', 'honda', 'mazda', 'subaru', 'mitsubishi'].includes((c.brand || c.make || '').toLowerCase())
-        if (carFilter === 'classics') return (c.year && Number(c.year) <= 1990)
-        if (carFilter === '4x4') return c.body_style === 'suv' || c.body_style === 'pickup'
-        return true
-      })
+  const filteredCars = applyCarPreset(liveCars, carFilter)
 
-  const filteredParts = partFilter === 'all'
-    ? liveParts
-    : liveParts.filter(p => {
-        const cat = (p.category || p.cat || '').toLowerCase()
-        return cat.includes(partFilter) || (partFilter === 'wheels' && cat.includes('tire'))
-      })
+  const filteredParts = applyPartPreset(liveParts, partFilter)
 
   return (
     <div className="home-modern">
@@ -481,7 +490,13 @@ export default function Home() {
               <p className="section-subtitle">Hand-picked enthusiast cars backed with full photographic inspection reports.</p>
             </div>
 
-            {/* Filter Pills */}
+            <div className="section-header-side">
+              <Link to="/marketplace" className="section-browse-all">
+                <span>Browse all cars</span>
+                <ArrowRight size={15} />
+              </Link>
+
+              {/* Filter Pills */}
             <div className="filter-pill-group">
               <button 
                 type="button" 
@@ -512,16 +527,44 @@ export default function Home() {
                 4x4 & Overland
               </button>
             </div>
+            </div>
           </div>
 
           <div className="modern-car-grid">
-            {filteredCars.map((car, i) => (
-              <CarCard
-                key={car.id}
-                car={car}
-                className={`reveal reveal-delay-${(i % 4) + 1}`}
-              />
-            ))}
+            {isLoadingCars ? (
+              [0, 1, 2, 3].map((i) => (
+                <div key={i} className="card-skel" aria-hidden="true">
+                  <div className="card-skel-media" />
+                  <div className="card-skel-body">
+                    <div className="card-skel-line card-skel-line--full" />
+                    <div className="card-skel-line card-skel-line--mid" />
+                    <div className="card-skel-line card-skel-line--short" />
+                  </div>
+                </div>
+              ))
+            ) : filteredCars.length === 0 ? (
+              <div className="home-empty-state">
+                <p className="home-empty-title">No cars match this filter yet</p>
+                <p className="home-empty-sub">Try another category, or browse the full verified inventory.</p>
+                <div className="home-empty-actions">
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setCarFilter('all')}>
+                    Show all featured
+                  </button>
+                  <Link to="/marketplace" className="btn btn-primary btn-sm">
+                    <span>Browse marketplace</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              filteredCars.map((car, i) => (
+                <CarCard
+                  key={car.id || car.uuid || i}
+                  car={car}
+                  className={`reveal reveal-delay-${(i % 4) + 1}`}
+                />
+              ))
+            )}
           </div>
 
           {/* Marketplace Stats Bar */}
@@ -557,6 +600,12 @@ export default function Home() {
               <h2 className="section-title">Trending Parts, Upgrades & Fab</h2>
               <p className="section-subtitle">OEM genuine, Japanese surplus, and bespoke components searchable by fitment.</p>
             </div>
+
+            <div className="section-header-side">
+              <Link to="/parts" className="section-browse-all">
+                <span>Shop all parts</span>
+                <ArrowRight size={15} />
+              </Link>
 
             <div className="filter-pill-group">
               <button 
@@ -595,16 +644,44 @@ export default function Home() {
                 Interior & Seats
               </button>
             </div>
+            </div>
           </div>
 
           <div className="modern-parts-grid">
-            {filteredParts.map((part, i) => (
-              <PartCard
-                key={part.id}
-                part={part}
-                className={`reveal reveal-delay-${(i % 3) + 1}`}
-              />
-            ))}
+            {isLoadingParts ? (
+              [0, 1, 2].map((i) => (
+                <div key={i} className="card-skel" aria-hidden="true">
+                  <div className="card-skel-media" />
+                  <div className="card-skel-body">
+                    <div className="card-skel-line card-skel-line--full" />
+                    <div className="card-skel-line card-skel-line--mid" />
+                    <div className="card-skel-line card-skel-line--short" />
+                  </div>
+                </div>
+              ))
+            ) : filteredParts.length === 0 ? (
+              <div className="home-empty-state">
+                <p className="home-empty-title">No parts match this filter yet</p>
+                <p className="home-empty-sub">Try another category, or search the full performance catalog.</p>
+                <div className="home-empty-actions">
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPartFilter('all')}>
+                    Show all trending
+                  </button>
+                  <Link to="/parts" className="btn btn-primary btn-sm">
+                    <span>Shop parts catalog</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              filteredParts.map((part, i) => (
+                <PartCard
+                  key={part.id || part.uuid || i}
+                  part={part}
+                  className={`reveal reveal-delay-${(i % 3) + 1}`}
+                />
+              ))
+            )}
           </div>
 
           {/* Wanted Request Banner */}
@@ -726,41 +803,24 @@ export default function Home() {
           </div>
 
           <div className="steps-container">
-            <div className="step-card reveal reveal-delay-1">
-              <div className="step-num">01</div>
-              <div className="step-icon-box">
-                <Search size={22} />
+            {[
+              { icon: Search, num: '01', title: 'Browse & Filter', text: 'Filter by make, chassis code, budget, or modification build. Every listing features verified photos and full history.' },
+              { icon: ShieldCheck, num: '02', title: 'Inspect with Confidence', text: 'Review comprehensive 100-point inspection reports, diagnostic readouts, and lift bay photos with no surprises.' },
+              { icon: Award, num: '03', title: 'Order with Buyer Protection', text: 'Chat with sellers, confirm fitment, and pay securely with transparent buyer protection policies.' },
+              { icon: Truck, num: '04', title: 'Drive & Belong', text: 'Pick up at our Makati showroom or have it crated & delivered to your doorstep. Join our builder meets and track days.' },
+            ].map((step, i) => (
+              <div key={step.num} className={`step-card reveal reveal-delay-${i + 1}`}>
+                <span className="step-ghost" aria-hidden="true">{step.num}</span>
+                <div className="step-top">
+                  <span className="step-node">{step.num}</span>
+                  <span className="step-icon-box">
+                    <step.icon size={22} />
+                  </span>
+                </div>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
               </div>
-              <h3>Browse & Filter</h3>
-              <p>Filter by make, chassis code, budget, or modification build. Every listing features verified photos and full history.</p>
-            </div>
-
-            <div className="step-card reveal reveal-delay-2">
-              <div className="step-num">02</div>
-              <div className="step-icon-box">
-                <ShieldCheck size={22} />
-              </div>
-              <h3>Inspect with Confidence</h3>
-              <p>Review comprehensive 100-point inspection reports, diagnostic readouts, and lift bay photos with no surprises.</p>
-            </div>
-
-            <div className="step-card reveal reveal-delay-3">
-              <div className="step-num">03</div>
-              <div className="step-icon-box">
-                <Award size={22} />
-              </div>
-              <h3>Order with Buyer Protection</h3>
-              <p>Chat with sellers, confirm fitment, and pay securely with transparent buyer protection policies.</p>
-            </div>
-
-            <div className="step-card reveal reveal-delay-4">
-              <div className="step-num">04</div>
-              <div className="step-icon-box">
-                <Truck size={22} />
-              </div>
-              <h3>Drive & Belong</h3>
-              <p>Pick up at our Makati showroom or have it crated & delivered to your doorstep. Join our builder meets and track days.</p>
-            </div>
+            ))}
           </div>
         </div>
       </section>

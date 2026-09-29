@@ -8,6 +8,7 @@
  *   forms.css     → inputs/selects/textareas + .field-* (contrast-safe)
  *   surfaces.css  → .card, .badge, modal, auth shell, night surface fixes
  *   layout.css    → topbar, nav, drawers, page containers
+ *   responsive.css→ mobile module: breakpoints, overflow guards, stacking
  *   index.css     → this file (imported once in main.jsx)
  *
  * Rules for the entire app:
@@ -22,3 +23,4 @@
 @import './forms.css';
 @import './surfaces.css';
 @import './layout.css';
+@import './responsive.css';

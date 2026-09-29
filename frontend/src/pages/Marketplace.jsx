@@ -20,17 +20,23 @@ import {
 } from 'lucide-react'
 import { useTaxonomy, groupBrandsByRegion, specOptions, specLabel } from '../api/taxonomy.js'
 import { useMarketplaceCars } from '../marketplace/useMarketplaceCars.js'
+import { CAR_PRESETS } from '../utils/catalogFilters.js'
 import CarCard from '../components/CarCard.jsx'
 import './Marketplace.css'
 
-// Preset filter categories for quick enthusiast discovery
-const PRESETS = [
+// Preset filter categories for quick enthusiast discovery.
+// Matchers live in utils/catalogFilters.js (shared with Home showroom).
+const PRESET_META = [
   { id: 'all', label: 'All Inventory', icon: Sparkles },
-  { id: 'jdm', label: 'JDM Icons', icon: Flame, match: (c) => ['nissan', 'toyota', 'honda', 'mazda', 'subaru', 'mitsubishi'].includes(c.brand?.toLowerCase() || c.make?.toLowerCase()) },
-  { id: 'classics', label: 'Restored Classics', icon: Car, match: (c) => (c.year && c.year <= 1990) || c.category === 'classics' },
-  { id: '4x4', label: '4x4 & Overland', icon: Truck, match: (c) => c.body_style === 'suv' || c.body_style === 'pickup' || c.category === '4x4' },
-  { id: 'coupe', label: 'Coupes & Turbos', icon: Flame, match: (c) => c.body_style === 'coupe' || c.fuel_type?.includes('turbo') },
+  { id: 'jdm', label: 'JDM Icons', icon: Flame },
+  { id: 'classics', label: 'Restored Classics', icon: Car },
+  { id: '4x4', label: '4x4 & Overland', icon: Truck },
+  { id: 'coupe', label: 'Coupes & Turbos', icon: Flame },
 ]
+const PRESETS = PRESET_META.map((meta) => ({
+  ...meta,
+  match: CAR_PRESETS.find((p) => p.id === meta.id)?.match,
+}))
 
 // Fallback curated sample cars to ensure the marketplace is rich & visually complete
 const CURATED_SAMPLE_CARS = [
