@@ -9,12 +9,15 @@ import { ChatProvider } from './context/ChatContext.jsx'
 import { NotificationProvider } from './context/NotificationContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { loadFreightPolicy } from './utils/freight.js'
+import { loadProgram } from './utils/program.js'
 // Single style entry point — all global styles live in src/styles/ (see index.css).
 import './styles/index.css'
 import './components/Modal.css'
 
 // Live freight policy (thresholds/fees) before first paint of prices.
 loadFreightPolicy()
+// Live program economics (commissions, subscriptions, perks).
+loadProgram()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

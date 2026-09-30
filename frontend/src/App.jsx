@@ -51,6 +51,7 @@ import Welcome from './pages/Welcome.jsx'
 import Wanted from './pages/Wanted.jsx'
 import WantedNew from './pages/WantedNew.jsx'
 import WantedDetail from './pages/WantedDetail.jsx'
+import Perks from './pages/Perks.jsx'
 import SearchModal from './components/SearchModal.jsx'
 import MobileQuickActions from './components/MobileQuickActions.jsx'
 import AuthModal from './components/AuthModal.jsx'
@@ -75,7 +76,7 @@ const NAV = [
 ]
 
 const ANNOUNCEMENTS = [
-  { icon: Sparkles, text: 'Become a Sales Agent — Earn 5% commission sharing parts & car listings to Facebook' },
+  { icon: Sparkles, text: 'Become a Sales Agent — Earn 3% on cars · 10% on parts sharing listings to Facebook' },
   { icon: Truck, text: 'Nationwide freight computed at checkout · Free shipping on flagged listings' },
   { icon: ShieldCheck, text: '100-Point Garage Certified Inspection Guarantee on all vehicles' },
   { icon: MapPin, text: 'Makati Showroom & Barako Café open Tue–Sun · Test drives & Lift inspections' },
@@ -592,6 +593,7 @@ export default function App() {
           <Route path="/wanted" element={<Wanted />} />
           <Route path="/wanted/new" element={<WantedNew />} />
           <Route path="/wanted/:id" element={<WantedDetail />} />
+          <Route path="/perks" element={<Perks />} />
           <Route path="*" element={<div style={{ padding: 48, textAlign: 'center' }}><h2>Page Not Found</h2><p>The page you are looking for does not exist. <Link to="/">Return to Homepage</Link></p></div>} />
         </Routes>
       </main>

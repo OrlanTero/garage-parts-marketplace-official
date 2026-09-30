@@ -15,6 +15,7 @@ use App\Models\Warehouse;
 use App\Services\AgentService;
 use App\Services\DeliveryFeeService;
 use App\Services\InventoryService;
+use App\Services\PerksService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -309,7 +310,14 @@ class OrderController extends Controller
         );
         $shippingFee = $quote['fee'];
 
-        $totalAmount = ($unitPrice * $quantity) + $shippingFee;
+        // Member perks discount (parts only, capped per listing).
+        $buyer = $request->user();
+        $perkDeal = ['pct' => 0, 'amount' => 0.0];
+        if ($itemType === 'part' && $part) {
+            $perkDeal = PerksService::lineDiscount($buyer, $part, $unitPrice, $quantity);
+        }
+
+        $totalAmount = ($unitPrice * $quantity) + $shippingFee - $perkDeal['amount'];
 
         // Resolve Sales Agent Attribution & Commission
         $agentCodeInput = trim((string) ($data['agent_code'] ?? $data['ref'] ?? ''));
@@ -317,7 +325,7 @@ class OrderController extends Controller
         $agentId = null;
         $agentCode = null;
         $agentName = null;
-        $commissionRate = 5.00;
+        $commissionRate = AgentService::commissionFor($itemType);
         $commissionAmount = 0.00;
         $commissionStatus = 'pending';
 
@@ -348,12 +356,13 @@ class OrderController extends Controller
                 $agentId = $agentUser->id;
                 $agentCode = $agentUser->agent_code;
                 $agentName = $agentUser->name;
-                $commissionRate = (float) ($agentUser->commission_rate ?? 5.00);
+                $commissionRate = AgentService::commissionFor($itemType, $agentUser->commission_rate ?? null);
                 $commissionAmount = round(($unitPrice * $quantity) * ($commissionRate / 100), 2);
             } elseif (!$agentUser && !$isSelfDeal) {
                 // Unknown code: preserve legacy attribution stub (no payee).
                 $agentCode = $agentCodeInput;
-                $commissionAmount = round(($unitPrice * $quantity) * (5.00 / 100), 2);
+                $unknownRate = AgentService::commissionFor($itemType);
+                $commissionAmount = round(($unitPrice * $quantity) * ($unknownRate / 100), 2);
             }
             // Known but INACTIVE agents (no KYC / no subscription / expired):
             // drop attribution entirely — no code, no commission.
@@ -412,6 +421,8 @@ class OrderController extends Controller
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
             'shipping_fee' => $shippingFee,
+            'discount_amount' => $perkDeal['amount'],
+            'perks_discount_pct' => $perkDeal['pct'],
             'delivery_distance_km' => $quote['distance_km'],
             'delivery_zone' => $quote['zone'],
             'warehouse_id' => $originWarehouse?->id,
@@ -434,7 +445,7 @@ class OrderController extends Controller
                 $car,
                 $order,
                 $totalAmount,
-                5.00,
+                AgentService::commissionFor('car'),
                 $order->payment_method ?? 'bank_transfer',
                 $order->order_number,
                 $request->user()
@@ -446,7 +457,7 @@ class OrderController extends Controller
                 $part,
                 $order,
                 $unitPrice * $quantity,
-                5.00,
+                AgentService::commissionFor('part'),
                 $order->payment_method ?? 'bank_transfer',
                 $order->order_number,
                 $request->user()

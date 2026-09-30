@@ -46,6 +46,11 @@ class User extends Authenticatable
         'agent_last_payment_at',
         'agent_last_payment_amount',
         'referral_reward_paid_at',
+        'perks_status',
+        'perks_subscribed_at',
+        'perks_expires_at',
+        'perks_last_payment_at',
+        'perks_last_payment_amount',
         'kyc_status',
         'is_kyc_verified',
         'kyc_document_type',
@@ -87,6 +92,10 @@ class User extends Authenticatable
             'agent_last_payment_at' => 'datetime',
             'agent_last_payment_amount' => 'decimal:2',
             'referral_reward_paid_at' => 'datetime',
+            'perks_subscribed_at' => 'datetime',
+            'perks_expires_at' => 'datetime',
+            'perks_last_payment_at' => 'datetime',
+            'perks_last_payment_amount' => 'decimal:2',
             'interests' => 'array',
             'onboarding_completed_at' => 'datetime',
         ];
@@ -116,9 +125,8 @@ class User extends Authenticatable
                 $prefix = strtoupper(substr($slug, 0, 4)) ?: 'AGT';
                 $user->agent_code = 'AGT-' . $prefix . strtoupper(Str::random(4));
             }
-            if ($user->commission_rate === null) {
-                $user->commission_rate = 5.00;
-            }
+            // commission_rate stays null unless an admin sets a personal
+            // override — type rates apply otherwise (AgentService).
             if ($user->is_agent === null) {
                 $user->is_agent = false;
             }

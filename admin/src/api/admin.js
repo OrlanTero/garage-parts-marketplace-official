@@ -9,6 +9,12 @@ export const adminApi = {
   approveCar: (carId) => client.post(`/admin/moderation/cars/${carId}/approve`).then((r) => r.data),
   rejectCar: (carId, reason) => client.post(`/admin/moderation/cars/${carId}/reject`, { reason }).then((r) => r.data),
 
+  // Member perks catalog moderation
+  getPerks: () => client.get('/admin/perks').then((r) => r.data?.data ?? r.data),
+  createPerk: (payload) => client.post('/admin/perks', payload).then((r) => r.data?.data ?? r.data),
+  updatePerk: (id, payload) => client.patch(`/admin/perks/${id}`, payload).then((r) => r.data?.data ?? r.data),
+  deletePerk: (id) => client.delete(`/admin/perks/${id}`).then((r) => r.data),
+
   // Appointment Monitoring
   getWantedRequests: (params = {}) => client.get('/wanted-requests', { params }).then((r) => r.data),
   deleteWantedRequest: (id) => client.delete(`/admin/wanted-requests/${id}`).then((r) => r.data),

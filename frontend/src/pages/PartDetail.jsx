@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { 
-  Truck, 
-  Star, 
-  Heart, 
-  MapPin, 
-  ShieldCheck, 
-  Award, 
-  ArrowLeft, 
-  Package, 
-  CheckCircle2, 
+import {
+  Truck,
+  Star,
+  Heart,
+  MapPin,
+  ShieldCheck,
+  Award,
+  ArrowLeft,
+  Package,
+  CheckCircle2,
   ShoppingCart,
   Sparkles,
   MessageSquare,
@@ -17,7 +17,8 @@ import {
   Tag,
   Building2,
   Store,
-  FileText
+  FileText,
+  BadgePercent
 } from 'lucide-react'
 import { marketplaceParts } from '../api/parts.js'
 import { ordersApi } from '../api/orders.js'
@@ -273,6 +274,20 @@ export default function PartDetail() {
                   </>
                 )}
               </div>
+              {Number(part.perks_discount_pct || 0) > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {user?.is_perks_member ? (
+                    <span className="badge" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <BadgePercent size={13} />
+                      <span>Member price: {part.perks_discount_pct}% off at checkout</span>
+                    </span>
+                  ) : (
+                    <Link to="/perks" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--color-accent)' }}>
+                      Members save {part.perks_discount_pct}% on this part — join perks
+                    </Link>
+                  )}
+                </div>
+              )}
 
               <div className="detail-trust-strip">
                 <div className="detail-trust-item">
@@ -417,7 +432,7 @@ export default function PartDetail() {
                     type="button"
                     className="btn btn-secondary"
                     onClick={() => setShareModalOpen(true)}
-                    title="Share product link & earn 5% sales commission"
+                    title="Share product link & earn agent commission (3% cars · 10% parts)"
                 >
                   <Share2 size={16} />
                 </button>

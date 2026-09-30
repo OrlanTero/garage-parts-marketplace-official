@@ -22,6 +22,7 @@ import { ordersApi } from '../api/orders.js'
 import { agentsApi } from '../api/agents.js'
 import { getActiveReferralCode } from '../utils/referral.js'
 import { partShipsFree, useFreightPolicy } from '../utils/freight.js'
+import { useProgram } from '../utils/program.js'
 import { useMediaQuery } from '../hooks/useMediaQuery.js'
 import DeliveryMapPicker from '../components/DeliveryMapPicker.jsx'
 import { accountApi, ADDRESS_LABELS } from '../api/account.js'
@@ -41,6 +42,7 @@ export default function Checkout() {
   const [item, setItem] = useState(null)
   const [itemType, setItemType] = useState(carId ? 'car' : 'part')
   const freightPolicy = useFreightPolicy()
+  const program = useProgram()
   const [loadingItem, setLoadingItem] = useState(true)
   const [quantity, setQuantity] = useState(1)
 
@@ -309,7 +311,12 @@ export default function Checkout() {
   const localFreeShipping = itemType === 'car' || partShipsFree(item, subtotal, freightPolicy)
   const isFreeShipping = quote ? Boolean(quote.free) : localFreeShipping
   const shippingFee = quote ? Number(quote.fee || 0) : (isFreeShipping ? 0 : Number(freightPolicy.flat_fee || 350))
-  const grandTotal = subtotal + shippingFee
+  // Member perks preview (server recomputes authoritatively at submit).
+  const perksPct = itemType === 'part' && user?.is_perks_member
+    ? Math.max(0, Math.min(Number(program.perks.max_part_discount_pct || 0), Number(item?.perks_discount_pct || 0)))
+    : 0
+  const perksDiscount = perksPct > 0 ? Math.round(subtotal * (perksPct / 100) * 100) / 100 : 0
+  const grandTotal = subtotal + shippingFee - perksDiscount
 
   // Chassis/VIN fitment identity is mandatory for PART orders only —
   // the buyer's vehicle must match the part. Car orders record the
@@ -1065,7 +1072,7 @@ export default function Checkout() {
                         Accredited Agent: {agentInfo.name} ({agentInfo.agent_code})
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                        {agentInfo.tagline || 'Official Garage Parts Sales Specialist'} · 5% Sales Commission Accredited
+                        {agentInfo.tagline || 'Official Garage Parts Sales Specialist'} · {agentInfo.commission_car_pct ?? program.agent.commission_car_pct}% cars · {agentInfo.commission_part_pct ?? program.agent.commission_part_pct}% parts accredited
                       </div>
                     </div>
                   </div>
@@ -1300,6 +1307,20 @@ export default function Checkout() {
                   <span>Chassis & VIN Fitment Validation</span>
                   <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Included (₱0.00)</span>
                 </div>
+                {perksDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
+                    <span>Member perks ({perksPct}% off parts)</span>
+                    <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>−{formatCurrency(perksDiscount)}</span>
+                  </div>
+                )}
+                {!user?.is_perks_member && itemType === 'part' && Number(item?.perks_discount_pct || 0) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
+                    <span>Member price available</span>
+                    <Link to="/perks" style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-accent)' }}>
+                      Save {Math.min(Number(program.perks.max_part_discount_pct || 0), Number(item.perks_discount_pct))}% — join perks
+                    </Link>
+                  </div>
+                )}
                 
                 <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: 12, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-heading)' }}>Total Payable</span>

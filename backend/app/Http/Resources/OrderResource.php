@@ -135,6 +135,11 @@ class OrderResource extends JsonResource
                 'formatted_unit_price' => '₱ ' . number_format((float) $this->unit_price, 2),
                 'shipping_fee' => (float) $this->shipping_fee,
                 'formatted_shipping_fee' => $this->shipping_fee > 0 ? '₱ ' . number_format((float) $this->shipping_fee, 2) : 'FREE',
+                'discount_amount' => (float) ($this->discount_amount ?? 0),
+                'formatted_discount' => ((float) ($this->discount_amount ?? 0)) > 0
+                    ? '−₱ ' . number_format((float) $this->discount_amount, 2)
+                    : null,
+                'perks_discount_pct' => (int) ($this->perks_discount_pct ?? 0),
                 'total_amount' => (float) $this->total_amount,
                 'formatted_total' => '₱ ' . number_format((float) $this->total_amount, 2),
                 'payment_method' => $this->payment_method,

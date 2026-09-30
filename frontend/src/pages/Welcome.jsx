@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import client from '../api/client.js'
+import { useProgram } from '../utils/program.js'
 import KycVerificationModal from '../components/KycVerificationModal.jsx'
 import { CAR_PRESETS, PART_PRESETS } from '../utils/catalogFilters.js'
 import './Welcome.css'
@@ -46,6 +47,7 @@ function StepDots({ step }) {
 export default function Welcome() {
   const navigate = useNavigate()
   const { user, status, isAuthenticated, refresh } = useAuth()
+  const program = useProgram()
   const [step, setStep] = useState(0)
   const [picked, setPicked] = useState(() => new Set(user?.interests || []))
   const [saving, setSaving] = useState(false)
@@ -154,7 +156,7 @@ export default function Welcome() {
             <div className="welcome-perks">
               <div className="welcome-perk"><Heart size={16} /><span>Interests tune your home feed</span></div>
               <div className="welcome-perk"><ShieldCheck size={16} /><span>ID verification unlocks selling & payouts</span></div>
-              <div className="welcome-perk"><HandCoins size={16} /><span>Agents earn 5% sharing listings</span></div>
+              <div className="welcome-perk"><HandCoins size={16} /><span>Agents earn {program.agent.commission_car_pct}% cars · {program.agent.commission_part_pct}% parts</span></div>
             </div>
             <div className="welcome-nav">
               <span />
@@ -244,7 +246,7 @@ export default function Welcome() {
           <div className="welcome-pane">
             <h2 className="auth-title">Earn as an agent <span className="welcome-optional">(optional)</span></h2>
             <p className="auth-subtitle">
-              Share any car or part listing to Facebook — earn <strong>5% commission</strong> on
+              Share any car or part listing to Facebook — earn <strong>{program.agent.commission_car_pct}% on cars · {program.agent.commission_part_pct}% on parts</strong> on
               resulting sales. Free to join, skip anytime.
             </p>
             <div className="welcome-agent-grid">

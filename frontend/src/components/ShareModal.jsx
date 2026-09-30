@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { buildShareableUrl, getSocialShareLinks } from '../utils/referral.js'
+import { useProgram } from '../utils/program.js'
 import './ShareModal.css'
 
 export default function ShareModal({ isOpen, onClose, item }) {
+  const program = useProgram()
   const { user } = useAuth()
   const [copied, setCopied] = useState(false)
   const [customAgentCode, setCustomAgentCode] = useState('')
@@ -233,7 +235,7 @@ export default function ShareModal({ isOpen, onClose, item }) {
           <div className="share-agent-tip">
             <div className="share-agent-tip-title">⚡ Anyone can be an Agent!</div>
             <p className="share-agent-tip-desc">
-              Share automotive listings to Facebook groups, car clubs, and friends. When a buyer completes an order through your link, you automatically earn <strong>5% sales commission</strong>.
+              Share automotive listings to Facebook groups, car clubs, and friends. When a buyer completes an order through your link, you automatically earn <strong>{program.agent.commission_car_pct}% on cars · {program.agent.commission_part_pct}% on parts</strong>.
             </p>
           </div>
         </div>

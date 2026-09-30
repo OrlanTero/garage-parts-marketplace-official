@@ -22,9 +22,27 @@ use Illuminate\Validation\ValidationException;
  */
 class AgentService
 {
+    public const DEFAULT_CAR_PCT = 3.0;
+    public const DEFAULT_PART_PCT = 10.0;
+
     public static function fee(): float
     {
         return round((float) (PlatformSetting::get('agent_subscription_fee', 100)), 2);
+    }
+
+    /**
+     * Referral commission % by item type (admin-parameterized).
+     * Personal commission_rate override on the agent wins when set.
+     */
+    public static function commissionFor(string $itemType, ?float $override = null): float
+    {
+        if ($override !== null && $override >= 0) {
+            return round($override, 2);
+        }
+
+        return $itemType === 'car'
+            ? round((float) PlatformSetting::get('agent_commission_car_pct', self::DEFAULT_CAR_PCT), 2)
+            : round((float) PlatformSetting::get('agent_commission_part_pct', self::DEFAULT_PART_PCT), 2);
     }
 
     public static function referralReward(): float

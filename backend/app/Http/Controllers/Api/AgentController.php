@@ -59,7 +59,9 @@ class AgentController extends Controller
                 'agent_code' => $agent->agent_code,
                 'avatar_url' => $agent->avatar_url,
                 'tagline' => $agent->agent_tagline ?? 'Official Garage Parts Sales Specialist',
-                'commission_rate' => (float) ($agent->commission_rate ?? 5.00),
+                'commission_rate' => $agent->commission_rate !== null ? (float) $agent->commission_rate : null,
+                'commission_car_pct' => \App\Services\AgentService::commissionFor('car', $agent->commission_rate !== null ? (float) $agent->commission_rate : null),
+                'commission_part_pct' => \App\Services\AgentService::commissionFor('part', $agent->commission_rate !== null ? (float) $agent->commission_rate : null),
             ],
         ]);
     }
@@ -188,7 +190,6 @@ class AgentController extends Controller
             $slug = Str::slug($user->name ?: 'AGENT', '');
             $prefix = strtoupper(substr($slug, 0, 4)) ?: 'AGT';
             $user->agent_code = 'AGT-' . $prefix . strtoupper(Str::random(4));
-            $user->commission_rate = $user->commission_rate ?? 5.00;
             $user->save();
             $user->refresh();
         }
@@ -227,7 +228,9 @@ class AgentController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'agent_code' => $user->agent_code,
-                'commission_rate' => (float) ($user->commission_rate ?? 5.00),
+                'commission_rate' => $user->commission_rate !== null ? (float) $user->commission_rate : null,
+                'commission_car_pct' => \App\Services\AgentService::commissionFor('car', $user->commission_rate !== null ? (float) $user->commission_rate : null),
+                'commission_part_pct' => \App\Services\AgentService::commissionFor('part', $user->commission_rate !== null ? (float) $user->commission_rate : null),
                 'tagline' => $user->agent_tagline ?? 'Official Garage Parts Sales Specialist',
                 'is_agent' => $isActive,
                 'is_active' => $isActive,
@@ -294,7 +297,9 @@ class AgentController extends Controller
                 'name' => $user->name,
                 'agent_code' => $user->agent_code,
                 'agent_tagline' => $user->agent_tagline,
-                'commission_rate' => (float) ($user->commission_rate ?? 5.00),
+                'commission_rate' => $user->commission_rate !== null ? (float) $user->commission_rate : null,
+                'commission_car_pct' => \App\Services\AgentService::commissionFor('car', $user->commission_rate !== null ? (float) $user->commission_rate : null),
+                'commission_part_pct' => \App\Services\AgentService::commissionFor('part', $user->commission_rate !== null ? (float) $user->commission_rate : null),
             ],
         ]);
     }

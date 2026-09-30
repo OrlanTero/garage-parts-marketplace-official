@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
+  BadgePercent,
   Wallet,
   Users,
   UserCheck,
@@ -91,6 +92,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/appointments', label: 'Appointment Monitoring', icon: Calendar, badge: 'Slots' },
       { to: '/promotions', label: 'Promotions & Boosts', icon: Tag },
+      { to: '/perks', label: 'Member Perks Club', icon: BadgePercent, badge: { label: 'Perks', variant: 'success' } },
       { to: '/payouts', label: 'Seller Payouts', icon: CreditCard },
       { to: '/notifications', label: 'WebSocket Broadcasts', icon: Radio },
       { to: '/my-notifications', label: 'My Notifications', icon: Bell },

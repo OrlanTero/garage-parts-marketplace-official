@@ -27,6 +27,7 @@ import SellerApplications from './pages/SellerApplications.jsx'
 import AppointmentMonitoring from './pages/AppointmentMonitoring.jsx'
 import ChatModeration from './pages/ChatModeration.jsx'
 import PromotionsManagement from './pages/PromotionsManagement.jsx'
+import PerksManagement from './pages/PerksManagement.jsx'
 import OrdersManagement from './pages/OrdersManagement.jsx'
 import CarTransactions from './pages/CarTransactions.jsx'
 import OrderDetail from './pages/OrderDetail.jsx'
@@ -98,6 +99,7 @@ export default function App() {
             <Route path="appointments" element={<AppointmentMonitoring />} />
             <Route path="chat-moderation" element={<ChatModeration />} />
             <Route path="promotions" element={<PromotionsManagement />} />
+  <Route path="perks" element={<PerksManagement />} />
             <Route path="payouts" element={<PayoutsManagement />} />
             <Route path="disputes" element={<DisputesManagement />} />
             <Route path="reviews" element={<ReviewsModeration />} />

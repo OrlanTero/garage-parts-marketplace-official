@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\DealOfferController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\RestockController;
 use App\Http\Controllers\Api\WantedController;
+use App\Http\Controllers\Api\PerksController;
+use App\Http\Controllers\Api\ProgramController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\KycController;
@@ -231,6 +233,12 @@ Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name
             Route::post('/profile', [AgentController::class, 'updateProfile'])->name('profile');
         });
 
+        // Member perks (discount club): status, yearly subscribe, catalog.
+        Route::prefix('perks')->name('api.perks.')->group(function () {
+            Route::get('/', [PerksController::class, 'status'])->name('status');
+            Route::post('/subscribe', [PerksController::class, 'subscribe'])->name('subscribe');
+        });
+
         // Legacy alias (pre-session-module clients)
         Route::get('/me', [AuthController::class, 'me'])->name('api.me');
 
@@ -282,7 +290,9 @@ Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name
     });
 
     // --- Checkout & Sales Orders (Public / Customer) ---
+    Route::get('/program', [ProgramController::class, 'show'])->name('api.program.show');
     Route::get('/freight-policy', [OrderController::class, 'freightPolicy'])->name('api.freight.policy');
+    Route::get('/perks/catalog', [PerksController::class, 'catalog'])->name('api.perks.catalog');
     Route::get('/delivery-quote', [OrderController::class, 'deliveryQuote'])->name('api.delivery.quote');
     // Wanted ads — public board (my actions + offers need auth, above).
     Route::get('/wanted-requests', [WantedController::class, 'index'])->name('api.wanted.index');
@@ -419,6 +429,12 @@ Route::get('/moderation/cars/{car}', [AdminCarModerationController::class, 'show
 
             // Wanted ads moderation (board itself is public; remove only).
             Route::delete('/wanted-requests/{wantedRequest}', [WantedController::class, 'adminDestroy'])->name('wanted.adminDestroy');
+
+            // Member perks catalog moderation.
+            Route::get('/perks', [PerksController::class, 'adminIndex'])->name('perks.index');
+            Route::post('/perks', [PerksController::class, 'store'])->name('perks.store');
+            Route::patch('/perks/{perk}', [PerksController::class, 'update'])->name('perks.update');
+            Route::delete('/perks/{perk}', [PerksController::class, 'destroy'])->name('perks.destroy');
 
             // Buyer-to-Seller Upgrade Application Review
             Route::get('/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('seller-applications.index');

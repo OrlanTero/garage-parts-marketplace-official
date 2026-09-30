@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import agentsApi from '../api/agents.js'
 import { buildShareableUrl, getSocialShareLinks } from '../utils/referral.js'
+import { useProgram } from '../utils/program.js'
 import './AgentPortal.css'
 
 export default function AgentPortal() {
@@ -70,6 +71,9 @@ export default function AgentPortal() {
   const kycVerified = stats?.agent?.is_kyc_verified ?? subscription?.is_kyc_verified ?? user?.is_kyc_verified ?? false
   const fee = subscription?.fee ?? stats?.agent?.subscription_fee ?? 100
   const reward = subscription?.referral_reward ?? stats?.agent?.referral_reward ?? 50
+  const program = useProgram()
+  const carPct = stats?.agent?.commission_car_pct ?? program.agent.commission_car_pct
+  const partPct = stats?.agent?.commission_part_pct ?? program.agent.commission_part_pct
   const expiresAt = subscription?.expires_at ?? stats?.agent?.subscription_expires_at ?? null
 
   const payMethodLabel = payMethod === 'gcash' ? 'GCash' : payMethod === 'maya' ? 'Maya' : 'Card'
@@ -175,7 +179,7 @@ export default function AgentPortal() {
           <h1 className="agent-hero-title">Monetize Your Automotive Network</h1>
           <p className="agent-hero-subtitle">
             Become a verified Sales Agent with <strong>KYC + ₱{fee}/year subscription</strong>. Share products or car
-            listings on Facebook and communities — earn <strong>5.0% commission</strong> per sale, plus{' '}
+            listings on Facebook and communities — earn <strong>{carPct}% on cars · {partPct}% on parts</strong> per sale, plus{' '}
             <strong>₱{reward} to your wallet</strong> for every referred signup who also becomes an agent.
           </p>
         </div>
@@ -315,7 +319,7 @@ export default function AgentPortal() {
             <div className="metric-value green">
               {stats?.performance?.formatted_total_commission || '₱ 0.00'}
             </div>
-            <div className="metric-sub">5% of all referred sales</div>
+            <div className="metric-sub">{carPct}% cars · {partPct}% parts referred sales</div>
           </div>
 
           <div className="agent-metric-card">
@@ -493,7 +497,7 @@ export default function AgentPortal() {
             </div>
             <div className="explainer-step">
               <div className="step-num">4</div>
-              <h4>Get 5% Commission</h4>
+              <h4>Get {carPct}% / {partPct}% Commission</h4>
               <p>Commissions are credited directly to your partner balance upon order processing and fulfillment.</p>
             </div>
           </div>

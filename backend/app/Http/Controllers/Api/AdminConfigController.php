@@ -62,13 +62,18 @@ class AdminConfigController extends Controller
             'settings.agent_subscription_fee' => ['sometimes', 'numeric', 'min:0'],
             'settings.agent_referral_reward' => ['sometimes', 'numeric', 'min:0'],
             'settings.agent_subscription_duration_days' => ['sometimes', 'integer', 'min:1', 'max:3650'],
+            'settings.agent_commission_car_pct' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'settings.agent_commission_part_pct' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'settings.perks_subscription_fee' => ['sometimes', 'numeric', 'min:0'],
+            'settings.perks_subscription_duration_days' => ['sometimes', 'integer', 'min:1', 'max:3650'],
+            'settings.perks_max_part_discount_pct' => ['sometimes', 'numeric', 'min:0', 'max:100'],
         ]);
 
         // NB: read raw input (not validated()) so unknown keys still reach
         // the allowlist below instead of being silently stripped.
         $settings = $request->input('settings', []);
         foreach ($settings as $key => $value) {
-            if (!in_array($key, ['delivery_services', 'free_freight_threshold', 'standard_flat_fee', 'reservation_fee_percentage', 'freight_per_km', 'freight_min_fee', 'freight_max_fee', 'free_freight_min_quantity', 'agent_subscription_fee', 'agent_referral_reward', 'agent_subscription_duration_days'], true)) {
+            if (!in_array($key, ['delivery_services', 'free_freight_threshold', 'standard_flat_fee', 'reservation_fee_percentage', 'freight_per_km', 'freight_min_fee', 'freight_max_fee', 'free_freight_min_quantity', 'agent_subscription_fee', 'agent_referral_reward', 'agent_subscription_duration_days', 'agent_commission_car_pct', 'agent_commission_part_pct', 'perks_subscription_fee', 'perks_subscription_duration_days', 'perks_max_part_discount_pct'], true)) {
                 abort(422, "Unknown setting key: {$key}.");
             }
             PlatformSetting::set($key, $value, 'variables');

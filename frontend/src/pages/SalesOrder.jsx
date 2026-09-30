@@ -665,7 +665,7 @@ export default function SalesOrder() {
               </div>
             </div>
             <div style={{ color: 'var(--color-success)', fontWeight: 700, fontSize: 11, background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: 4 }}>
-              ✓ Accredited Referral (5%)
+              ✓ Accredited Referral
             </div>
           </div>
         )}
@@ -983,6 +983,12 @@ export default function SalesOrder() {
                 <span>{isCarOrder ? 'Ownership Documentation:' : 'Chassis Fitment Check:'}</span>
                 <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Included (₱0.00)</span>
               </div>
+              {Number(financials.discount_amount || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
+                  <span>Member perks{financials.perks_discount_pct ? ` (${financials.perks_discount_pct}% off parts)` : ''}:</span>
+                  <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{financials.formatted_discount}</span>
+                </div>
+              )}
               
               <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-heading)' }}>Total Amount:</span>

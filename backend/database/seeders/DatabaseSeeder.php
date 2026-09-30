@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             FundsSeeder::class,
             WalletSeeder::class,
             NotificationSeeder::class,
+            PerkSeeder::class,
         ]);
     }
 }
