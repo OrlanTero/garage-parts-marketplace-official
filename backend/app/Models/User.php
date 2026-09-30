@@ -37,6 +37,7 @@ class User extends Authenticatable
         'agent_code',
         'commission_rate',
         'is_agent',
+        'is_house_staff',
         'agent_tagline',
         'referred_by_user_id',
         'agent_subscription_status',
@@ -75,6 +76,7 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'commission_rate' => 'decimal:2',
             'is_agent' => 'boolean',
+            'is_house_staff' => 'boolean',
             'is_kyc_verified' => 'boolean',
             'is_showroom_active' => 'boolean',
             'showroom_activated_at' => 'datetime',
@@ -248,6 +250,16 @@ class User extends Authenticatable
     public function isHouse(): bool
     {
         return $this->username === static::HOUSE_USERNAME || $this->email === static::HOUSE_EMAIL;
+    }
+
+    /**
+     * Manages the house catalog: the house row itself plus flagged staff
+     * operator accounts (e.g. seller@garagemarket.ph). Treasury identity
+     * stays on isHouse() alone — this is catalog-management scope only.
+     */
+    public function managesHouseCatalog(): bool
+    {
+        return $this->isHouse() || (bool) $this->is_house_staff;
     }
 
     public static function house(): ?static

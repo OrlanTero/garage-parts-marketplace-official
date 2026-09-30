@@ -158,7 +158,17 @@ class OrderController extends Controller
             $quantity,
         );
 
-        return response()->json(['status' => 'success', 'data' => $quote]);
+        return response()->json(['status' => 'success', 'data' => $quote + ['policy' => DeliveryFeeService::policy()]]);
+    }
+
+    /**
+     * Public freight policy (thresholds/fees) so the storefront badges and
+     * checkout mirror the backend rule without hardcoding. No auth needed.
+     * GET /freight-policy
+     */
+    public function freightPolicy(): JsonResponse
+    {
+        return response()->json(['status' => 'success', 'data' => DeliveryFeeService::policy()]);
     }
 
     /** House dispatch warehouse: active default first, else oldest active. */

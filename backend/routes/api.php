@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DealOfferController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\RestockController;
+use App\Http\Controllers\Api\WantedController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\KycController;
@@ -178,6 +179,14 @@ Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name
         Route::post('/restocks', [RestockController::class, 'store'])->name('api.restocks.store');
         Route::delete('/restocks/{subscription}', [RestockController::class, 'destroy'])->name('api.restocks.destroy');
 
+        // Wanted ads — my board actions (public board lives outside auth).
+        Route::post('/wanted-requests', [WantedController::class, 'store'])->name('api.wanted.store');
+        Route::patch('/wanted-requests/{wantedRequest}', [WantedController::class, 'update'])->name('api.wanted.update');
+        Route::post('/wanted-requests/{wantedRequest}/status', [WantedController::class, 'setStatus'])->name('api.wanted.status');
+        Route::post('/wanted-requests/{wantedRequest}/offers', [WantedController::class, 'offer'])->name('api.wanted.offer');
+        Route::post('/wanted-requests/{wantedRequest}/accept', [WantedController::class, 'accept'])->name('api.wanted.accept');
+        Route::delete('/wanted-requests/{wantedRequest}', [WantedController::class, 'destroy'])->name('api.wanted.destroy');
+
         // Wallet: balance, billing statements, payout accounts, cash-outs.
         // Any authenticated user (sellers earn payouts, agents earn
         // commissions) — zero balances simply report empty.
@@ -273,7 +282,11 @@ Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name
     });
 
     // --- Checkout & Sales Orders (Public / Customer) ---
+    Route::get('/freight-policy', [OrderController::class, 'freightPolicy'])->name('api.freight.policy');
     Route::get('/delivery-quote', [OrderController::class, 'deliveryQuote'])->name('api.delivery.quote');
+    // Wanted ads — public board (my actions + offers need auth, above).
+    Route::get('/wanted-requests', [WantedController::class, 'index'])->name('api.wanted.index');
+    Route::get('/wanted-requests/{wantedRequest}', [WantedController::class, 'show'])->name('api.wanted.show');
     Route::get('/offer-quote', [OrderController::class, 'offerQuote'])->name('api.offer.quote');
     // Registered before /orders/{identifier} so `verify` is not captured as an identifier.
     Route::get('/orders/verify/{hash}', [OrderController::class, 'verify'])->name('api.orders.verify');
@@ -376,6 +389,7 @@ Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name
         ->prefix('admin')->name('api.admin.')->group(function () {
             // Car Moderation & Vehicle Inspection Lifecycle
             Route::get('/moderation/cars', [AdminCarModerationController::class, 'index'])->name('moderation.cars.index');
+Route::get('/moderation/cars/{car}', [AdminCarModerationController::class, 'show'])->name('moderation.cars.show');
             Route::post('/moderation/cars/{car}/schedule-inspection', [AdminCarModerationController::class, 'scheduleInspection'])->name('moderation.cars.schedule');
             Route::post('/moderation/cars/{car}/record-inspection', [AdminCarModerationController::class, 'recordInspection'])->name('moderation.cars.record');
             Route::post('/moderation/cars/{car}/approve', [AdminCarModerationController::class, 'approve'])->name('moderation.cars.approve');
@@ -394,6 +408,7 @@ Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name
             Route::middleware(['role:admin,super_admin'])->group(function () {
             // Users, Buyers, Sellers, Dealers & RBAC Permissions
             Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+            Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
             Route::get('/staff', [AdminUserController::class, 'staff'])->name('staff.index');
             Route::patch('/users/{user}/role', [AdminUserController::class, 'updateRole'])->name('users.updateRole');
 
@@ -401,6 +416,9 @@ Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name
             Route::get('/kyc-verifications', [AdminKycController::class, 'index'])->name('kyc.index');
             Route::post('/kyc-verifications/{user}/approve', [AdminKycController::class, 'approve'])->name('kyc.approve');
             Route::post('/kyc-verifications/{user}/reject', [AdminKycController::class, 'reject'])->name('kyc.reject');
+
+            // Wanted ads moderation (board itself is public; remove only).
+            Route::delete('/wanted-requests/{wantedRequest}', [WantedController::class, 'adminDestroy'])->name('wanted.adminDestroy');
 
             // Buyer-to-Seller Upgrade Application Review
             Route::get('/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('seller-applications.index');

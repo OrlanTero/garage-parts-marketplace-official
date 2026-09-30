@@ -20,6 +20,8 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'is_house' => (bool) $this->isHouse(),
+            'is_house_staff' => (bool) ($this->is_house_staff ?? false),
+            'manages_house_catalog' => (bool) $this->managesHouseCatalog(),
             'role' => $role,
             'provider' => $this->provider,
             'avatar_url' => $this->avatar_url,

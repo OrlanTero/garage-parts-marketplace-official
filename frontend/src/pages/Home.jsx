@@ -691,7 +691,7 @@ export default function Home() {
               <h3>Can&apos;t find your specific engine code, aero part, or wheel specs?</h3>
               <p>Post a free <strong>Wanted Ad</strong> and our verified network of 280+ Japanese & local surplus shops will ping you with quotes.</p>
             </div>
-            <Link to="/parts" className="btn btn-primary wanted-ad-btn">
+            <Link to="/wanted/new" className="btn btn-primary wanted-ad-btn">
               <span>Post Wanted Request</span>
               <ArrowRight size={16} />
             </Link>

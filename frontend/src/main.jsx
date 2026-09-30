@@ -8,9 +8,13 @@ import { FavoritesProvider } from './context/FavoritesContext.jsx'
 import { ChatProvider } from './context/ChatContext.jsx'
 import { NotificationProvider } from './context/NotificationContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
+import { loadFreightPolicy } from './utils/freight.js'
 // Single style entry point — all global styles live in src/styles/ (see index.css).
 import './styles/index.css'
 import './components/Modal.css'
+
+// Live freight policy (thresholds/fees) before first paint of prices.
+loadFreightPolicy()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -20,6 +20,7 @@ import {
   FileText
 } from 'lucide-react'
 import { marketplaceParts } from '../api/parts.js'
+import { ordersApi } from '../api/orders.js'
 import { useFavorites } from '../context/FavoritesContext.jsx'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useChat } from '../context/ChatContext.jsx'
@@ -28,6 +29,8 @@ import ShareModal from '../components/ShareModal.jsx'
 import ReviewSection from '../components/ReviewSection.jsx'
 import NotifyMeButton from '../components/NotifyMeButton.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
+import { canManagePart, isHouseAccount } from '../utils/listingAccess.js'
+import { partShipsFree, peso as freightPeso, useFreightPolicy } from '../utils/freight.js'
 import './Details.css'
 
 const CATEGORY_PLACEHOLDERS = {
@@ -59,12 +62,14 @@ export default function PartDetail() {
   const [error, setError] = useState('')
   const [selectedImgIdx, setSelectedImgIdx] = useState(0)
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [freightQuote, setFreightQuote] = useState(null)
+  const freightPolicy = useFreightPolicy()
   const activeReferralCode = getActiveReferralCode()
 
-  // Own listing: the seller gets manage controls, never buy buttons.
-  const isOwner = Boolean(
-    user?.id && part?.seller?.id && Number(user.id) === Number(part.seller.id),
-  )
+  // Managers (owner, house staff, future partner-garage staff) get manage
+  // controls — never buy/inquire buttons. See utils/listingAccess.js.
+  const isOwner = canManagePart(user, part)
+  const isHouse = isHouseAccount(user)
   const reloadPart = () => {
     marketplaceParts
       .show(id)
@@ -87,6 +92,17 @@ export default function PartDetail() {
           : e.message,
       ))
   }, [id])
+
+  // Live freight quote (no destination yet → threshold rule or standard
+  // flat fee), so the badge matches what checkout will actually charge.
+  useEffect(() => {
+    if (!part?.id) return
+    let alive = true
+    ordersApi.getDeliveryQuote({ part_id: part.id, item_type: 'part', quantity: 1 })
+      .then((q) => { if (alive) setFreightQuote(q) })
+      .catch(() => { if (alive) setFreightQuote(null) })
+    return () => { alive = false }
+  }, [part?.id])
 
   if (error) {
     return (
@@ -130,7 +146,14 @@ export default function PartDetail() {
   const priceDisplay = formatPrice(part.price)
   const origPriceDisplay = part.origPrice || part.original_price ? formatPrice(part.origPrice || part.original_price) : null
   const location = part.location || part.loc || part.city || 'Makati Showroom'
-  const freeShip = part.free_shipping || part.freeShip || (Number(part.price) >= 8000)
+  // Freight verdict: live backend quote wins (it carries the effective
+  // policy); synchronous rule only as fallback.
+  const quotePolicy = freightQuote?.policy || freightPolicy
+  const quoteFree = freightQuote ? Boolean(freightQuote.free) : null
+  const freeShip = quoteFree ?? partShipsFree(part, Number(part.price || 0), quotePolicy)
+  const freightFeeText = !freeShip && freightQuote?.fee != null
+    ? `${freightPeso(freightQuote.fee, 0)} standard freight`
+    : null
   const tag = part.tag || (part.condition === 'new' ? 'Brand New OEM' : 'Surplus Mint')
   const rating = part.rating || 4.9
   const reviewsCount = part.reviews_count || part.reviews || 18
@@ -144,7 +167,7 @@ export default function PartDetail() {
     ['Condition', part.condition ? (part.condition === 'new' ? 'Brand New in Box' : 'Japanese Surplus Mint') : '—'],
     ['Stock Quantity', part.quantity != null ? `${part.quantity} Unit(s) Available` : 'In Stock'],
     ...(part.lifecycle_status && part.lifecycle_status !== 'active' ? [['Catalog Status', String(part.lifecycle_status).toUpperCase()]] : []),
-    ['Freight Delivery', freeShip ? 'Free Insured Crated Shipping' : 'Calculated at Checkout'],
+    ['Freight Delivery', freeShip ? 'Free Insured Crated Shipping' : (freightFeeText ? `${freightFeeText} · exact rate at checkout` : 'Calculated at Checkout')],
     ['Hub Location', location],
   ]
 
@@ -166,11 +189,15 @@ export default function PartDetail() {
                   className="detail-main-img" 
                 />
                 {catName && <span className="detail-media-tag">{catName}</span>}
-                {freeShip && (
+                {freeShip ? (
                   <span className="detail-media-score" style={{ background: '#15803d' }}>
                     <Truck size={14} /> Free Freight
                   </span>
-                )}
+                ) : freightFeeText ? (
+                  <span className="detail-media-score" style={{ background: 'rgba(20, 23, 26, 0.85)' }}>
+                    <Truck size={14} /> {freightFeeText}
+                  </span>
+                ) : null}
                 {activeMedia?.caption && (
                   <div className="detail-caption-bar">{activeMedia.caption}</div>
                 )}
@@ -265,8 +292,8 @@ export default function PartDetail() {
               {/* Referring Agent Banner (buyers only) */}
               {activeReferralCode && !isOwner && (
                 <div style={{
-                  background: 'rgba(16, 185, 129, 0.12)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  background: 'var(--color-success-bg)',
+                  border: '1px solid var(--color-success)',
                   borderRadius: 10,
                   padding: '10px 14px',
                   marginBottom: 16,
@@ -274,7 +301,7 @@ export default function PartDetail() {
                   alignItems: 'center',
                   gap: 10,
                   fontSize: 13,
-                  color: '#10b981'
+                  color: 'var(--color-success)'
                 }}>
                   <span>🤝</span>
                   <div>
@@ -286,8 +313,8 @@ export default function PartDetail() {
               {isOwner ? (
                 <>
                   <div style={{
-                    background: 'rgba(124, 58, 237, 0.1)',
-                    border: '1px solid rgba(124, 58, 237, 0.4)',
+                    background: 'var(--color-warning-bg)',
+                    border: '1px solid var(--color-warning)',
                     borderRadius: 10,
                     padding: '10px 14px',
                     marginBottom: 12,
@@ -295,11 +322,12 @@ export default function PartDetail() {
                     alignItems: 'center',
                     gap: 10,
                     fontSize: 13,
-                    color: '#c4b5fd',
+                    color: 'var(--color-warning)',
                   }}>
                     <Store size={16} />
                     <div>
-                      <strong>This is your listing.</strong> Buyers see the public view — you get manage controls.
+                      <strong>{isHouse ? 'Garage catalog listing.' : 'This is your listing.'}</strong>{' '}
+                      Buyers see the public view — you get manage controls.
                     </div>
                   </div>
                   <div className="detail-actions-row">
@@ -435,7 +463,7 @@ export default function PartDetail() {
                     <div className="detail-seller-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>@{part.seller.username || 'seller'}</span>
                       {part.seller.is_kyc_verified && (
-                        <ShieldCheck size={16} style={{ color: '#10b981' }} title="KYC Verified Seller" />
+                        <ShieldCheck size={16} style={{ color: 'var(--color-success)' }} title="KYC Verified Seller" />
                       )}
                     </div>
                     <div className="detail-seller-sub">Verified Parts Supplier · {location}</div>
@@ -463,7 +491,7 @@ export default function PartDetail() {
                     </button>
                   )}
                   {part.seller.is_kyc_verified ? (
-                    <span className="badge" style={{ background: '#dcfce7', color: '#15803d', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <span className="badge" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <ShieldCheck size={13} />
                       <span>KYC Verified</span>
                     </span>

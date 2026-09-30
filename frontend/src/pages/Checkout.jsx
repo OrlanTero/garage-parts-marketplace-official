@@ -21,6 +21,7 @@ import { marketplaceCars } from '../api/cars.js'
 import { ordersApi } from '../api/orders.js'
 import { agentsApi } from '../api/agents.js'
 import { getActiveReferralCode } from '../utils/referral.js'
+import { partShipsFree, useFreightPolicy } from '../utils/freight.js'
 import { useMediaQuery } from '../hooks/useMediaQuery.js'
 import DeliveryMapPicker from '../components/DeliveryMapPicker.jsx'
 import { accountApi, ADDRESS_LABELS } from '../api/account.js'
@@ -39,6 +40,7 @@ export default function Checkout() {
 
   const [item, setItem] = useState(null)
   const [itemType, setItemType] = useState(carId ? 'car' : 'part')
+  const freightPolicy = useFreightPolicy()
   const [loadingItem, setLoadingItem] = useState(true)
   const [quantity, setQuantity] = useState(1)
 
@@ -304,9 +306,9 @@ export default function Checkout() {
     return () => clearTimeout(timer)
   }, [itemType, item?.id, quantity, formData.delivery_latitude, formData.delivery_longitude, formData.shipping_city])
 
-  const localFreeShipping = (item && (item.free_shipping || item.freeShip)) || subtotal >= 10000 || itemType === 'car'
+  const localFreeShipping = itemType === 'car' || partShipsFree(item, subtotal, freightPolicy)
   const isFreeShipping = quote ? Boolean(quote.free) : localFreeShipping
-  const shippingFee = quote ? Number(quote.fee || 0) : (isFreeShipping ? 0 : 350)
+  const shippingFee = quote ? Number(quote.fee || 0) : (isFreeShipping ? 0 : Number(freightPolicy.flat_fee || 350))
   const grandTotal = subtotal + shippingFee
 
   // Chassis/VIN fitment identity is mandatory for PART orders only —
@@ -1277,12 +1279,21 @@ export default function Checkout() {
                     Express Freight Logistics
                     {quote?.zone && (
                       <span style={{ display: 'block', fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                        From GAP Valenzuela Main · {quote.zone}{quote.distance_km != null ? ` · ${quote.distance_km} km` : ''}
+                        {quote.zone}{quote.distance_km != null ? ` · ${quote.distance_km} km` : ''}
+                      </span>
+                    )}
+                    {isFreeShipping && (
+                      <span style={{ display: 'block', fontSize: 11, color: 'var(--color-success)', marginTop: 2 }}>
+                        {quote?.reason || (item?.free_shipping || item?.freeShip
+                          ? 'Seller offers free shipping on this listing.'
+                          : freightPolicy.threshold > 0
+                            ? `Free freight for orders at/above ₱${Number(freightPolicy.threshold).toLocaleString('en-PH')}.`
+                            : 'Free freight applied.')}
                       </span>
                     )}
                   </span>
                   <span style={{ color: isFreeShipping ? 'var(--color-success)' : 'var(--color-heading)', fontWeight: 600 }}>
-                    {isFreeShipping ? 'FREE (Special Promo)' : formatCurrency(shippingFee)}
+                    {isFreeShipping ? 'FREE' : formatCurrency(shippingFee)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>

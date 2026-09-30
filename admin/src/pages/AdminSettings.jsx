@@ -45,9 +45,10 @@ export default function AdminSettings() {
   }
 
   return (
-    <div style={{ maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div>
+    <div className="admin-settings-page" style={{ maxWidth: 1000, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="admin-settings-head">
         <h1
+          className="admin-settings-title"
           style={{
             fontFamily: 'var(--font-display)',
             fontSize: '1.6rem',

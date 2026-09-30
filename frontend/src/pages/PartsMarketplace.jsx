@@ -174,7 +174,7 @@ export default function PartsMarketplace() {
       <section className="parts-hero">
         <div className="parts-hero-inner">
           <span className="parts-eyebrow">
-            <Truck size={16} /> Free Freight on Orders Over ₱10,000 · Genuine & Japanese Surplus
+            <Truck size={16} /> Warehouse-Priced Freight · Genuine & Japanese Surplus
           </span>
           <h1 className="parts-title">Performance Parts, Internals & Fab</h1>
           <p className="parts-lead">
@@ -485,15 +485,14 @@ export default function PartsMarketplace() {
               and receive verified quotes with photos directly from our vetted surplus importers.
             </p>
           </div>
-          <button 
-            type="button" 
-            className="btn btn-primary" 
+          <Link
+            to="/wanted/new"
+            className="btn btn-primary"
             style={{ padding: '12px 24px', fontSize: 15 }}
-            onClick={() => alert('Wanted Request feature is ready! Sellers & importers will be notified.')}
           >
             <span>Post Wanted Request</span>
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </div>
       </div>
     </div>

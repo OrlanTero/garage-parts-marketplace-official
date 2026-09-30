@@ -412,7 +412,7 @@ export default function Marketplace() {
             </div>
             <h3>No Vehicles Match Your Criteria</h3>
             <p>
-              We couldn&apos;t find any verified vehicles matching your current filter selection. 
+              We couldn&apos;t find any verified vehicles matching your current filter selection.
               Try adjusting your price range, clearing specific filters, or post a Wanted Ad.
             </p>
             <div className="empty-state-actions">
@@ -420,8 +420,8 @@ export default function Marketplace() {
                 <RotateCcw size={15} />
                 <span>Reset All Filters</span>
               </button>
-              <Link to="/sell" className="btn btn-secondary">
-                <span>List a Vehicle for Sale</span>
+              <Link to="/wanted/new" className="btn btn-secondary">
+                <span>Post a Wanted Ad</span>
               </Link>
             </div>
           </div>

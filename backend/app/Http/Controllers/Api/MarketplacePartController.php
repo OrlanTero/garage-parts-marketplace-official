@@ -50,6 +50,6 @@ class MarketplacePartController extends Controller
             $this->authorize('view', $part);
         }
 
-        return new PartResource($part->loadMissing(['seller:id,name', 'media'])->loadCount('heldOrders'));
+        return new PartResource($part->loadMissing(['seller:id,name,username,avatar_url,role', 'media'])->loadCount('heldOrders'));
     }
 }
