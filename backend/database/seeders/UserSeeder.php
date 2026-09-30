@@ -290,6 +290,10 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($buyers as $buyerData) {
+            // Community buyers carry a referral identity (agent_code) so the
+            // agent flow is demoable, but they are NOT agents: no KYC, no
+            // subscription, no commission override — type rates apply if
+            // they ever qualify. Never seed is_agent=true without both.
             User::firstOrCreate(
                 ['email' => $buyerData['email']],
                 [
@@ -300,8 +304,6 @@ class UserSeeder extends Seeder
                     'avatar_url' => $buyerData['avatar_url'],
                     'agent_code' => $buyerData['agent_code'] ?? null,
                     'agent_tagline' => $buyerData['agent_tagline'] ?? null,
-                    'commission_rate' => 5.00,
-                    'is_agent' => true,
                     'email_verified_at' => now(),
                 ]
             );

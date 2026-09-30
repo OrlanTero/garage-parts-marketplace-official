@@ -237,7 +237,11 @@ export default function AgentPortal() {
           </div>
         )}
 
-        {/* Agent Profile & Main Referral Link Card */}
+        {/* Agent Profile & Main Referral Link Card — active agents only.
+            Everyone else gets the locked panel below (no links, QR, metrics
+            or order history until KYC + paid subscription). */}
+        {isActive ? (
+        <>
         <div className="agent-identity-card">
           <div className="agent-identity-main">
             <div className="agent-avatar-wrap">
@@ -254,7 +258,7 @@ export default function AgentPortal() {
                 <span className="agent-code-pill">Code: <strong>{agentCode}</strong></span>
               </div>
               <p className="agent-commission-callout">
-                Active Commission Rate: <span className="highlight-green">{stats?.agent?.commission_rate || user?.commission_rate || 5.0}% per sale</span>
+                Active Commission Rate: <span className="highlight-green">{carPct}% cars · {partPct}% parts</span>
               </p>
               
               {user && (
@@ -475,6 +479,27 @@ export default function AgentPortal() {
             </div>
           )}
         </div>
+        </>
+        ) : (
+        <div className="agent-identity-card" style={{ textAlign: 'center', padding: '36px 24px' }}>
+          <div style={{ fontSize: 34 }}>🔒</div>
+          <h3 style={{ margin: '12px 0 6px' }}>Agent tools unlock after activation</h3>
+          <p style={{ margin: '0 auto 18px', maxWidth: 460, fontSize: 14, opacity: 0.85 }}>
+            Your referral links, QR code, commissions and order history appear here once
+            KYC is verified and the ₱{fee}/year subscription is active.
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {!kycVerified && (
+              <Link to="/settings" className="btn btn-secondary btn-sm">Go to KYC verification</Link>
+            )}
+            {kycVerified && (
+              <button type="button" className="btn btn-primary btn-sm" onClick={openPayModal}>
+                Subscribe — ₱{fee}/yr
+              </button>
+            )}
+          </div>
+        </div>
+        )}
 
         {/* How It Works Explainer */}
         <div className="agent-explainer-section">
