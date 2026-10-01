@@ -500,7 +500,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
+                            "raw": "{\n    \"name\": \"Enthusiast Buyer\",\n    \"email\": \"buyer.test.1790830135@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"buyer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -556,7 +556,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
+                            "raw": "{\n    \"name\": \"Private Car Seller\",\n    \"email\": \"seller.test.1790830135@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -612,7 +612,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
+                            "raw": "{\n    \"name\": \"Metro Premier Auto Mall\",\n    \"email\": \"dealer.test.1790830135@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"dealer\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -668,7 +668,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1790600167@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
+                            "raw": "{\n    \"name\": \"Apex Performance Parts Supply\",\n    \"email\": \"parts.test.1790830135@garagemarket.ph\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"role\": \"parts_seller\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -3941,7 +3941,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"inspection_type\": \"garage_dropoff\",\n    \"inspection_date\": \"2026-09-30 12:56:07\",\n    \"inspection_location\": \"Makati Certified Bay 1\",\n    \"notes\": \"Underside rust and turbo manifold inspection\"\n}"
+                            "raw": "{\n    \"inspection_type\": \"garage_dropoff\",\n    \"inspection_date\": \"2026-10-03 04:48:55\",\n    \"inspection_location\": \"Makati Certified Bay 1\",\n    \"notes\": \"Underside rust and turbo manifold inspection\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/admin/moderation/cars/{{carId}}/schedule-inspection",
@@ -4689,6 +4689,337 @@
                             ]
                         },
                         "description": "Verifies authenticated requests properly bypass edge FastCGI caching."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "17. Admin Orders, Car Transactions & Analytics",
+            "item": [
+                {
+                    "name": "PATCH Admin Order Status (Funds-First Fulfillment)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Status moved\", function () { const d = pm.response.json().data; pm.expect(d.status).to.be.a(\"string\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"shipped\",\n    \"carrier\": \"LBC Express\",\n    \"tracking_number\": \"LBC-DEMO-0001\",\n    \"estimated_arrival\": \"2026-10-04\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/orders/{{orderId}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{orderId}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Moves fulfillment forward (requires verified acceptance + confirmed funds for preparing/sold/shipped/delivered)."
+                    }
+                },
+                {
+                    "name": "PATCH Admin Order Delivery Info (No Status Move)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Delivery saved\", function () { const d = pm.response.json().data; pm.expect(d.carrier).to.eql(\"LBC Express\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"carrier\": \"LBC Express\",\n    \"tracking_number\": \"LBC-DEMO-0001\",\n    \"tracking_url\": \"https:\\/\\/www.lbcexpress.com\\/track\\/LBC-DEMO-0001\",\n    \"estimated_arrival\": \"2026-10-04\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/orders/{{orderId}}/delivery",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{orderId}}",
+                                "delivery"
+                            ]
+                        },
+                        "description": "Saves courier/tracking/ETA without moving status — works on shipped/delivered orders. Blocked only when cancelled/refunded."
+                    }
+                },
+                {
+                    "name": "GET Car Transactions (Holds, Proofs & Releases)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Transactions present\", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an(\"array\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/car-transactions?per_page=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "car-transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "20"
+                                }
+                            ]
+                        },
+                        "description": "Every car build transaction with hold state, proof state and payout flag, plus held-funds summary."
+                    }
+                },
+                {
+                    "name": "POST Approve Handover Proof (Release Funds)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Funds released\", function () { const d = pm.response.json().data; pm.expect(d.payment_status).to.eql(\"released\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/car-transactions/{{orderId}}/approve-proof",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "car-transactions",
+                                "{{orderId}}",
+                                "approve-proof"
+                            ]
+                        },
+                        "description": "Approves a pending handover proof: releases escrow to the seller wallet, settles agent commission, completes the order."
+                    }
+                },
+                {
+                    "name": "POST Reject Handover Proof (Return with Reason)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Proof returned\", function () { const d = pm.response.json().data; pm.expect(d.proof.status).to.eql(\"rejected\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reason\": \"Odometer photo is unreadable \\u2014 please resubmit a clear shot.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/car-transactions/{{orderId}}/reject-proof",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "car-transactions",
+                                "{{orderId}}",
+                                "reject-proof"
+                            ]
+                        },
+                        "description": "Returns a pending proof with feedback; funds stay held."
+                    }
+                },
+                {
+                    "name": "GET Marketplace Analytics Overview",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"KPIs present\", function () { const d = pm.response.json().data; pm.expect(d.kpis.gmv).to.be.a(\"number\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/admin/analytics/overview?range=30d",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "analytics",
+                                "overview"
+                            ],
+                            "query": [
+                                {
+                                    "key": "range",
+                                    "value": "30d"
+                                }
+                            ]
+                        },
+                        "description": "Platform intelligence: GMV, take-rate, AOV, orders by status/type, categories, brands, 6-month trend, users, inventory, payouts. Range: 7d|30d|90d|ytd|all."
+                    }
+                },
+                {
+                    "name": "POST Save Onboarding Profile + Address (Required Step)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Profile saved\", function () { const d = pm.response.json(); pm.expect(d.phone).to.be.a(\"string\"); });"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Juan Dela Cruz\",\n    \"phone\": \"0917-123-4567\",\n    \"address\": {\n        \"address_line\": \"123 Sampaguita St., Brgy. Poblacion\",\n        \"city\": \"Makati\",\n        \"postal_code\": \"1200\",\n        \"phone\": \"0917-123-4567\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/auth/onboarding",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "onboarding"
+                            ]
+                        },
+                        "description": "Saves the required setup-wizard profile (name/phone) plus the default delivery address. Add {\"complete\": true} to finish setup (422 until profile complete)."
                     }
                 }
             ]

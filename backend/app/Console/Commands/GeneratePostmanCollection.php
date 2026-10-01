@@ -82,6 +82,7 @@ class GeneratePostmanCollection extends Command
                 $this->adminModerationAndRbacFolder(),
                 $this->broadcastingFolder(),
                 $this->nginxCachingFolder(),
+                $this->adminOrdersFolder(),
             ],
         ];
 
@@ -1977,6 +1978,144 @@ class GeneratePostmanCollection extends Command
                         'header' => [['key' => 'Accept', 'value' => 'application/json']],
                         'url' => ['raw' => '{{baseUrl}}/api/v1/seller/cars', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'seller', 'cars']],
                         'description' => 'Verifies authenticated requests properly bypass edge FastCGI caching.',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    private function adminOrdersFolder(): array
+    {
+        return [
+            'name' => '17. Admin Orders, Car Transactions & Analytics',
+            'item' => [
+                [
+                    'name' => 'PATCH Admin Order Status (Funds-First Fulfillment)',
+                    'event' => [$this->testStatus200('pm.test("Status moved", function () { const d = pm.response.json().data; pm.expect(d.status).to.be.a("string"); });')],
+                    'request' => [
+                        'method' => 'PATCH',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'Content-Type', 'value' => 'application/json'],
+                        ],
+                        'body' => [
+                            'mode' => 'raw',
+                            'raw' => json_encode([
+                                'status' => 'shipped',
+                                'carrier' => 'LBC Express',
+                                'tracking_number' => 'LBC-DEMO-0001',
+                                'estimated_arrival' => date('Y-m-d', strtotime('+3 days')),
+                            ], JSON_PRETTY_PRINT),
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/admin/orders/{{orderId}}/status', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'admin', 'orders', '{{orderId}}', 'status']],
+                        'description' => 'Moves fulfillment forward (requires verified acceptance + confirmed funds for preparing/sold/shipped/delivered).',
+                    ],
+                ],
+                [
+                    'name' => 'PATCH Admin Order Delivery Info (No Status Move)',
+                    'event' => [$this->testStatus200('pm.test("Delivery saved", function () { const d = pm.response.json().data; pm.expect(d.carrier).to.eql("LBC Express"); });')],
+                    'request' => [
+                        'method' => 'PATCH',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'Content-Type', 'value' => 'application/json'],
+                        ],
+                        'body' => [
+                            'mode' => 'raw',
+                            'raw' => json_encode([
+                                'carrier' => 'LBC Express',
+                                'tracking_number' => 'LBC-DEMO-0001',
+                                'tracking_url' => 'https://www.lbcexpress.com/track/LBC-DEMO-0001',
+                                'estimated_arrival' => date('Y-m-d', strtotime('+3 days')),
+                            ], JSON_PRETTY_PRINT),
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/admin/orders/{{orderId}}/delivery', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'admin', 'orders', '{{orderId}}', 'delivery']],
+                        'description' => 'Saves courier/tracking/ETA without moving status — works on shipped/delivered orders. Blocked only when cancelled/refunded.',
+                    ],
+                ],
+                [
+                    'name' => 'GET Car Transactions (Holds, Proofs & Releases)',
+                    'event' => [$this->testStatus200('pm.test("Transactions present", function () { const d = pm.response.json(); pm.expect(d.data).to.be.an("array"); });')],
+                    'request' => [
+                        'method' => 'GET',
+                        'header' => [['key' => 'Accept', 'value' => 'application/json']],
+                        'url' => [
+                            'raw' => '{{baseUrl}}/api/v1/admin/car-transactions?per_page=20',
+                            'host' => ['{{baseUrl}}'],
+                            'path' => ['api', 'v1', 'admin', 'car-transactions'],
+                            'query' => [['key' => 'per_page', 'value' => '20']],
+                        ],
+                        'description' => 'Every car build transaction with hold state, proof state and payout flag, plus held-funds summary.',
+                    ],
+                ],
+                [
+                    'name' => 'POST Approve Handover Proof (Release Funds)',
+                    'event' => [$this->testStatus200('pm.test("Funds released", function () { const d = pm.response.json().data; pm.expect(d.payment_status).to.eql("released"); });')],
+                    'request' => [
+                        'method' => 'POST',
+                        'header' => [['key' => 'Accept', 'value' => 'application/json']],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/admin/car-transactions/{{orderId}}/approve-proof', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'admin', 'car-transactions', '{{orderId}}', 'approve-proof']],
+                        'description' => 'Approves a pending handover proof: releases escrow to the seller wallet, settles agent commission, completes the order.',
+                    ],
+                ],
+                [
+                    'name' => 'POST Reject Handover Proof (Return with Reason)',
+                    'event' => [$this->testStatus200('pm.test("Proof returned", function () { const d = pm.response.json().data; pm.expect(d.proof.status).to.eql("rejected"); });')],
+                    'request' => [
+                        'method' => 'POST',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'Content-Type', 'value' => 'application/json'],
+                        ],
+                        'body' => [
+                            'mode' => 'raw',
+                            'raw' => json_encode([
+                                'reason' => 'Odometer photo is unreadable — please resubmit a clear shot.',
+                            ], JSON_PRETTY_PRINT),
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/admin/car-transactions/{{orderId}}/reject-proof', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'admin', 'car-transactions', '{{orderId}}', 'reject-proof']],
+                        'description' => 'Returns a pending proof with feedback; funds stay held.',
+                    ],
+                ],
+                [
+                    'name' => 'GET Marketplace Analytics Overview',
+                    'event' => [$this->testStatus200('pm.test("KPIs present", function () { const d = pm.response.json().data; pm.expect(d.kpis.gmv).to.be.a("number"); });')],
+                    'request' => [
+                        'method' => 'GET',
+                        'header' => [['key' => 'Accept', 'value' => 'application/json']],
+                        'url' => [
+                            'raw' => '{{baseUrl}}/api/v1/admin/analytics/overview?range=30d',
+                            'host' => ['{{baseUrl}}'],
+                            'path' => ['api', 'v1', 'admin', 'analytics', 'overview'],
+                            'query' => [['key' => 'range', 'value' => '30d']],
+                        ],
+                        'description' => 'Platform intelligence: GMV, take-rate, AOV, orders by status/type, categories, brands, 6-month trend, users, inventory, payouts. Range: 7d|30d|90d|ytd|all.',
+                    ],
+                ],
+                [
+                    'name' => 'POST Save Onboarding Profile + Address (Required Step)',
+                    'event' => [$this->testStatus200('pm.test("Profile saved", function () { const d = pm.response.json(); pm.expect(d.phone).to.be.a("string"); });')],
+                    'request' => [
+                        'method' => 'POST',
+                        'header' => [
+                            ['key' => 'Accept', 'value' => 'application/json'],
+                            ['key' => 'Content-Type', 'value' => 'application/json'],
+                        ],
+                        'body' => [
+                            'mode' => 'raw',
+                            'raw' => json_encode([
+                                'name' => 'Juan Dela Cruz',
+                                'phone' => '0917-123-4567',
+                                'address' => [
+                                    'address_line' => '123 Sampaguita St., Brgy. Poblacion',
+                                    'city' => 'Makati',
+                                    'postal_code' => '1200',
+                                    'phone' => '0917-123-4567',
+                                ],
+                            ], JSON_PRETTY_PRINT),
+                        ],
+                        'url' => ['raw' => '{{baseUrl}}/api/v1/auth/onboarding', 'host' => ['{{baseUrl}}'], 'path' => ['api', 'v1', 'auth', 'onboarding']],
+                        'description' => 'Saves the required setup-wizard profile (name/phone) plus the default delivery address. Add {"complete": true} to finish setup (422 until profile complete).',
                     ],
                 ],
             ],
