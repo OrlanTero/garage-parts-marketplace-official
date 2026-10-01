@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
@@ -18,18 +19,58 @@ import {
 import { useFavorites } from '../context/FavoritesContext.jsx'
 import { useProgram } from '../utils/program.js'
 
+/**
+ * Menu container — desktop popover in place; on small windows a
+ * right slide-in panel portaled to document.body (escapes the
+ * navbar's backdrop-filter, which would trap position:fixed).
+ */
+function MenuShell({ mobile, onClose, panelRef, children }) {
+  if (!mobile || typeof document === 'undefined') {
+    return (
+      <div className="user-dropdown-menu" role="menu">
+        {children}
+      </div>
+    )
+  }
+  return createPortal(
+    <>
+      <div className="user-panel-backdrop" onClick={onClose} />
+      <div ref={panelRef} className="user-dropdown-menu user-slide-panel" role="menu" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </>,
+    document.body,
+  )
+}
+
 export default function UserMenu({ user, logout, isTransparent = false }) {
   const program = useProgram()
   const { favoritesCount, carsCount, partsCount } = useFavorites()
   const [isOpen, setIsOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const menuRef = useRef(null)
+  const panelRef = useRef(null)
   const navigate = useNavigate()
+
+  // Small windows get a slide-in panel (portaled to body so the
+  // navbar's backdrop-filter can't trap it); desktop keeps the popover.
+  const [isMobilePanel, setIsMobilePanel] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
+  )
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined
+    const mq = window.matchMedia('(max-width: 640px)')
+    const onChange = (e) => setIsMobilePanel(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   // Close menu on click outside or Escape
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
+        if (panelRef.current && panelRef.current.contains(e.target)) return
         setIsOpen(false)
       }
     }
@@ -138,9 +179,9 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
         />
       </button>
 
-      {/* Dropdown Menu Popover */}
+      {/* Dropdown Menu Popover (desktop) / Slide-in panel (small windows) */}
       {isOpen && (
-        <div className="user-dropdown-menu" role="menu">
+        <MenuShell mobile={isMobilePanel} onClose={() => setIsOpen(false)} panelRef={panelRef}>
           {/* Header Card with User Details */}
           <div className="user-dropdown-header">
             <div className="user-dropdown-avatar-lg">
@@ -314,7 +355,7 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               <span>Log Out of Session</span>
             </button>
           </div>
-        </div>
+        </MenuShell>
       )}
     </div>
   )

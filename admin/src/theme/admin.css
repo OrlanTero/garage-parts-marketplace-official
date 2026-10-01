@@ -986,6 +986,123 @@ a.kyc-list-row:hover { color: var(--color-rust); }
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   KPI Cards — analytics stat cards in the theme's own voice: flat white,
+   soft-tint icon tile, Space Grotesk value, quiet footer metrics.
+   Tones reuse the theme status palette (+ rust).
+   ========================================================================== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  --kpi-tone: var(--color-rust);
+  --kpi-tone-bg: rgba(216, 98, 44, 0.1);
+  background: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 20px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.kpi-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+.kpi-card--green { --kpi-tone: var(--admin-success); --kpi-tone-bg: var(--admin-success-bg); }
+.kpi-card--rust { --kpi-tone: var(--color-rust); --kpi-tone-bg: rgba(216, 98, 44, 0.1); }
+.kpi-card--blue { --kpi-tone: var(--admin-info); --kpi-tone-bg: var(--admin-info-bg); }
+.kpi-card--amber { --kpi-tone: var(--admin-warning); --kpi-tone-bg: var(--admin-warning-bg); }
+.kpi-card--violet { --kpi-tone: #6d28d9; --kpi-tone-bg: rgba(139, 92, 246, 0.1); }
+.kpi-card--teal { --kpi-tone: #047857; --kpi-tone-bg: rgba(16, 185, 129, 0.1); }
+
+.kpi-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.kpi-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kpi-tone);
+  background: var(--kpi-tone-bg);
+  flex-shrink: 0;
+}
+
+.kpi-card-eyebrow {
+  font-size: 12px;
+  color: var(--admin-text-muted);
+  font-weight: 600;
+}
+
+.kpi-card-value {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  color: var(--admin-text-primary);
+  line-height: 1.15;
+}
+
+.kpi-card-value small {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+}
+
+.kpi-card-delta {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kpi-card-delta--up { color: #047857; }
+.kpi-card-delta--down { color: #b91c1c; }
+.kpi-card-delta--flat { color: var(--admin-text-muted); }
+
+.kpi-card-spark {
+  margin: 8px -2px 0;
+  display: block;
+}
+
+.kpi-card-foot {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--admin-border-subtle);
+  font-size: 12px;
+  color: var(--admin-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.kpi-card-foot strong { color: var(--admin-text-secondary); }
+
+.kpi-card-meter {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--admin-bg-subtle);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.kpi-card-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--kpi-tone);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }

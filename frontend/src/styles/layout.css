@@ -795,7 +795,50 @@
   .topbar-login-btn { padding: 8px; width: 40px; height: 40px; }
   .topbar-inner { gap: 8px; }
   .topbar-actions { gap: 6px; }
-  .user-dropdown-menu { width: min(300px, 92vw); right: -10px; }
+
+  /* Dim backdrop behind the slide-in user panel */
+  .user-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 26, 0.45);
+    z-index: 390;
+    animation: userPanelFade 0.22s ease;
+  }
+
+  @keyframes userPanelFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* User menu becomes a right slide-in panel on small windows */
+  .user-dropdown-menu {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, 88vw);
+    max-width: 88vw;
+    max-height: none;
+    border-radius: 0;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 14px 12px calc(20px + env(safe-area-inset-bottom));
+    z-index: 400;
+    animation: userPanelSlideIn 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: -16px 0 40px rgba(20, 23, 26, 0.22);
+  }
+
+  @keyframes userPanelSlideIn {
+    from {
+      opacity: 0.4;
+      transform: translateX(48px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
 }
 
 @media (max-width: 380px) {

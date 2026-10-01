@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Mobile Quick-Actions Bar — visible on mobile only (≤768px).
-   Exactly three buttons: Search / Saved / Messages.
+   Mobile Bottom Navigation (≤768px): Home, Search, Saved, Messages,
+   Notifications — app-style foot navbar with active states + badges.
    ========================================================================== */
 
 .mobile-quick-actions {
@@ -11,40 +11,52 @@
   .mobile-quick-actions {
     display: flex;
     align-items: stretch;
-    gap: 4px;
+    gap: 2px;
     position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 90;
-    background: rgba(20, 23, 26, 0.94);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 999px;
-    padding: 6px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    background: var(--card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    padding: 6px 4px;
+    box-shadow: var(--shadow-card);
   }
 
   .mobile-quick-actions-item {
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    min-width: 76px;
-    padding: 8px 10px 6px;
-    border-radius: 999px;
+    gap: 3px;
+    padding: 8px 4px 6px;
+    border-radius: 14px;
     background: none;
     border: none;
     cursor: pointer;
     text-decoration: none;
-    color: #cbd5e1;
+    color: var(--color-text-muted);
     transition: background 0.15s ease, color 0.15s ease;
+    position: relative;
   }
 
   .mobile-quick-actions-item:active {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    background: var(--color-surface-subtle);
+  }
+
+  .mobile-quick-actions-item--active {
+    color: var(--color-rust);
+  }
+
+  .mobile-quick-actions-item--active::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    width: 22px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--color-rust);
   }
 
   .mobile-quick-actions-btn {
@@ -56,12 +68,16 @@
   .mobile-quick-actions-btn .action-badge {
     position: absolute;
     top: -8px;
-    right: -12px;
+    right: -14px;
   }
 
   .mobile-quick-actions-label {
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.02em;
+  }
+
+  .mobile-quick-actions-item--active .mobile-quick-actions-label {
+    color: var(--color-rust);
   }
 }

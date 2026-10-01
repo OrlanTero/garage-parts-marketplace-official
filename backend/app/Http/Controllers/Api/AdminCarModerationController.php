@@ -41,10 +41,11 @@ class AdminCarModerationController extends Controller
     public function show(Car $car): CarResource
     {
         return new CarResource($car->loadMissing([
-            'seller:id,name,email,username,role,phone',
+            'seller:id,name,email,username,role,phone,is_showroom_active',
             'inspector:id,name,username',
             'approver:id,name,username',
             'media',
+            'showroomSlots',
         ]));
     }
 

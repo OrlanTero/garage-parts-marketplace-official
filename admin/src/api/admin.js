@@ -70,6 +70,9 @@ export const adminApi = {
   rejectCarProof: (orderId, reason) =>
     client.post(`/admin/car-transactions/${orderId}/reject-proof`, { reason }).then((r) => r.data?.data ?? r.data),
 
+  // Marketplace analytics & reports
+  getAnalyticsOverview: (params = {}) => client.get('/admin/analytics/overview', { params }).then((r) => r.data?.data ?? r.data),
+
   // Notifications: stats, ledger, real broadcasts
   getNotificationStats: () => client.get('/admin/notifications/stats').then((r) => r.data?.data ?? r.data),
   getNotifications: (params = {}) => client.get('/admin/notifications', { params }).then((r) => r.data),

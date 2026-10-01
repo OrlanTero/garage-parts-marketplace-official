@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminAnalyticsController;
 use App\Http\Controllers\Api\AdminAppointmentController;
 use App\Http\Controllers\Api\AdminAuctionController;
 use App\Http\Controllers\Api\AdminCarTransactionController;
@@ -450,6 +451,9 @@ Route::get('/moderation/cars/{car}', [AdminCarModerationController::class, 'show
             Route::get('/car-transactions', [AdminCarTransactionController::class, 'index'])->name('carTransactions.index');
             Route::post('/car-transactions/{order}/approve-proof', [AdminCarTransactionController::class, 'approveProof'])->name('carTransactions.approveProof');
             Route::post('/car-transactions/{order}/reject-proof', [AdminCarTransactionController::class, 'rejectProof'])->name('carTransactions.rejectProof');
+
+            // Marketplace analytics & reports (GMV, take-rate, categories, brands, trend)
+            Route::get('/analytics/overview', [AdminAnalyticsController::class, 'overview'])->name('analytics.overview');
 
             // Notifications: stats, ledger, user lookup, real broadcasts
             Route::get('/notifications/stats', [AdminNotificationController::class, 'stats'])->name('notifications.stats');

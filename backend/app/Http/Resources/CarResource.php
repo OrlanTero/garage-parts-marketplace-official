@@ -69,15 +69,40 @@ class CarResource extends JsonResource
             'sold_at' => $this->sold_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'seller' => $this->whenLoaded('seller', fn () => [
-                'id' => $this->seller->id,
-                'username' => $this->seller->username,
-                'avatar_url' => $this->seller->avatar_url,
-                'is_kyc_verified' => (bool) ($this->seller->is_kyc_verified && $this->seller->kyc_status === 'approved'),
-                'kyc_status' => $this->seller->kyc_status ?? 'not_submitted',
-                'role' => $this->seller->role instanceof BackedEnum ? $this->seller->role->value : $this->seller->role,
-                'rating' => (float) ($this->seller->rating ?? 5.0),
-            ]),
+            'seller' => $this->whenLoaded('seller', function () use ($request) {
+                $public = [
+                    'id' => $this->seller->id,
+                    'username' => $this->seller->username,
+                    'avatar_url' => $this->seller->avatar_url,
+                    'is_kyc_verified' => (bool) ($this->seller->is_kyc_verified && $this->seller->kyc_status === 'approved'),
+                    'kyc_status' => $this->seller->kyc_status ?? 'not_submitted',
+                    'role' => $this->seller->role instanceof BackedEnum ? $this->seller->role->value : $this->seller->role,
+                    'rating' => (float) ($this->seller->rating ?? 5.0),
+                ];
+                // Staff-only contact fields (admin/moderation reads) — never
+                // exposed on public marketplace payloads.
+                if ($request->is('api/*/admin/*')) {
+                    $public['name'] = $this->seller->name;
+                    $public['email'] = $this->seller->email;
+                    $public['phone'] = $this->seller->phone ?? null;
+                    $public['is_showroom_active'] = (bool) ($this->seller->is_showroom_active ?? false);
+                }
+                return $public;
+            }),
+            // Showroom & floor state (columns) + slot applications
+            // (when loaded, e.g. moderation detail) — no PII inside.
+            'is_in_showroom' => (bool) ($this->is_in_showroom ?? false),
+            'showroom_status' => $this->showroom_status,
+            'showroom_slots' => $this->whenLoaded('showroomSlots', fn () => $this->showroomSlots->map(fn ($slot) => [
+                'id' => $slot->id,
+                'status' => $slot->status,
+                'fee_percentage' => (float) ($slot->fee_percentage ?? 0),
+                'calculated_fee' => (float) ($slot->calculated_fee ?? 0),
+                'payment_method' => $slot->payment_method,
+                'approved_at' => $slot->approved_at?->toIso8601String(),
+                'expires_at' => $slot->expires_at?->toIso8601String(),
+                'created_at' => $slot->created_at?->toIso8601String(),
+            ])->values()),
         ];
     }
 }

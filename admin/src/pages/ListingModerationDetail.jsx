@@ -396,6 +396,54 @@ export default function ListingModerationDetail() {
         </div>
       </div>
 
+      {/* Showroom & floor status — build + seller garage presence */}
+      <div className="admin-card">
+        <h3 className="mod-card-title">Showroom & floor status</h3>
+        <div className="mod-grid">
+          <Spec label="On showroom floor" value={car.is_in_showroom ? 'Yes — displayed' : 'No'} />
+          <Spec label="Parking state" value={car.showroom_status ? String(car.showroom_status).replace(/_/g, ' ') : 'No slot availed'} />
+          <Spec label="Seller showroom" value={car.seller?.is_showroom_active ? 'Activated' : 'Not activated'} />
+          <Spec
+            label="Locations to visit"
+            value={[
+              car.inspection_location ? `Inspection: ${car.inspection_location}` : null,
+              car.city ? `Build city: ${car.city}` : null,
+            ].filter(Boolean).join(' · ') || '—'}
+          />
+        </div>
+        {Array.isArray(car.showroom_slots) && car.showroom_slots.length > 0 && (
+          <div className="table-container" style={{ marginTop: 12 }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Slot</th>
+                  <th>Status</th>
+                  <th>Fee</th>
+                  <th>Approved</th>
+                  <th>Expires</th>
+                </tr>
+              </thead>
+              <tbody>
+                {car.showroom_slots.map((slot) => (
+                  <tr key={slot.id}>
+                    <td style={{ fontFamily: 'monospace' }}>#{slot.id}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{String(slot.status || '').replace(/_/g, ' ')}</td>
+                    <td>₱ {Number(slot.calculated_fee || 0).toLocaleString('en-PH')} ({slot.fee_percentage}%)</td>
+                    <td>{slot.approved_at ? new Date(slot.approved_at).toLocaleDateString() : '—'}</td>
+                    <td>{slot.expires_at ? new Date(slot.expires_at).toLocaleDateString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div style={{ marginTop: 12 }}>
+          <Link to="/showroom-management" className="btn btn-secondary btn-sm">
+            <Building2 size={13} /> Open Showroom Management
+          </Link>
+        </div>
+      </div>
+
       <div className="mod-footnote">
         <MapPin size={13} />Reviewed in the moderation workspace — actions notify the seller automatically.
       </div>
