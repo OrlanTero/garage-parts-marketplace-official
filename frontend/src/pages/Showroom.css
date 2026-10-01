@@ -1088,8 +1088,8 @@
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: end;
+  justify-content: right !important;
 }
 
 .highlight-price-label {
@@ -1104,6 +1104,7 @@
   font-weight: 800;
   color: #ff9b66;
   font-family: var(--font-display);
+  white-space: nowrap;
 }
 
 /* Official Seller Card styling */

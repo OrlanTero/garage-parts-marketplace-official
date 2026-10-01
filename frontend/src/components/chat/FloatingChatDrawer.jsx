@@ -136,16 +136,8 @@ export default function FloatingChatDrawer() {
     }
   }, [offerAutoOpenKey, listingKey, isLoadingMessages, activeConversation?.id, clearOfferAutoOpen])
 
-  if (!isDrawerOpen) return null
-
-  const listingCard = activeListing?.card || attachedListing || null
-  const listingType = activeListing?.type || attachedListing?.type || null
-  const listingId = activeListing?.id || attachedListing?.id || null
-  const listingTitle = listingCard?.title || 'Listing'
-  const listingThumb = listingCard?.primary_image_url || listingFallbackImg(listingType)
-  const isViewerSeller = listingRole === 'selling'
-  const listingClosed = isListingClosed(listingCard)
-
+  // Hooks stay above the early return (Rules of Hooks) — useListingOrders
+  // is null-safe and idles to [] when no listing is attached.
   const { orders: listingOrders, refresh: refreshListingOrders } = useListingOrders(
     activeListing?.type || attachedListing?.type,
     activeListing?.id || attachedListing?.id,
@@ -162,6 +154,16 @@ export default function FloatingChatDrawer() {
     }
     return open[0] || null
   }, [listingOrders, recipientUser?.id])
+
+  if (!isDrawerOpen) return null
+
+  const listingCard = activeListing?.card || attachedListing || null
+  const listingType = activeListing?.type || attachedListing?.type || null
+  const listingId = activeListing?.id || attachedListing?.id || null
+  const listingTitle = listingCard?.title || 'Listing'
+  const listingThumb = listingCard?.primary_image_url || listingFallbackImg(listingType)
+  const isViewerSeller = listingRole === 'selling'
+  const listingClosed = isListingClosed(listingCard)
 
   const handleQuickAdvance = async (order, status) => {
     if (!order || !isViewerSeller) return
@@ -301,15 +303,15 @@ export default function FloatingChatDrawer() {
           </div>
 
           <div className="floating-chat-drawer__info">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="floating-chat-drawer__title-row">
               <h3 className="floating-chat-drawer__name" title={listingTitle}>
                 {listingTitle}
               </h3>
               {recipientUser?.is_kyc_verified && (
-                <ShieldCheck size={15} style={{ color: '#10b981' }} title="KYC Verified" />
+                <ShieldCheck size={15} className="floating-chat-drawer__kyc" title="KYC Verified" />
               )}
             </div>
-            <div className="floating-chat-drawer__role-pill">
+            <div className="floating-chat-drawer__meta-line">
               {listingRole && (
                 <span
                   className="floating-chat-drawer__agent-badge"
@@ -318,13 +320,15 @@ export default function FloatingChatDrawer() {
                   {listingRole === 'selling' ? 'Selling' : 'Buying'}
                 </span>
               )}
-              {listingCard?.price != null && <span>{formatPrice(listingCard.price)}</span>}
-              {replyTargetName && (
-                <span style={{ opacity: 0.85 }}>
-                  {isViewerSeller ? 'Reply to' : 'Seller'} {replyTargetName}
-                </span>
+              {listingCard?.price != null && (
+                <span className="floating-chat-drawer__price">{formatPrice(listingCard.price)}</span>
               )}
             </div>
+            {replyTargetName && (
+              <div className="floating-chat-drawer__counterparty" title={replyTargetName}>
+                {isViewerSeller ? 'Reply to' : 'Seller'} {replyTargetName}
+              </div>
+            )}
           </div>
         </div>
 
@@ -409,7 +413,7 @@ export default function FloatingChatDrawer() {
           )}
 
           {/* PII Safety Shield Banner */}
-          <div className="floating-chat-drawer__safety-banner">
+          <div className="floating-chat-drawer__safety-banner" title="Buyer Protection Active: Phone, email, & off-platform links are protected.">
             <Shield size={14} className="floating-chat-drawer__safety-icon" />
             <span>Buyer Protection Active: Phone, email, & off-platform links are protected.</span>
           </div>

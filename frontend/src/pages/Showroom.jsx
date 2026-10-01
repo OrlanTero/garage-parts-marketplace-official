@@ -898,7 +898,7 @@ export default function Showroom() {
                       onClick={() => setShowcaseTab('cars')}
                     >
                       <Car size={16} />
-                      <span>Vehicle Builds on Floor ({selectedSellerData.cars?.length || 0})</span>
+                      <span> Floor ({selectedSellerData.cars?.length || 0})</span>
                     </button>
 
                     <button
@@ -907,7 +907,7 @@ export default function Showroom() {
                       onClick={() => setShowcaseTab('reviews')}
                     >
                       <Star size={16} />
-                      <span>Buyer Reviews ({selectedSellerData.reviews?.length || 0})</span>
+                      <span>Reviews ({selectedSellerData.reviews?.length || 0})</span>
                     </button>
                   </div>
 
@@ -953,11 +953,11 @@ export default function Showroom() {
                                 <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 12 }}>
                                   {car.year} · {car.brand} {car.model} · {car.transmission || 'Manual'}
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-rust)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-rust)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                     {formatPeso(car.price)}
                                   </span>
-                                  <div style={{ display: 'flex', gap: 8 }}>
+                                  <div style={{ display: 'flex', justifyContent: "center", width: '100%', gap: 8, flexWrap: 'wrap' }}>
                                     <button
                                       type="button"
                                       className="btn btn-secondary"

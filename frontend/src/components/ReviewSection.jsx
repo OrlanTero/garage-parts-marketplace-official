@@ -143,7 +143,7 @@ export default function ReviewSection({ itemType, itemId, listingTitle }) {
   return (
     <div className="detail-specs-card" style={{ marginTop: 20 }}>
       <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <MessageSquare size={18} /> Buyer Reviews
+        <MessageSquare size={18} /> Reviews
         {summary.count > 0 && (
           <span style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>
             {summary.count} review{summary.count === 1 ? '' : 's'}
