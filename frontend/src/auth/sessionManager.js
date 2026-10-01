@@ -48,19 +48,27 @@ export const sessionManager = {
   me: () => client.get('/auth/me').then((r) => r.data),
 
   // --- OAuth flows ---
-  /** Ask backend for the provider URL (role travels as signup intent). */
+  /** Ask backend for the provider URL (role travels as signup intent). API/Postman use. */
   oauthRedirectUrl: (provider, role = 'buyer') => {
     if (!SUPPORTED_OAUTH_PROVIDERS.includes(provider)) throw new Error(`Unsupported provider: ${provider}`)
     return client
-      .get(`/auth/oauth/${provider}/redirect`, { params: { role, frontend: 1 } })
+      .get(`/auth/oauth/${provider}/redirect`, { params: { role } })
       .then((r) => r.data.url)
   },
 
-  /** Full browser redirect (used by the login screen later). */
-  startOAuth: (provider, role = 'buyer') =>
-    sessionManager.oauthRedirectUrl(provider, role).then((url) => {
-      window.location.assign(url)
-    }),
+  /**
+   * Full browser redirect — no XHR (axios would follow Google's 302
+   * cross-origin and die on CORS). The backend 302s straight to Google
+   * with a |web state marker; Google returns to the backend callback,
+   * which 302s to /oauth/callback?token=… in the SPA.
+   */
+  startOAuth: (provider, role = 'buyer') => {
+    if (!SUPPORTED_OAUTH_PROVIDERS.includes(provider)) throw new Error(`Unsupported provider: ${provider}`)
+    const base = String(client.defaults?.baseURL || '').replace(/\/$/, '')
+    const url = `${base}/auth/oauth/${provider}/redirect?${new URLSearchParams({ role, frontend: '1' }).toString()}`
+    window.location.assign(url)
+    return Promise.resolve(url)
+  },
 
   /**
    * Called on the /oauth/callback route (built later): pulls ?token= from the URL,
