@@ -64,6 +64,9 @@ export default function Checkout() {
     delivery_longitude: '',
     delivery_label: '',
 
+    // Car-build meetup: drop off at the seller point or on-site visit
+    handover_mode: 'dropoff',
+
     // Mandatory Vehicle Details
     chassis_number: '',
     vin: '',
@@ -410,6 +413,8 @@ export default function Checkout() {
         // Deal checkout: agreed chat price (single-use token).
         offer_token: offerToken || undefined,
         notes: formData.notes,
+        // Car meetup mode (cars only)
+        handover_mode: itemType === 'car' ? formData.handover_mode : undefined,
         // Optional upfront delivery pinpoint
         delivery_latitude: formData.delivery_latitude !== '' ? Number(formData.delivery_latitude) : undefined,
         delivery_longitude: formData.delivery_longitude !== '' ? Number(formData.delivery_longitude) : undefined,
@@ -472,7 +477,7 @@ export default function Checkout() {
 
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 8px 0', fontFamily: 'var(--font-display, inherit)' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 8px 0', fontFamily: 'var(--font-display, inherit)', color: 'var(--color-heading)' }}>
           Secure Checkout & Sales Order Generation
         </h1>
         {dealLocked && (
@@ -547,7 +552,7 @@ export default function Checkout() {
                     <Wrench size={20} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Vehicle Identification & Fitment Details</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--color-heading)' }}>Vehicle Identification & Fitment Details</h2>
                     <div style={{ fontSize: 12, color: '#d8622c', fontWeight: 600, marginTop: 2 }}>
                       Mandatory for Official Sales Order & Fitment Warranty
                     </div>
@@ -692,7 +697,7 @@ export default function Checkout() {
                   <Truck size={20} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Customer & Delivery Destination</h2>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--color-heading)' }}>Customer & Delivery Destination</h2>
                   <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
                     Official recipient information for freight logistics and sales order dispatch
                   </div>
@@ -917,26 +922,57 @@ export default function Checkout() {
                   />
                 </div>
 
-                {/* Precise drop-off pin (parts freight) — always visible, no extra step */}
-                {isPartOrder && (
+                {/* Precise location pin — parts drop-off AND car handover point. Always visible, no extra step */}
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}>
                     <MapPin size={14} />
-                    <span>Drop-off Pin</span>
+                    <span>{isPartOrder ? 'Drop-off Pin' : 'Handover Location Pin'}</span>
                     {formData.delivery_latitude !== '' && (
                       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-success)' }}>
                         {Number(formData.delivery_latitude).toFixed(5)}, {Number(formData.delivery_longitude).toFixed(5)}
                       </span>
                     )}
                   </label>
+                  {!isPartOrder && (
+                    <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '0 0 8px 0', lineHeight: 1.5 }}>
+                      Pin exactly where the seller delivers the car and hands over the documents — the seller navigates to this point.
+                    </p>
+                  )}
+                  {!isPartOrder && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                      {[
+                        { id: 'dropoff', label: 'Garage Drop-off', hint: 'Meet at the seller point' },
+                        { id: 'onsite_visit', label: 'On-Site Visit', hint: 'Seller comes to my pin' },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, handover_mode: m.id }))}
+                          style={{
+                            flex: '1 1 160px',
+                            textAlign: 'left',
+                            padding: '10px 12px',
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            background: formData.handover_mode === m.id ? 'rgba(216, 98, 44, 0.12)' : 'transparent',
+                            border: formData.handover_mode === m.id ? '1.5px solid #d8622c' : '1px solid var(--input-border)',
+                          }}
+                        >
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-heading)' }}>{m.label}</div>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{m.hint}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <DeliveryMapPicker
                     height={280}
+                    autoConfirm
                     value={formData.delivery_latitude !== '' ? {
                       latitude: Number(formData.delivery_latitude),
                       longitude: Number(formData.delivery_longitude),
                       label: formData.delivery_label,
                     } : null}
-                    confirmLabel={formData.delivery_latitude !== '' ? 'Update Pin' : 'Set Drop-off Pin'}
+                    confirmLabel={formData.delivery_latitude !== '' ? 'Update Pin' : isPartOrder ? 'Set Drop-off Pin' : 'Set Handover Pin'}
                     onConfirm={(pin) => {
                       setFormData((prev) => ({
                         ...prev,
@@ -947,7 +983,6 @@ export default function Checkout() {
                     }}
                   />
                 </div>
-                )}
 
                 {/* Save this destination for later (logged-in buyers) */}
                 {user && (
@@ -1002,7 +1037,7 @@ export default function Checkout() {
                     <Sparkles size={20} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Sales Agent / Referral Partner</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--color-heading)' }}>Sales Agent / Referral Partner</h2>
                     <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
                       Support your referring tuning shop, advisor, or garage affiliate
                     </div>
@@ -1108,7 +1143,7 @@ export default function Checkout() {
                   <CreditCard size={20} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#fff' }}>Payment Settlement</h2>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--color-heading)' }}>Payment Settlement</h2>
                   <div style={{ fontSize: 12, color: mockPaid ? 'var(--color-success)' : 'var(--color-warning)', marginTop: 2, fontWeight: 600 }}>
                     {mockPaid ? 'Paid — order will be created as a complete sales order' : 'Pay now — checkout completes only after settlement'}
                   </div>

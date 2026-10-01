@@ -47,6 +47,7 @@ export const adminApi = {
   getOrders: (params = {}) => client.get('/admin/orders', { params }).then((r) => r.data),
   getOrder: (idOrNumber) => client.get(`/orders/${idOrNumber}`).then((r) => r.data?.data ?? r.data),
   updateOrderStatus: (orderId, data) => client.patch(`/admin/orders/${orderId}/status`, data).then((r) => r.data),
+  updateDelivery: (orderId, data) => client.patch(`/admin/orders/${orderId}/delivery`, data).then((r) => r.data?.data ?? r.data),
 
   // Seller Verification Queue (admins share the seller accept/reject endpoints)
   acceptSellerOrder: (orderId, verification_note) =>

@@ -15,12 +15,13 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import client from '../api/client.js'
+import { accountApi } from '../api/account.js'
 import { useProgram } from '../utils/program.js'
 import KycVerificationModal from '../components/KycVerificationModal.jsx'
 import { CAR_PRESETS, PART_PRESETS } from '../utils/catalogFilters.js'
 import './Welcome.css'
 
-const STEPS = ['Welcome', 'Interests', 'Verify ID', 'Earn more']
+const STEPS = ['Welcome', 'Your Details', 'Interests', 'Verify ID', 'Earn more']
 
 const INTEREST_OPTIONS = [
   ...CAR_PRESETS.filter((p) => p.id !== 'all').map((p) => ({ id: `car:${p.id}`, label: p.label, icon: Car })),
@@ -40,8 +41,10 @@ function StepDots({ step }) {
 }
 
 /**
- * Post-signup setup wizard. Every step is skippable — interests personalize
- * the home feed later, KYC unlocks selling/payouts, agent earns commission.
+ * Post-signup setup wizard. The profile step (name/phone/address) is
+ * REQUIRED — Google signups bypass registration, so no account leaves
+ * setup without contact + delivery details. Everything after it
+ * (interests, KYC, agent) stays optional and skippable.
  * Guards: guests bounce to /login, finished accounts bounce home.
  */
 export default function Welcome() {
@@ -54,6 +57,43 @@ export default function Welcome() {
   const [finishing, setFinishing] = useState(false)
   const [error, setError] = useState('')
   const [kycOpen, setKycOpen] = useState(false)
+
+  // Required profile details (Google OAuth captures none of these).
+  const [profile, setProfile] = useState({ name: '', phone: '', address_line: '', city: '', postal_code: '' })
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileErrors, setProfileErrors] = useState({})
+  const [profileLoaded, setProfileLoaded] = useState(false)
+
+  const profileComplete = Boolean(user?.phone) && Boolean(user?.has_address)
+
+  // Prefill profile from account + default address book entry.
+  useEffect(() => {
+    if (!isAuthenticated || profileLoaded) return
+    let alive = true
+    setProfile((prev) => ({
+      ...prev,
+      name: prev.name || user?.name || '',
+      phone: prev.phone || user?.phone || '',
+    }))
+    accountApi.listAddresses()
+      .then((list) => {
+        if (!alive) return
+        const rows = Array.isArray(list) ? list : []
+        const def = rows.find((a) => a.is_default) || rows[0]
+        if (def) {
+          setProfile((prev) => ({
+            ...prev,
+            phone: prev.phone || def.phone || user?.phone || '',
+            address_line: prev.address_line || def.address_line || '',
+            city: prev.city || def.city || '',
+            postal_code: prev.postal_code || def.postal_code || '',
+          }))
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (alive) setProfileLoaded(true) })
+    return () => { alive = false }
+  }, [isAuthenticated, profileLoaded, user?.name, user?.phone])
 
   // Redirects once auth state resolves.
   useEffect(() => {
@@ -91,17 +131,64 @@ export default function Welcome() {
     }
   }
 
-  const finish = async () => finishAndGo('/')
+  const saveProfile = async () => {
+    const errs = {}
+    if (!profile.name.trim()) errs.name = 'Full name is required.'
+    if (!profile.phone.trim()) errs.phone = 'Mobile number is required.'
+    else if (profile.phone.trim().length < 7) errs.phone = 'Enter a valid mobile number.'
+    if (!profile.address_line.trim()) errs.address_line = 'Delivery address is required.'
+    if (!profile.city.trim()) errs.city = 'City is required.'
+    setProfileErrors(errs)
+    if (Object.keys(errs).length > 0) return false
+    setProfileSaving(true)
+    setError('')
+    try {
+      await client.post('/auth/onboarding', {
+        name: profile.name.trim(),
+        phone: profile.phone.trim(),
+        address: {
+          address_line: profile.address_line.trim(),
+          city: profile.city.trim(),
+          postal_code: profile.postal_code.trim() || undefined,
+          phone: profile.phone.trim(),
+        },
+      })
+      await refresh()
+      return true
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Could not save your details — please try again.')
+      return false
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  const requireProfile = () => {
+    if (!profileComplete) {
+      setError('Please complete your details first — name, mobile number and delivery address are required.')
+      setStep(1)
+      return false
+    }
+    return true
+  }
+
+  const finish = async () => {
+    if (!requireProfile()) return
+    finishAndGo('/')
+  }
 
   const finishAndGo = async (to) => {
+    if (!requireProfile()) return
     setFinishing(true)
     setError('')
     try {
       await client.post('/auth/onboarding', { interests: [...picked], complete: true })
       await refresh()
       navigate(to, { replace: true })
-    } catch {
-      setError('Could not finish setup — please try again.')
+    } catch (err) {
+      const msg = err?.response?.data?.message
+      setError(msg || 'Could not finish setup — please try again.')
+      if (err?.response?.status === 422) setStep(1)
       setFinishing(false)
     }
   }
@@ -128,9 +215,13 @@ export default function Welcome() {
       <div className="auth-card auth-card--wide welcome-card">
         <div className="welcome-topbar">
           <span className="welcome-step-label">Step {step + 1} of {STEPS.length} · {STEPS[step]}</span>
-          <button type="button" className="welcome-skip-all" onClick={finish} disabled={finishing}>
-            {finishing ? 'Finishing…' : 'Skip setup'}
-          </button>
+          {profileComplete ? (
+            <button type="button" className="welcome-skip-all" onClick={finish} disabled={finishing}>
+              {finishing ? 'Finishing…' : 'Skip setup'}
+            </button>
+          ) : (
+            <span className="welcome-required-note">Details required to continue</span>
+          )}
         </div>
         <StepDots step={step} />
         {error && <p className="field-error welcome-error" role="alert">{error}</p>}
@@ -151,7 +242,7 @@ export default function Welcome() {
             <p className="auth-subtitle" style={{ textAlign: 'center', maxWidth: 460, marginInline: 'auto' }}>
               Your {user?.provider === 'google' ? 'Google' : ''} account is ready
               {user?.role && user.role !== 'buyer' ? ` as a ${user.role.replace('_', ' ')}` : ''}.
-              Three quick, skippable steps personalize your marketplace.
+              First your required contact & delivery details, then three quick skippable steps.
             </p>
             <div className="welcome-perks">
               <div className="welcome-perk"><Heart size={16} /><span>Interests tune your home feed</span></div>
@@ -167,8 +258,85 @@ export default function Welcome() {
           </div>
         )}
 
-        {/* ---- Step 1: Interests ---- */}
+        {/* ---- Step 1: Required details (NOT skippable) ---- */}
         {step === 1 && (
+          <div className="welcome-pane">
+            <h2 className="auth-title">Your details <span className="welcome-required">(required)</span></h2>
+            <p className="auth-subtitle">
+              Google sign-in skips registration, so we collect the essentials here.
+              Sellers contact you on this number and deliver to this address.
+            </p>
+            <div className="welcome-form">
+              <label>
+                <span>Full name *</span>
+                <input
+                  type="text"
+                  value={profile.name}
+                  onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Juan Dela Cruz"
+                />
+                {profileErrors.name && <em className="field-error">{profileErrors.name}</em>}
+              </label>
+              <label>
+                <span>Mobile number *</span>
+                <input
+                  type="tel"
+                  value={profile.phone}
+                  onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
+                  placeholder="0917 123 4567"
+                />
+                {profileErrors.phone && <em className="field-error">{profileErrors.phone}</em>}
+              </label>
+              <label>
+                <span>Delivery address (street, barangay) *</span>
+                <input
+                  type="text"
+                  value={profile.address_line}
+                  onChange={(e) => setProfile((p) => ({ ...p, address_line: e.target.value }))}
+                  placeholder="123 Sampaguita St., Brgy. Poblacion"
+                />
+                {profileErrors.address_line && <em className="field-error">{profileErrors.address_line}</em>}
+              </label>
+              <div className="welcome-form-row">
+                <label>
+                  <span>City *</span>
+                  <input
+                    type="text"
+                    value={profile.city}
+                    onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))}
+                    placeholder="Makati"
+                  />
+                  {profileErrors.city && <em className="field-error">{profileErrors.city}</em>}
+                </label>
+                <label>
+                  <span>Postal code</span>
+                  <input
+                    type="text"
+                    value={profile.postal_code}
+                    onChange={(e) => setProfile((p) => ({ ...p, postal_code: e.target.value }))}
+                    placeholder="1200"
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="welcome-nav">
+              <button type="button" className="btn btn-ghost" onClick={() => setStep(3)}>
+                <ArrowLeft size={15} /><span>Back</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={profileSaving}
+                onClick={async () => { if (await saveProfile()) setStep(2) }}
+              >
+                {profileSaving ? 'Saving…' : <><span>Save & continue</span><ArrowRight size={15} /></>}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ---- Step 2: Interests ---- */}
+        {step === 2 && (
           <div className="welcome-pane">
             <h2 className="auth-title">What are you into?</h2>
             <p className="auth-subtitle">Pick as many as you like — we will highlight matching cars & parts. Skippable.</p>
@@ -193,14 +361,14 @@ export default function Welcome() {
             </div>
             <p className="field-hint">{interestCount === 0 ? 'No picks yet — fine, continue or skip.' : `${interestCount} picked`}</p>
             <div className="welcome-nav">
-              <button type="button" className="btn btn-ghost" onClick={() => setStep(0)}>
+              <button type="button" className="btn btn-ghost" onClick={() => setStep(1)}>
                 <ArrowLeft size={15} /><span>Back</span>
               </button>
               <button
                 type="button"
                 className="btn btn-primary"
                 disabled={saving}
-                onClick={async () => { await saveInterests(); setStep(2) }}
+                onClick={async () => { await saveInterests(); setStep(3) }}
               >
                 {saving ? 'Saving…' : <><span>Continue</span><ArrowRight size={15} /></>}
               </button>
@@ -208,8 +376,8 @@ export default function Welcome() {
           </div>
         )}
 
-        {/* ---- Step 2: KYC ---- */}
-        {step === 2 && (
+        {/* ---- Step 3: KYC ---- */}
+        {step === 3 && (
           <div className="welcome-pane">
             <h2 className="auth-title">Verify your ID <span className="welcome-optional">(optional)</span></h2>
             <p className="auth-subtitle">
@@ -231,18 +399,18 @@ export default function Welcome() {
               </button>
             )}
             <div className="welcome-nav">
-              <button type="button" className="btn btn-ghost" onClick={() => setStep(1)}>
+              <button type="button" className="btn btn-ghost" onClick={() => setStep(2)}>
                 <ArrowLeft size={15} /><span>Back</span>
               </button>
-              <button type="button" className="btn btn-primary" onClick={() => setStep(3)}>
+              <button type="button" className="btn btn-primary" onClick={() => setStep(4)}>
                 <span>{kycDone || kycPending ? 'Continue' : 'Skip for now'}</span><ArrowRight size={15} />
               </button>
             </div>
           </div>
         )}
 
-        {/* ---- Step 3: Agent ---- */}
-        {step === 3 && (
+        {/* ---- Step 4: Agent ---- */}
+        {step === 4 && (
           <div className="welcome-pane">
             <h2 className="auth-title">Earn as an agent <span className="welcome-optional">(optional)</span></h2>
             <p className="auth-subtitle">

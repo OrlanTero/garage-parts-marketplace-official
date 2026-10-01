@@ -137,6 +137,14 @@ img, video, svg, canvas { max-width: 100%; }
   /* KYC queue: search full-width, table scrolls instead of crushing. */
   .kyc-search-form { max-width: none !important; flex-basis: 100% !important; }
   .kyc-queue-scroll .admin-table { min-width: 860px; }
+
+  /* Admin vehicle cards collapse to one column. */
+  .admin-car-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Catalog filter fields go full-width. */
+  .admin-filter-field { flex: 1 1 100%; max-width: none; }
+  .admin-filter-actions { width: 100%; }
+  .admin-filter-actions .btn { flex: 1 1 auto; justify-content: center; }
 }
 
 /* ============ §5 Small phones ≤480px (extends admin.css block) ============ */

@@ -198,3 +198,66 @@
   margin-top: 6px;
   flex-wrap: wrap;
 }
+
+/* ---- Required profile details step ---- */
+.welcome-required {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-rust);
+}
+
+.welcome-required-note {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-rust);
+}
+
+.welcome-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.welcome-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.welcome-form input {
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md, 10px);
+  background: var(--color-surface-inset);
+  color: var(--color-heading);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+}
+
+.welcome-form input:focus {
+  border-color: var(--color-rust);
+}
+
+.welcome-form-row {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 12px;
+}
+
+.welcome-form .field-error {
+  font-style: normal;
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .welcome-form-row {
+    grid-template-columns: 1fr;
+  }
+}

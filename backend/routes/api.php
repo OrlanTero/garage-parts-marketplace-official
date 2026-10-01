@@ -444,6 +444,7 @@ Route::get('/moderation/cars/{car}', [AdminCarModerationController::class, 'show
             // Sales Orders Management
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
             Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+            Route::patch('/orders/{order}/delivery', [OrderController::class, 'updateDelivery'])->name('orders.updateDelivery');
 
             // Car build transactions: holds, handover proofs, fund release
             Route::get('/car-transactions', [AdminCarTransactionController::class, 'index'])->name('carTransactions.index');

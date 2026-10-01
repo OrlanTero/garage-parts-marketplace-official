@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Car,
   Search,
@@ -18,6 +19,8 @@ import {
   Fuel,
   Wrench,
   DollarSign,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 import { carsApi } from '../api/cars.js'
 import MediaUploadField from '../components/MediaUploadField.jsx'
@@ -27,11 +30,19 @@ export default function CarsManagement() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // all | active | pending_inspection | sold | draft
+  // Client-side dimensions (instant, over the fetched queue).
+  const [brandFilter, setBrandFilter] = useState('all')
+  const [bodyFilter, setBodyFilter] = useState('all')
+  const [transFilter, setTransFilter] = useState('all')
+  const [fuelFilter, setFuelFilter] = useState('all')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
 
   // Modal States
-  const [viewModalOpen, setViewModalOpen] = useState(false)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [viewMode, setViewMode] = useState('cards') // 'cards' | 'table'
   const [selectedCar, setSelectedCar] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionSuccess, setActionSuccess] = useState(null)
@@ -60,12 +71,14 @@ export default function CarsManagement() {
     images: [],
   })
 
-  const fetchCars = async () => {
+  const fetchCars = async (overrides = {}) => {
     setLoading(true)
     try {
       const params = {}
-      if (search.trim()) params.q = search.trim()
-      if (statusFilter !== 'all') params.status = statusFilter
+      const q = overrides.search !== undefined ? overrides.search : search
+      const st = overrides.status !== undefined ? overrides.status : statusFilter
+      if (String(q || '').trim()) params.q = String(q).trim()
+      if (st !== 'all') params.status = st
 
       const res = await carsApi.list(params)
       setCars(res.data || [])
@@ -85,9 +98,64 @@ export default function CarsManagement() {
     fetchCars()
   }
 
-  const handleOpenView = (car) => {
-    setSelectedCar(car)
-    setViewModalOpen(true)
+  // Distinct option values from the fetched queue.
+  const brandOptions = useMemo(() => {
+    const set = new Set()
+    cars.forEach((c) => {
+      const b = (c.brand || c.make || '').trim()
+      if (b) set.add(b)
+    })
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [cars])
+  const bodyOptions = useMemo(() => {
+    const set = new Set()
+    cars.forEach((c) => {
+      const b = String(c.body_style || '').trim()
+      if (b) set.add(b)
+    })
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [cars])
+
+  const filteredCars = useMemo(() => {
+    const lo = minPrice !== '' ? Number(minPrice) : null
+    const hi = maxPrice !== '' ? Number(maxPrice) : null
+    const out = cars.filter((c) => {
+      if (brandFilter !== 'all' && (c.brand || c.make || '') !== brandFilter) return false
+      if (bodyFilter !== 'all' && String(c.body_style || '') !== bodyFilter) return false
+      if (transFilter !== 'all' && String(c.transmission || '') !== transFilter) return false
+      if (fuelFilter !== 'all' && String(c.fuel_type || c.fuel || '') !== fuelFilter) return false
+      const price = Number(c.price || 0)
+      if (lo !== null && !Number.isNaN(lo) && price < lo) return false
+      if (hi !== null && !Number.isNaN(hi) && price > hi) return false
+      return true
+    })
+    const byPrice = (a, b) => Number(a.price || 0) - Number(b.price || 0)
+    const byMileage = (a, b) => Number(a.mileage_km ?? a.mileage ?? 0) - Number(b.mileage_km ?? b.mileage ?? 0)
+    const byYear = (a, b) => Number(b.year || 0) - Number(a.year || 0)
+    switch (sortBy) {
+      case 'price-asc': return [...out].sort(byPrice)
+      case 'price-desc': return [...out].sort((a, b) => byPrice(b, a))
+      case 'mileage-asc': return [...out].sort(byMileage)
+      case 'year-desc': return [...out].sort(byYear)
+      default: return out
+    }
+  }, [cars, brandFilter, bodyFilter, transFilter, fuelFilter, minPrice, maxPrice, sortBy])
+
+  const hasClientFilters =
+    brandFilter !== 'all' || bodyFilter !== 'all' || transFilter !== 'all' ||
+    fuelFilter !== 'all' || minPrice !== '' || maxPrice !== '' || sortBy !== 'newest'
+
+  const resetAllFilters = () => {
+    setSearch('')
+    setStatusFilter('all')
+    setBrandFilter('all')
+    setBodyFilter('all')
+    setTransFilter('all')
+    setFuelFilter('all')
+    setMinPrice('')
+    setMaxPrice('')
+    setSortBy('newest')
+    fetchCars({ search: '', status: 'all' })
   }
 
   const handleOpenCreate = () => {
@@ -282,6 +350,28 @@ export default function CarsManagement() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div className="view-mode-toggle" role="tablist" aria-label="Layout view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'cards'}
+              className={`view-mode-btn ${viewMode === 'cards' ? 'active' : ''}`}
+              onClick={() => setViewMode('cards')}
+              title="Cards view"
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'table'}
+              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Table view"
+            >
+              <List size={15} />
+            </button>
+          </div>
           <button type="button" onClick={fetchCars} className="btn btn-secondary btn-sm">
             <RefreshCw size={14} />
             <span>Refresh</span>
@@ -308,7 +398,7 @@ export default function CarsManagement() {
       </div>
 
       {actionSuccess && (
-        <div className="admin-card" style={{ padding: '12px 16px', marginBottom: 16, borderColor: 'var(--color-emerald)', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--color-emerald)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="admin-card" style={{ padding: '12px 16px', marginBottom: 16, borderColor: 'var(--admin-success)', background: 'var(--admin-success-bg)', color: 'var(--admin-success)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>{actionSuccess}</span>
           <button type="button" onClick={() => setActionSuccess(null)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>×</button>
         </div>
@@ -430,11 +520,78 @@ export default function CarsManagement() {
             </button>
           ))}
         </div>
+
+        <div className="admin-filters" style={{ width: '100%', paddingTop: 12, borderTop: '1px solid var(--admin-border-subtle)' }}>
+          <label className="admin-filter-field">
+            <span>Brand</span>
+            <select className="admin-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
+              <option value="all">All brands</option>
+              {brandOptions.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-filter-field">
+            <span>Body style</span>
+            <select className="admin-select" value={bodyFilter} onChange={(e) => setBodyFilter(e.target.value)}>
+              <option value="all">All bodies</option>
+              {bodyOptions.map((b) => (
+                <option key={b} value={b} style={{ textTransform: 'capitalize' }}>{b.replace('_', ' ')}</option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-filter-field">
+            <span>Transmission</span>
+            <select className="admin-select" value={transFilter} onChange={(e) => setTransFilter(e.target.value)}>
+              <option value="all">Any</option>
+              <option value="manual">Manual</option>
+              <option value="automatic">Automatic</option>
+            </select>
+          </label>
+          <label className="admin-filter-field">
+            <span>Fuel</span>
+            <select className="admin-select" value={fuelFilter} onChange={(e) => setFuelFilter(e.target.value)}>
+              <option value="all">Any</option>
+              <option value="petrol">Petrol</option>
+              <option value="diesel">Diesel</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="electric">Electric</option>
+            </select>
+          </label>
+          <label className="admin-filter-field">
+            <span>Min price ₱</span>
+            <input type="number" min="0" className="admin-input" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" />
+          </label>
+          <label className="admin-filter-field">
+            <span>Max price ₱</span>
+            <input type="number" min="0" className="admin-input" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="No cap" />
+          </label>
+          <label className="admin-filter-field">
+            <span>Sort</span>
+            <select className="admin-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="newest">Newest first</option>
+              <option value="year-desc">Year · newest</option>
+              <option value="price-asc">Price · low to high</option>
+              <option value="price-desc">Price · high to low</option>
+              <option value="mileage-asc">Mileage · lowest</option>
+            </select>
+          </label>
+          <div className="admin-filter-actions">
+            <span className="admin-result-count">{filteredCars.length} of {cars.length} builds</span>
+            {(hasClientFilters || search.trim() || statusFilter !== 'all') && (
+              <button type="button" className="btn btn-secondary btn-sm" onClick={resetAllFilters}>
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Main Table */}
+      {viewMode === 'table' ? (
       <div className="table-container admin-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="admin-table">
+        <div style={{ overflowX: 'auto' }}>
+        <table className="admin-table admin-cars-table">
           <thead>
             <tr>
               <th>Vehicle Specification</th>
@@ -454,7 +611,7 @@ export default function CarsManagement() {
                   <div>Loading vehicle listings...</div>
                 </td>
               </tr>
-            ) : cars.length === 0 ? (
+            ) : filteredCars.length === 0 ? (
               <tr>
                 <td colSpan="7" style={{ textAlign: 'center', padding: 48, color: 'var(--admin-text-muted)' }}>
                   <Car size={36} style={{ color: 'var(--admin-text-muted)', marginBottom: 12 }} />
@@ -463,7 +620,7 @@ export default function CarsManagement() {
                 </td>
               </tr>
             ) : (
-              cars.map((car) => {
+              filteredCars.map((car) => {
                 const title = car.title || `${car.brand || car.make || ''} ${car.model || ''}`
                 const imageUrl = car.primary_image_url || (car.media && car.media[0]?.url)
                 const isPublished = car.status === 'active' || car.status === 'published'
@@ -537,15 +694,14 @@ export default function CarsManagement() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenView(car)}
+                        <Link
+                          to={`/cars/${car.id}`}
                           className="btn btn-secondary btn-sm"
-                          title="View Complete Build Details"
+                          title="Open full vehicle page"
                         >
                           <Eye size={14} />
                           <span>View</span>
-                        </button>
+                        </Link>
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(car)}
@@ -568,111 +724,105 @@ export default function CarsManagement() {
                 )
               })
             )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* View Vehicle Build Modal */}
-      {viewModalOpen && selectedCar && (
-        <div className="modal-backdrop" onClick={() => setViewModalOpen(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
-            <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ padding: 8, borderRadius: 'var(--radius-md)', background: 'rgba(146, 68, 36, 0.1)', color: 'var(--color-rust)' }}>
-                  <Car size={22} />
-                </div>
-                <div>
-                  <h3 className="modal-title" style={{ margin: 0 }}>
-                    {selectedCar.title || `${selectedCar.brand || selectedCar.make} ${selectedCar.model}`}
-                  </h3>
-                  <div style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
-                    VIN: {selectedCar.vin || 'Not Set'} · Build #{selectedCar.id}
-                  </div>
-                </div>
-              </div>
-              <button type="button" onClick={() => setViewModalOpen(false)} className="modal-close">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="modal-body" style={{ padding: 24 }}>
-              {/* Image Banner if available */}
-              {(selectedCar.primary_image_url || (selectedCar.media && selectedCar.media[0]?.url)) && (
-                <div style={{ marginBottom: 20, borderRadius: 'var(--radius-md)', overflow: 'hidden', height: 220, background: '#000' }}>
-                  <img
-                    src={selectedCar.primary_image_url || (selectedCar.media && selectedCar.media[0]?.url)}
-                    alt="Build preview"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                </div>
-              )}
-
-              {/* Specs Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
-                <div style={{ background: 'var(--admin-bg-subtle)', padding: 12, borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>Price</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-rust)', marginTop: 2 }}>
-                    ₱{Number(selectedCar.price || 0).toLocaleString('en-PH')}
-                  </div>
-                </div>
-                <div style={{ background: 'var(--admin-bg-subtle)', padding: 12, borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>Mileage</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--admin-text-primary)', marginTop: 2 }}>
-                    {selectedCar.mileage_km ? `${Number(selectedCar.mileage_km).toLocaleString()} km` : '—'}
-                  </div>
-                </div>
-                <div style={{ background: 'var(--admin-bg-subtle)', padding: 12, borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>Drivetrain</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--admin-text-primary)', marginTop: 2, textTransform: 'capitalize' }}>
-                    {selectedCar.transmission} · {selectedCar.fuel_type || 'Petrol'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div style={{ marginBottom: 20 }}>
-                <h4 style={{ margin: '0 0 6px 0', fontSize: 13, fontWeight: 700, color: 'var(--admin-text-primary)' }}>
-                  Build Platform Description
-                </h4>
-                <div style={{ fontSize: 13, color: 'var(--admin-text-secondary)', lineHeight: 1.6, background: '#ffffff', border: '1px solid var(--admin-border)', padding: 12, borderRadius: 'var(--radius-md)' }}>
-                  {selectedCar.description || 'No detailed modifications or build description provided.'}
-                </div>
-              </div>
-
-              {/* Inspection & Location Details */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ background: 'var(--admin-bg-subtle)', padding: 12, borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>Inspection Status</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--admin-text-primary)', marginTop: 2, textTransform: 'capitalize' }}>
-                    {selectedCar.inspection_status || 'Pending Verification'} ({selectedCar.inspection_score || 'Score: N/A'})
-                  </div>
-                </div>
-                <div style={{ background: 'var(--admin-bg-subtle)', padding: 12, borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>Showroom Location</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--admin-text-primary)', marginTop: 2 }}>
-                    {selectedCar.city || 'Makati'} · {selectedCar.location || 'Showroom Bay'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" onClick={() => setViewModalOpen(false)} className="btn btn-secondary">
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewModalOpen(false)
-                  handleOpenEdit(selectedCar)
-                }}
-                className="btn btn-primary"
-              >
-                Edit Build Specs
-              </button>
-            </div>
+            </tbody>
+          </table>
           </div>
-        </div>
+      </div>
+      ) : (
+      <div className="admin-car-grid">
+        {loading ? (
+          [0, 1, 2, 3].map((i) => (
+            <div key={i} className="admin-card admin-car-card" aria-hidden="true">
+              <div className="admin-car-media" style={{ background: 'var(--admin-bg-subtle)' }} />
+              <div style={{ padding: 14 }}>
+                <div style={{ height: 14, borderRadius: 6, background: 'var(--admin-bg-subtle)', marginBottom: 8 }} />
+                <div style={{ height: 12, borderRadius: 6, background: 'var(--admin-bg-subtle)', width: '60%' }} />
+              </div>
+            </div>
+          ))
+        ) : filteredCars.length === 0 ? (
+          <div className="admin-card" style={{ gridColumn: '1 / -1', padding: 48, textAlign: 'center', color: 'var(--admin-text-muted)' }}>
+            <Car size={36} style={{ marginBottom: 12 }} />
+            <h3 style={{ margin: '0 0 6px 0', color: 'var(--admin-text-primary)' }}>No Vehicle Builds Found</h3>
+            <p style={{ margin: '0 0 14px', fontSize: 14 }}>No builds match the selected search or filter.</p>
+            {(hasClientFilters || search.trim() || statusFilter !== 'all') && (
+              <button type="button" className="btn btn-secondary btn-sm" onClick={resetAllFilters}>
+                Reset all filters
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredCars.map((car) => {
+            const title = car.title || `${car.brand || car.make || ''} ${car.model || ''}`
+            const imageUrl = car.primary_image_url || (car.media && car.media[0]?.url)
+            const isPublished = car.status === 'active' || car.status === 'published'
+            const isPending = car.status === 'pending_inspection'
+            return (
+              <div key={car.id} className="admin-card admin-car-card">
+                <Link to={`/cars/${car.id}`} className="admin-car-media" title={title}>
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={title} loading="lazy" />
+                  ) : (
+                    <span className="admin-car-nomedia"><Car size={28} /></span>
+                  )}
+                  <span
+                    className={`badge ${
+                      isPublished
+                        ? 'badge-success'
+                        : isPending
+                        ? 'badge-warning'
+                        : car.status === 'sold'
+                        ? 'badge-danger'
+                        : 'badge-neutral'
+                    } admin-car-badge`}
+                  >
+                    {isPending ? 'Pending Inspection' : car.status || 'Draft'}
+                  </span>
+                </Link>
+                <div className="admin-car-body">
+                  <Link to={`/cars/${car.id}`} className="admin-car-title">{title}</Link>
+                  <div className="admin-car-sub">
+                    {[car.year, car.brand || car.make, car.model].filter(Boolean).join(' · ')}
+                    {car.vin ? ` · VIN ${car.vin}` : ''}
+                  </div>
+                  <div className="admin-car-meta">
+                    <span>{car.mileage_km ? `${Number(car.mileage_km).toLocaleString()} km` : '—'}</span>
+                    <span className="admin-car-dot">•</span>
+                    <span style={{ textTransform: 'capitalize' }}>{car.transmission || '—'}</span>
+                  </div>
+                  <div className="admin-car-foot">
+                    <span className="admin-car-price">
+                      ₱{Number(car.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className="admin-car-seller">{car.seller?.name || car.city || 'Showroom'}</span>
+                  </div>
+                  <div className="admin-car-actions">
+                    <Link to={`/cars/${car.id}`} className="btn btn-secondary btn-sm">
+                      <Eye size={14} /> <span>View</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(car)}
+                      className="btn btn-secondary btn-sm"
+                      title="Edit Build Platform Specs"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(car.id)}
+                      className="btn btn-danger btn-sm"
+                      title="Delete Vehicle"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
       )}
 
       {/* Create / Add Vehicle Platform Modal */}

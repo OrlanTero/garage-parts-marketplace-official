@@ -1,47 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
-  LayoutDashboard,
   Car,
   Package,
   Eye,
-  Rocket,
-  PauseCircle,
   BadgeCheck,
-  Trash2,
   Store,
   ShieldAlert,
   RefreshCw,
   Inbox,
-  Check,
-  X,
   Building2,
   DollarSign,
-  ShieldCheck,
-  Sparkles,
   ExternalLink,
   Plus,
+  Search,
+  Clock,
+  FileText,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { sellerCars } from '../api/cars.js'
 import { sellerParts } from '../api/parts.js'
-import { sellerApi, sellerOrdersApi, SELLER_ORDER_STATUSES, CAR_STATUSES, PART_STATUSES, STATUS_LABELS } from '../api/seller.js'
-import ListingStatusPicker, { normalizeListingStatus } from '../components/ListingStatusPicker.jsx'
+import { sellerApi, sellerOrdersApi, CAR_STATUSES, PART_STATUSES, STATUS_LABELS } from '../api/seller.js'
 import { useOrderStatusListener } from '../realtime/useOrderStatus.js'
 import { showroomApi } from '../api/showroom.js'
+import ListingCard from '../components/ListingCard.jsx'
+import ListingDetail from '../components/ListingDetail.jsx'
+import SellerOrderCard from '../components/orders/SellerOrderCard.jsx'
+import SellerOrderDetail from '../components/orders/SellerOrderDetail.jsx'
 import './MyListings.css'
 
 const SELLER_ROLES = ['seller', 'dealer', 'parts_seller', 'admin', 'super_admin']
-
-const STATUS_CLASS = {
-  active: 'listing-badge--live',
-  draft: 'listing-badge--draft',
-  pending_inspection: 'listing-badge--pending',
-  inspected: 'listing-badge--pending',
-  rejected: 'listing-badge--rejected',
-  sold: 'listing-badge--sold',
-  archived: 'listing-badge--archived',
-}
 
 function formatPrice(value) {
   const num = Number(value)
@@ -73,15 +61,55 @@ export default function MyListings() {
   const [pendingRequests, setPendingRequests] = useState(0)
   // Paid (auto-accepted) orders must be visible here too — not just pending.
   const [requestFilter, setRequestFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
+  const [selectedListing, setSelectedListing] = useState(null)
+  const [selectedRequest, setSelectedRequest] = useState(null)
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState('newest') // newest | price-asc | price-desc | orders
 
   const switchTab = (next) => {
     setTab(next)
+    setSelectedListing(null)
+    setSelectedRequest(null)
     setSearchParams(next === 'cars' ? {} : { tab: next })
   }
-  const [loading, setLoading] = useState(true)
-  const [actingId, setActingId] = useState(null)
-  const [error, setError] = useState(null)
-  const [notice, setNotice] = useState(null)
+
+  // URL-managed details — shareable, refresh-safe, back-button friendly:
+  // /my-listings?tab=cars&listing=12 · /my-listings?tab=requests&order=SO-…
+  const paramListing = searchParams.get('listing')
+  const paramOrder = searchParams.get('order')
+
+  const openListing = (item) => {
+    setSelectedListing(item)
+    setSelectedRequest(null)
+    setSearchParams(tab === 'cars' ? { listing: String(item.id) } : { tab, listing: String(item.id) })
+  }
+
+  const closeListing = () => {
+    setSelectedListing(null)
+    setSearchParams(tab === 'cars' ? {} : { tab })
+  }
+
+  const openRequest = (order) => {
+    setSelectedRequest(order)
+    setSelectedListing(null)
+    setSearchParams({ tab: 'requests', order: String(order.order_number || order.id) })
+  }
+
+  const closeRequest = () => {
+    setSelectedRequest(null)
+    setSearchParams({ tab: 'requests' })
+    load()
+  }
+
+  const activeListing = selectedListing || (paramListing && tab !== 'requests' && tab !== 'showroom'
+    ? { id: paramListing }
+    : null)
+  const activeRequest = selectedRequest || (tab === 'requests' && paramOrder
+    ? { id: paramOrder, order_number: paramOrder }
+    : null)
 
   // Showroom & Parking States
   const [showroomData, setShowroomData] = useState(null)
@@ -97,7 +125,6 @@ export default function MyListings() {
   // manages vehicles here; admins use Parts & Product Management.
   const canSellParts = Boolean(user?.is_house || user?.role === 'admin' || user?.role === 'super_admin')
   const statuses = tab === 'cars' ? CAR_STATUSES : PART_STATUSES
-  const api = tab === 'cars' ? sellerCars : sellerParts
 
   const load = useCallback(async () => {
     if (!isSeller) {
@@ -156,140 +183,31 @@ export default function MyListings() {
     const drafts = (summary.cars?.draft || 0) + (summary.parts?.draft || 0)
     const sold = (summary.cars?.sold || 0) + (summary.parts?.sold || 0)
     return [
-      { label: 'Live on Marketplace', value: live, className: 'stat--live' },
-      { label: 'Pending Review', value: summary.pending_moderation || 0, className: 'stat--pending' },
-      { label: 'Drafts', value: drafts, className: 'stat--draft' },
-      { label: 'Sold', value: sold, className: 'stat--sold' },
+      { label: 'Live on Marketplace', value: live, className: 'stat--live', icon: Eye },
+      { label: 'Pending Review', value: summary.pending_moderation || 0, className: 'stat--pending', icon: Clock },
+      { label: 'Requests to Review', value: pendingRequests, className: 'stat--action', icon: Inbox, action: () => switchTab('requests') },
+      { label: 'Drafts', value: drafts, className: 'stat--draft', icon: FileText },
+      { label: 'Sold', value: sold, className: 'stat--sold', icon: BadgeCheck },
     ]
-  }, [summary])
+  }, [summary, pendingRequests])
 
-  const runAction = async (id, action, successMsg, confirmMsg) => {
-    if (confirmMsg && !window.confirm(confirmMsg)) return
-    setActingId(`${action}-${id}`)
-    setError(null)
-    setNotice(null)
-    try {
-      await api[action](id)
-      setNotice(successMsg)
-      await load()
-    } catch (err) {
-      setError(extractError(err, `Failed to ${action} listing.`))
-    } finally {
-      setActingId(null)
+  const visibleItems = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const rows = (q ? items.filter((it) => String(it.title || '').toLowerCase().includes(q)) : [...items])
+    switch (sort) {
+      case 'price-asc':
+        return rows.sort((a, b) => Number(a.price || 0) - Number(b.price || 0))
+      case 'price-desc':
+        return rows.sort((a, b) => Number(b.price || 0) - Number(a.price || 0))
+      case 'orders':
+        return rows.sort((a, b) => Number(b.orders_count || 0) - Number(a.orders_count || 0))
+      default:
+        return rows.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0) || Number(b.id || 0) - Number(a.id || 0))
     }
-  }
+  }, [items, query, sort])
 
-  const runSubmitInspection = async (carId, inspectionType = 'garage_dropoff') => {
-    const label = inspectionType === 'onsite_visit' ? 'Mobile On-Site Visit' : 'Garage Drop-off'
-    if (!window.confirm(`Submit this build for ${label} inspection? It enters the verification queue (not the marketplace) until approved.`)) return
-    setActingId(`inspect-${carId}`)
-    setError(null)
-    setNotice(null)
-    try {
-      await sellerCars.submitInspection(carId, { inspection_type: inspectionType })
-      setNotice(`Submitted for ${label} inspection — an inspector will be assigned. You will be notified of the result.`)
-      await load()
-    } catch (err) {
-      setError(extractError(err, 'Failed to submit for inspection.'))
-    } finally {
-      setActingId(null)
-    }
-  }
-
-  const runSubmitProof = async (order) => {
-    const note = window.prompt('Handover note for the admin reviewer (e.g. turnover location, odometer, keys handed over):', '')
-    if (note === null) return
-    const urls = window.prompt('Photo proof URLs, comma-separated (handover photos, OR/CR, odometer):', '')
-    if (urls === null) return
-    const images = urls.split(',').map((u) => u.trim()).filter(Boolean)
-    setActingId(`proof-${order.id}`)
-    setError(null)
-    setNotice(null)
-    try {
-      await sellerOrdersApi.submitProof(order.id, { images, note: note.trim() || undefined })
-      setNotice('Handover proof submitted — admin review releases your held funds to your wallet.')
-      await load()
-    } catch (err) {
-      setError(extractError(err, 'Failed to submit handover proof.'))
-    } finally {
-      setActingId(null)
-    }
-  }
-
-  const runOrderStatusChange = async (order, status) => {
-    if (!status || status === order.status) {
-      await load()
-      return
-    }
-    if (!window.confirm(`Move order ${order.order_number || `#${order.id}`} to "${status}"?`)) {
-      await load()
-      return
-    }
-    setActingId(`status-${order.id}`)
-    setError(null)
-    setNotice(null)
-    try {
-      await sellerOrdersApi.updateStatus(order.id, { status })
-      setNotice(`Order moved to ${status}.`)
-      await load()
-    } catch (err) {
-      setError(extractError(err, 'Failed to update order status.'))
-      await load()
-    } finally {
-      setActingId(null)
-    }
-  }
-
-  const runRequestAction = async (order, action) => {
-    const note =
-      action === 'reject'
-        ? window.prompt('Reason for declining (optional, shown to buyer):', '')
-        : null
-    if (action === 'reject' && note === null) return
-    if (action === 'accept' && !window.confirm(`Accept request ${order.order_number || `#${order.id}`}? Other pending requests for this listing will auto-decline.`)) return
-    setActingId(`${action}-${order.id}`)
-    setError(null)
-    setNotice(null)
-    try {
-      await sellerOrdersApi[action](order.id, action === 'reject' && note ? note : undefined)
-      setNotice(action === 'accept' ? 'Request verified & accepted. Payment is now unlocked for the buyer.' : 'Request declined.')
-      await load()
-    } catch (err) {
-      setError(extractError(err, `Failed to ${action} request.`))
-    } finally {
-      setActingId(null)
-    }
-  }
-
-  const runRefund = async (order) => {
-    const isCar = (order.item?.type || order.item_type || tab) === 'car'
-    const note = window.prompt('Refund note for the buyer (optional):', isCar ? 'Refunded after inspection dispute.' : 'Refunded after dispute resolution.')
-    if (note === null) return
-    if (!window.confirm(`Refund the payment for order ${order.order_number || `#${order.id}`} back to the buyer?`)) return
-    setActingId(`refund-${order.id}`)
-    setError(null)
-    setNotice(null)
-    try {
-      await sellerOrdersApi.refund(order.id, note || undefined)
-      setNotice('Payment refunded to the buyer. Order closed as refunded.')
-      await load()
-    } catch (err) {
-      setError(extractError(err, 'Failed to refund order.'))
-      await load()
-    } finally {
-      setActingId(null)
-    }
-  }
-
-  const canPublish = (status) =>
-    tab === 'cars'
-      ? ['draft', 'archived', 'rejected', 'pending_inspection'].includes(status)
-      : ['draft', 'archived'].includes(status)
-
-  const detailPath = (item) =>
-    tab === 'cars'
-      ? `/marketplace/${item.uuid || item.id}`
-      : `/parts/${item.uuid || item.id}`
+  // Listing + order mutations now live in ListingDetail / SellerOrderCard —
+  // this page only reloads lists and surfaces their notices via refresh.
 
   const handleOpenSlotModal = (carId = '') => {
     setSelectedCarId(carId ? String(carId) : (showroomData?.cars?.[0]?.id ? String(showroomData.cars[0].id) : ''))
@@ -347,19 +265,52 @@ export default function MyListings() {
     )
   }
 
+  if (activeRequest) {
+    return (
+      <div className="my-listings-page">
+        <div className="my-listings-container">
+          <SellerOrderDetail
+            orderId={activeRequest.id}
+            orderNumber={activeRequest.order_number}
+            onBack={closeRequest}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  if (activeListing) {
+    return (
+      <div className="my-listings-page">
+        <div className="my-listings-container">
+          <ListingDetail
+            listing={activeListing}
+            type={tab === 'cars' ? 'car' : 'part'}
+            onBack={closeListing}
+            onAction={load}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="my-listings-page">
       <div className="my-listings-container">
-        <div className="my-listings-head">
-          <div>
-            <h1><LayoutDashboard size={22} /> My Listings</h1>
-            <p className="muted">Track every listing across draft, inspection, live, and sold — cars and parts in one place.</p>
+        <div className="my-listings-hero">
+          <div className="my-listings-hero-id">
+            <span className="my-listings-avatar">{String(user?.username || user?.name || 'S').charAt(0).toUpperCase()}</span>
+            <div>
+              <div className="my-listings-eyebrow">Seller Studio</div>
+              <h1>{user?.username || user?.name || 'My Listings'}</h1>
+              <p className="muted">Drafts, inspections, live units, sales requests and showroom — run the whole shop from here.</p>
+            </div>
           </div>
           <div className="my-listings-head-actions">
             <button type="button" className="btn btn-ghost" onClick={load} disabled={loading}>
               <RefreshCw size={15} /> Refresh
             </button>
-            <Link to="/sell" className="btn btn-primary">+ New Listing</Link>
+            <Link to="/sell" className="btn btn-primary"><Plus size={15} /> New Listing</Link>
           </div>
         </div>
 
@@ -367,12 +318,27 @@ export default function MyListings() {
         {notice && <div className="my-listings-alert my-listings-alert--success"><BadgeCheck size={15} /> {notice}</div>}
 
         <div className="my-listings-stats">
-          {stats.map((s) => (
-            <div key={s.label} className={`my-listings-stat ${s.className}`}>
-              <span className="my-listings-stat-value">{s.value}</span>
-              <span className="my-listings-stat-label">{s.label}</span>
-            </div>
-          ))}
+          {stats.map((s) => {
+            const Icon = s.icon
+            const clickable = typeof s.action === 'function'
+            return (
+              <div
+                key={s.label}
+                className={`my-listings-stat ${s.className}${clickable ? ' my-listings-stat--clickable' : ''}`}
+                onClick={clickable ? s.action : undefined}
+                role={clickable ? 'button' : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); s.action() } } : undefined}
+                title={clickable ? 'Jump to buyer requests' : undefined}
+              >
+                <span className="my-listings-stat-top">
+                  {Icon && <Icon size={16} className="my-listings-stat-icon" />}
+                  <span className="my-listings-stat-value">{s.value}</span>
+                </span>
+                <span className="my-listings-stat-label">{s.label}</span>
+              </div>
+            )
+          })}
         </div>
 
         <div className="my-listings-tabs">
@@ -461,62 +427,56 @@ export default function MyListings() {
                 <Link to="/sell" className="btn btn-primary">+ New Car Listing</Link>
               </div>
             ) : (
-              <ul className="my-listings-list" style={{ marginBottom: 32 }}>
+              <div className="showroom-grid" style={{ marginBottom: 32 }}>
                 {showroomData.cars.map((car) => {
+                  const img = car.primary_image_url || car.image_urls?.[0] || null
+                  const onFloor = car.is_in_showroom
+                  const pending = car.showroom_status === 'pending'
                   return (
-                    <li key={car.id} className="my-listings-row">
-                      <div className="my-listings-row-main">
-                        <span className="my-listings-title">{car.title}</span>
-                        <div className="my-listings-meta">
-                          <span className="my-listings-price">{formatPrice(car.price)}</span>
-                          <span
-                            className={`listing-badge ${
-                              car.is_in_showroom
-                                ? 'listing-badge--live'
-                                : car.showroom_status === 'pending'
-                                ? 'listing-badge--pending'
-                                : 'listing-badge--draft'
-                            }`}
-                          >
-                            {car.is_in_showroom
-                              ? '✓ ON SHOWROOM FLOOR'
-                              : car.showroom_status === 'pending'
-                              ? '⌛ PARKING FEE PENDING'
-                              : 'NOT IN SHOWROOM'}
-                          </span>
-                          <span className="muted">
-                            Showroom Fee ({car.fee_percentage}%): <strong>{formatPrice(car.calculated_fee)}</strong>
-                          </span>
+                    <div key={car.id} className={`showroom-card${onFloor ? ' showroom-card--live' : ''}`}>
+                      <div className="showroom-card-media">
+                        {img ? (
+                          <img src={img} alt={car.title} loading="lazy" />
+                        ) : (
+                          <div className="showroom-card-fallback"><Car size={30} /></div>
+                        )}
+                        <span className={`listing-badge ${onFloor ? 'listing-badge--live' : pending ? 'listing-badge--pending' : 'listing-badge--draft'}`}>
+                          {onFloor ? '✓ ON SHOWROOM FLOOR' : pending ? '⌛ FEE PENDING' : 'NOT IN SHOWROOM'}
+                        </span>
+                      </div>
+                      <div className="showroom-card-body">
+                        <h3 className="showroom-card-title">{car.title}</h3>
+                        <div className="showroom-card-price">{formatPrice(car.price)}</div>
+                        <div className="showroom-card-fee muted">
+                          Parking fee ({car.fee_percentage}%): <strong>{formatPrice(car.calculated_fee)}</strong>
                         </div>
                       </div>
-                      <div className="my-listings-row-actions">
+                      <div className="showroom-card-actions">
                         <Link to={`/marketplace/${car.uuid || car.id}`} className="btn btn-ghost btn-sm" title="View Listing">
-                          <Eye size={14} />
+                          <Eye size={14} /> View
                         </Link>
-                        {!car.is_in_showroom && car.showroom_status !== 'pending' && (
+                        {!onFloor && !pending && (
                           <button
                             type="button"
-                            className="btn btn-secondary btn-sm"
+                            className="btn btn-primary btn-sm"
                             onClick={() => handleOpenSlotModal(car.id)}
-                            style={{ fontSize: 12.5 }}
                           >
-                            <DollarSign size={14} /> Avail Parking Slot ({formatPrice(car.calculated_fee)})
+                            <DollarSign size={14} /> Park it · {formatPrice(car.calculated_fee)}
                           </button>
                         )}
-                        {car.is_in_showroom && (
+                        {onFloor && (
                           <Link
                             to={`/showroom?seller=${user.username}`}
-                            className="btn btn-ghost btn-sm"
-                            style={{ color: '#10b981', fontWeight: 700 }}
+                            className="btn btn-secondary btn-sm"
                           >
                             Live on Floor →
                           </Link>
                         )}
                       </div>
-                    </li>
+                    </div>
                   )
                 })}
-              </ul>
+              </div>
             )}
 
             {/* Application History */}
@@ -526,38 +486,33 @@ export default function MyListings() {
                   <Building2 size={18} />
                   <span>Showroom Slot Application History</span>
                 </h3>
-                <ul className="my-listings-list">
+                <div className="slot-history">
                   {showroomData.applications.map((app) => (
-                    <li key={app.id} className="my-listings-row">
-                      <div className="my-listings-row-main">
-                        <span className="my-listings-title">
+                    <div key={app.id} className="slot-history-card">
+                      <div>
+                        <div className="slot-history-title">
                           #{app.id} · {app.car?.title || `Car #${app.car_id}`}
-                        </span>
-                        <div className="my-listings-meta">
-                          <span className="my-listings-price">{formatPrice(app.calculated_fee)}</span>
-                          <span
-                            className={`listing-badge ${
-                              app.status === 'approved'
-                                ? 'listing-badge--live'
-                                : app.status === 'pending'
-                                ? 'listing-badge--pending'
-                                : 'listing-badge--rejected'
-                            }`}
-                          >
-                            {app.status.toUpperCase()}
-                          </span>
-                          <span className="muted">Method: {app.payment_method?.toUpperCase()}</span>
-                          {app.payment_reference && <span className="muted">Ref: {app.payment_reference}</span>}
+                        </div>
+                        <div className="slot-history-meta muted">
+                          {formatPrice(app.calculated_fee)} · {app.payment_method?.toUpperCase()}
+                          {app.payment_reference ? ` · Ref: ${app.payment_reference}` : ''}
+                          {app.created_at ? ` · ${new Date(app.created_at).toLocaleDateString()}` : ''}
                         </div>
                       </div>
-                      <div className="my-listings-row-actions">
-                        <span className="muted" style={{ fontSize: 12 }}>
-                          {app.created_at ? new Date(app.created_at).toLocaleDateString() : ''}
-                        </span>
-                      </div>
-                    </li>
+                      <span
+                        className={`listing-badge ${
+                          app.status === 'approved'
+                            ? 'listing-badge--live'
+                            : app.status === 'pending'
+                            ? 'listing-badge--pending'
+                            : 'listing-badge--rejected'
+                        }`}
+                      >
+                        {app.status.toUpperCase()}
+                      </span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </>
             )}
           </div>
@@ -577,103 +532,38 @@ export default function MyListings() {
               <div className="my-listings-card my-listings-card--center">
                 <Inbox size={32} className="my-listings-accent" />
                 <h2>No {requestFilter === 'all' ? '' : `"${requestFilter}"`} requests</h2>
-                <p className="muted">Buyer sales-order requests for your listings will appear here. Accept exactly one per listing.</p>
+                <p className="muted">Buyer sales-order requests for your listings will appear here. Accept exactly one per listing — click a card to expand its full receipt, timeline, and funds status.</p>
               </div>
             ) : (
-              <ul className="my-listings-list">
-                {requests.map((order) => {
-                  const verification = order.verification_status || 'pending'
-                  const payStatus = order.financials?.payment_status || 'pending'
-                  return (
-                    <li key={order.id} className="my-listings-row">
-                      <div className="my-listings-row-main">
-                        <span className="my-listings-title">{order.item?.name || order.item_name || `Order #${order.id}`}</span>
-                        <div className="my-listings-meta">
-                          <span className="my-listings-price">{order.financials?.formatted_total || ''}</span>
-                          <span className={`listing-badge ${verification === 'accepted' ? 'listing-badge--live' : verification === 'rejected' ? 'listing-badge--rejected' : 'listing-badge--pending'}`}>
-                            {order.verification_label || verification}
-                          </span>
-                          <span className="muted">{order.status ? `Order: ${order.status}` : ''}</span>
-                          <span className="muted">{order.buyer?.name || order.buyer_name || ''}</span>
-                          {order.vehicle?.chassis_number && <span className="muted">Chassis: {order.vehicle.chassis_number}</span>}
-                        </div>
-                        {verification === 'accepted' && (
-                          <div className="my-listings-meta" style={{ marginTop: 4 }}>
-                            <span className="muted">
-                              Payment: {(order.financials?.payment_method || '').replace('_', ' ') || '—'}
-                              {' · '}{order.financials?.payment_label || payStatus}
-                            </span>
-                            {order.financials?.payment_reference && (
-                              <span className="muted" style={{ fontFamily: 'monospace' }}>Ref: {order.financials.payment_reference}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="my-listings-row-actions">
-                        <Link to={`/sales-order/${order.order_number || order.id}`} className="btn btn-ghost btn-sm" title="View sales order"><Eye size={14} /></Link>
-                        {verification === 'accepted' && !['completed', 'refunded', 'cancelled'].includes(order.status) && (
-                          <select
-                            className="btn btn-secondary btn-sm"
-                            value={order.status || 'processing'}
-                            disabled={actingId === `status-${order.id}`}
-                            onChange={(e) => runOrderStatusChange(order, e.target.value)}
-                            title="Advance this order (processing → negotiating → sold → shipped → delivered)"
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {SELLER_ORDER_STATUSES.map((s) => (
-                              <option key={s} value={s}>
-                                {s.charAt(0).toUpperCase() + s.slice(1)}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        {verification === 'accepted' && order.status === 'disputed' && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            disabled={actingId === `refund-${order.id}`}
-                            onClick={() => runRefund(order)}
-                            title="Resolve the dispute by refunding the payment to the buyer"
-                          >
-                            Refund Buyer
-                          </button>
-                        )}
-                        {verification === 'accepted' && (order.item?.type || order.item_type) === 'car' && ['shipped', 'delivered'].includes(order.status) && (order.proof?.status || 'none') !== 'approved' && (
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            disabled={actingId === `proof-${order.id}`}
-                            onClick={() => runSubmitProof(order)}
-                            title="Submit handover photos + note — admin approval releases held funds to your wallet"
-                          >
-                            {order.proof?.status === 'pending' ? 'Resubmit Proof' : order.proof?.status === 'rejected' ? 'Fix & Resubmit Proof' : 'Submit Handover Proof'}
-                          </button>
-                        )}
-                        {(order.proof?.status === 'pending' || order.proof?.status === 'approved') && (
-                          <span className="muted" style={{ fontSize: 12 }}>
-                            Proof: {order.proof.status}{order.proof.status === 'rejected' && order.proof.rejection_reason ? ` — ${order.proof.rejection_reason}` : ''}
-                          </span>
-                        )}
-                        )}
-                        {verification === 'pending' && (
-                          <>
-                            <button type="button" className="btn btn-secondary btn-sm" disabled={actingId === `accept-${order.id}`} onClick={() => runRequestAction(order, 'accept')} title="Verify & accept this buyer">
-                              <Check size={14} /> Accept
-                            </button>
-                            <button type="button" className="btn btn-ghost btn-sm btn-danger-ghost" disabled={actingId === `reject-${order.id}`} onClick={() => runRequestAction(order, 'reject')} title="Decline this request">
-                              <X size={14} /> Decline
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
+              <div className="orders-list">
+                <div className="my-listings-resultline muted" style={{ marginBottom: 4 }}>
+                  {requests.length} request{requests.length === 1 ? '' : 's'} · Manage opens the full order view
+                </div>
+                {requests.map((order) => (
+                  <SellerOrderCard key={order.id} order={order} onChanged={load} showListing onOpen={openRequest} />
+                ))}
+              </div>
             )}
           </>
         ) : (
         <>
+        <div className="my-listings-toolbar">
+          <div className="my-listings-search">
+            <Search size={15} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search your ${tab === 'cars' ? 'vehicles' : 'parts'}…`}
+            />
+          </div>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} className="my-listings-sort" title="Sort listings">
+            <option value="newest">Newest first</option>
+            <option value="orders">Most orders</option>
+            <option value="price-desc">Price: high → low</option>
+            <option value="price-asc">Price: low → high</option>
+          </select>
+        </div>
         <div className="my-listings-filters">
           <button type="button" className={statusFilter === 'all' ? 'my-listings-chip my-listings-chip--active' : 'my-listings-chip'} onClick={() => setStatusFilter('all')}>
             All statuses
@@ -695,70 +585,30 @@ export default function MyListings() {
             <p className="muted">{statusFilter === 'all' ? 'Create your first listing to appear here.' : 'Try a different status filter.'}</p>
             {statusFilter === 'all' && <Link to="/sell" className="btn btn-primary">+ New Listing</Link>}
           </div>
+        ) : visibleItems.length === 0 ? (
+          <div className="my-listings-card my-listings-card--center">
+            <Search size={28} className="my-listings-accent" />
+            <h2>No matches for “{query}”</h2>
+            <p className="muted">Try a different search or clear the status filter.</p>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setQuery(''); setStatusFilter('all') }}>Clear search</button>
+          </div>
         ) : (
-          <ul className="my-listings-list">
-            {items.map((item) => {
-              const status = item.status || 'draft'
-              return (
-                <li key={item.id} className="my-listings-row">
-                  <div className="my-listings-row-main">
-                    <Link to={detailPath(item)} className="my-listings-title">{item.title || `Listing #${item.id}`}</Link>
-                    <div className="my-listings-meta">
-                      <span className="my-listings-price">{formatPrice(item.price)}</span>
-                      <span className={`listing-badge ${STATUS_CLASS[status] || ''}`}>{STATUS_LABELS[status] || status}</span>
-                      {item.city && <span className="muted">{item.city}</span>}
-                    </div>
-                  </div>
-                  <div className="my-listings-row-actions">
-                    <Link to={detailPath(item)} className="btn btn-ghost btn-sm" title="View listing"><Eye size={14} /></Link>
-                    {tab === 'cars' && ['draft', 'archived', 'rejected'].includes(status) && (
-                      <>
-                        <select
-                          className="btn btn-secondary btn-sm"
-                          defaultValue="garage_dropoff"
-                          id={`inspect-type-${item.id}`}
-                          title="Inspection method: garage drop-off or mobile on-site visit"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <option value="garage_dropoff">Drop-off</option>
-                          <option value="onsite_visit">On-Site</option>
-                        </select>
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          disabled={actingId === `inspect-${item.id}`}
-                          onClick={() => {
-                            const sel = document.getElementById(`inspect-type-${item.id}`)
-                            runSubmitInspection(item.id, sel?.value || 'garage_dropoff')
-                          }}
-                          title="Submit for mandatory inspection — goes live only after approval"
-                        >
-                          <ShieldCheck size={14} /> {actingId === `inspect-${item.id}` ? 'Submitting…' : 'Submit for Inspection'}
-                        </button>
-                      </>
-                    )}
-                    {tab === 'cars' && ['pending_inspection', 'inspected'].includes(status) && (
-                      <span className="muted" style={{ fontSize: 12 }} title="With the inspectors — you will be notified of the result">
-                        In inspection queue
-                      </span>
-                    )}
-                    <ListingStatusPicker
-                      listingType={tab === 'cars' ? 'car' : 'part'}
-                      listingId={item.id}
-                      value={normalizeListingStatus(status)}
-                      onChanged={() => load()}
-                      onError={(err) => setError(extractError(err, 'Failed to update listing status.'))}
-                      className="btn btn-secondary btn-sm"
-                      style={{ cursor: 'pointer' }}
-                    />
-                    <button type="button" className="btn btn-ghost btn-sm btn-danger-ghost" disabled={actingId === `destroy-${item.id}`} onClick={() => runAction(item.id, 'destroy', 'Listing deleted.', 'Delete this listing permanently?')} title="Delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+          <>
+            <div className="my-listings-resultline muted">
+              {visibleItems.length} of {items.length} {tab === 'cars' ? 'vehicle' : 'part'}{items.length === 1 ? '' : 's'} · click a card to manage its sales
+            </div>
+            <div className="listings-grid">
+              {visibleItems.map((item) => (
+                <ListingCard
+                  key={item.id}
+                  item={item}
+                  type={tab === 'cars' ? 'car' : 'part'}
+                  orderCount={item.orders_count || 0}
+                  onClick={() => openListing(item)}
+                />
+              ))}
+            </div>
+          </>
         )}
         </>
         )}

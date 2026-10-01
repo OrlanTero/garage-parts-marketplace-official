@@ -26,6 +26,7 @@ class UserResource extends JsonResource
             'provider' => $this->provider,
             'avatar_url' => $this->avatar_url,
             'interests' => $this->interests ?? [],
+            'has_address' => \App\Models\Address::where('user_id', $this->id)->exists(),
             'onboarding_completed_at' => $this->onboarding_completed_at,
             'needs_onboarding' => $this->onboarding_completed_at === null,
             'perks_status' => $this->perks_status ?? 'inactive',

@@ -24,6 +24,7 @@ class Order extends Model
         'delivery_latitude',
         'delivery_longitude',
         'delivery_label',
+        'handover_mode',
         'chassis_number',
         'vin',
         'vehicle_make_model',

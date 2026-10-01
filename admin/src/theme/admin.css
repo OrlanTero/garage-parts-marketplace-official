@@ -457,11 +457,78 @@ input, select, textarea {
 }
 
 /* ==========================================================================
+   Admin vehicle cards (CarsManagement grid view)
+   ========================================================================== */
+.admin-car-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 16px;
+}
+.admin-car-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.admin-car-media {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  background: var(--admin-bg-subtle);
+  overflow: hidden;
+}
+.admin-car-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.25s ease; }
+.admin-car-card:hover .admin-car-media img { transform: scale(1.04); }
+.admin-car-nomedia {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--admin-text-muted);
+}
+.admin-car-badge { position: absolute; top: 10px; left: 10px; }
+.admin-car-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.admin-car-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.admin-car-title:hover { color: var(--color-rust); }
+.admin-car-sub { font-size: 12px; color: var(--admin-text-muted); }
+.admin-car-meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--admin-text-secondary); }
+.admin-car-dot { color: var(--admin-text-muted); }
+.admin-car-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+.admin-car-price { font-size: 16px; font-weight: 800; color: var(--color-rust); font-family: var(--font-display); }
+.admin-car-seller {
+  font-size: 11.5px;
+  color: var(--admin-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+}
+.admin-car-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--admin-border-subtle);
+}
+.admin-car-actions .btn { flex: 1 1 auto; justify-content: center; }
+
+/* ==========================================================================
    Moderation queue (ListingModeration)
    ========================================================================== */
 .mod-queue-card { padding: 0; overflow: hidden; }
 .mod-queue-table { border: none; border-radius: 0; }
 .mod-queue-table .admin-table { min-width: 880px; }
+.admin-parts-table { min-width: 900px; }
 
 /* ==========================================================================
    KYC detail page (KycDetail)
@@ -834,6 +901,64 @@ a.kyc-list-row:hover { color: var(--color-rust); }
   border-color: var(--admin-border);
   box-shadow: var(--shadow-card);
 }
+
+/* Icon view-mode toggle (cards / table). */
+.view-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--admin-bg-subtle);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+}
+.view-mode-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  min-height: 32px;
+}
+.view-mode-btn.active {
+  background: #ffffff;
+  color: var(--color-rust);
+  box-shadow: var(--shadow-card);
+}
+
+/* Shared catalog filter row (management pages). */
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.admin-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 130px;
+  flex: 1 1 130px;
+  max-width: 210px;
+}
+.admin-filter-field > span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--admin-text-muted);
+}
+.admin-filter-field .admin-input,
+.admin-filter-field .admin-select {
+  width: 100%;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+.admin-filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+.admin-result-count { font-size: 12.5px; color: var(--admin-text-muted); font-weight: 600; white-space: nowrap; }
 
 .stats-grid {
   display: grid;

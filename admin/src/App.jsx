@@ -12,6 +12,7 @@ import BuyersManagement from './pages/BuyersManagement.jsx'
 import SellersManagement from './pages/SellersManagement.jsx'
 import DealersManagement from './pages/DealersManagement.jsx'
 import CarsManagement from './pages/CarsManagement.jsx'
+import CarDetail from './pages/CarDetail.jsx'
 import BiddingManagement from './pages/BiddingManagement.jsx'
 import WantedManagement from './pages/WantedManagement.jsx'
 import ShowroomManagement from './pages/ShowroomManagement.jsx'
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="sellers" element={<SellersManagement />} />
             <Route path="dealers" element={<DealersManagement />} />
             <Route path="cars" element={<CarsManagement />} />
+  <Route path="cars/:id" element={<CarDetail />} />
             <Route path="auctions" element={<BiddingManagement />} />
   <Route path="wanted" element={<WantedManagement />} />
             <Route path="showroom" element={<ShowroomManagement />} />

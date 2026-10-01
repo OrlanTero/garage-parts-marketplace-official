@@ -52,7 +52,7 @@ export const sessionManager = {
   oauthRedirectUrl: (provider, role = 'buyer') => {
     if (!SUPPORTED_OAUTH_PROVIDERS.includes(provider)) throw new Error(`Unsupported provider: ${provider}`)
     return client
-      .get(`/auth/oauth/${provider}/redirect`, { params: { role } })
+      .get(`/auth/oauth/${provider}/redirect`, { params: { role, frontend: 1 } })
       .then((r) => r.data.url)
   },
 

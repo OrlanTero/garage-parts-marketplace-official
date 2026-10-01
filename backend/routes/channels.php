@@ -32,6 +32,12 @@ Broadcast::channel('seller.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id && in_array($user->role->value ?? $user->role, ['seller', 'dealer', 'parts_seller', 'admin'], true);
 });
 
+// Back-office staff channel — every sale order lifecycle move is audible
+// here so admin screens refresh live. Staff only, never buyers/sellers.
+Broadcast::channel('staff.orders', function ($user) {
+    return in_array($user->role->value ?? $user->role, ['admin', 'super_admin', 'inspector'], true);
+});
+
 // Presence channel for marketplace activity (who is currently browsing)
 Broadcast::channel('marketplace', function ($user) {
     if ($user) {

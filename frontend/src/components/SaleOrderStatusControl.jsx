@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FileText } from 'lucide-react'
-import { SELLER_ORDER_STATUSES } from '../api/seller.js'
+import { FileText, Truck } from 'lucide-react'
 import { sellerOrdersApi } from '../api/seller.js'
+import { nextStatusFor, statusLabel } from './orders/orderFlow.js'
 import { useListingOrders } from '../hooks/useListingOrders.js'
 import { useOrderStatusListener } from '../realtime/useOrderStatus.js'
 
@@ -74,8 +74,7 @@ export default function SaleOrderStatusControl({ listingType, listingId, role, c
 
   const handleStatusChange = async (next) => {
     if (!selected || busy || next === selected.status) return
-    if (next === 'sold' && !window.confirm(`Mark order ${selected.order_number} as sold (unit committed)?`)) return
-    setBusy(true)
+    if (next === 'sold' && !window.confirm(`Mark order ${selected.order_number} as sold (unit committed)?`)) return    setBusy(true)
     setError('')
     try {
       await sellerOrdersApi.updateStatus(selected.id, { status: next })
@@ -133,22 +132,27 @@ export default function SaleOrderStatusControl({ listingType, listingId, role, c
       )}
       {selected && (
         <>
-          <select
-            value={selected.status || 'processing'}
-            disabled={busy || CLOSED.includes(selected.status)}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            title={CLOSED.includes(selected.status) ? 'This order is closed' : 'Advance this sale order'}
-            style={compact ? undefined : { background: '#0f1117', border: '1px solid #2d3748', borderRadius: 8, color: '#f8fafc', fontSize: 12, fontWeight: 700, padding: '7px 10px', cursor: 'pointer', outline: 'none' }}
-          >
-            {SELLER_ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </option>
-            ))}
-            {CLOSED.includes(selected.status) && !SELLER_ORDER_STATUSES.includes(selected.status) && (
-              <option value={selected.status}>{selected.status}</option>
-            )}
-          </select>
+          {(() => {
+            const next = nextStatusFor(selected)
+            if (!next) {
+              return (
+                <span className="messages-hub-counterparty-chip" title="This order is closed — no further moves">
+                  {statusLabel(selected.status)}
+                </span>
+              )
+            }
+            return (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => handleStatusChange(next)}
+                title={`One way forward: ${selected.status} → ${next}. No going back.`}
+                style={compact ? undefined : { background: '#0f1117', border: '1px solid #2d3748', borderRadius: 8, color: '#f8fafc', fontSize: 12, fontWeight: 700, padding: '7px 12px', cursor: 'pointer', outline: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Truck size={12} /> Mark {statusLabel(next)}
+              </button>
+            )
+          })()}
           <Link
             to={`/sales-order/${selected.order_number || selected.id}`}
             className="messages-hub-counterparty-chip messages-hub-order-chip"

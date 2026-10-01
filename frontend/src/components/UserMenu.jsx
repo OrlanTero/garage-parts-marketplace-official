@@ -58,6 +58,7 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
     if (logout) {
       await logout()
     }
+    navigate('/login', { replace: true })
   }
 
   const handleLinkClick = () => {
@@ -171,31 +172,21 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
 
           <div className="user-dropdown-divider" />
 
-          {/* Contextual Actions / Shortcuts */}
+          {/* Contextual Actions / Shortcuts — commerce first, account last */}
           <div className="user-dropdown-section">
             <div className="user-dropdown-section-title">Marketplace & Activity</div>
 
-            <Link to="/settings" className="user-dropdown-item" onClick={handleLinkClick}>
+            <Link to="/my-orders" className="user-dropdown-item" onClick={handleLinkClick}>
               <div className="user-dropdown-item-icon">
-                <SlidersHorizontal size={16} />
+                <ShoppingBag size={16} />
               </div>
               <div className="user-dropdown-item-text">
-                <span className="user-dropdown-item-title">Account Settings</span>
-                <span className="user-dropdown-item-desc">Profile, address book, KYC & security</span>
+                <span className="user-dropdown-item-title">My Orders</span>
+                <span className="user-dropdown-item-desc">Purchases, payments & receipts</span>
               </div>
             </Link>
 
-            <Link to="/agent" className="user-dropdown-item" onClick={handleLinkClick}>
-              <div className="user-dropdown-item-icon icon-action">
-                <Sparkles size={16} />
-              </div>
-              <div className="user-dropdown-item-text">
-                <span className="user-dropdown-item-title">Sales Agent Dashboard</span>
-                <span className="user-dropdown-item-desc">{user?.agent_code ? `Code: ${user.agent_code}` : `Earn ${program.agent.commission_car_pct}% cars · ${program.agent.commission_part_pct}% parts sharing`}</span>
-              </div>
-            </Link>
-
-            {isSeller && (
+            {isSeller ? (
               <Link to="/my-listings?tab=requests" className="user-dropdown-item" onClick={handleLinkClick}>
                 <div className="user-dropdown-item-icon icon-action">
                   <Store size={16} />
@@ -203,6 +194,16 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
                 <div className="user-dropdown-item-text">
                   <span className="user-dropdown-item-title">My Listings & Requests</span>
                   <span className="user-dropdown-item-desc">Paid orders, buyer requests & inventory</span>
+                </div>
+              </Link>
+            ) : (
+              <Link to="/become-seller" className="user-dropdown-item" onClick={handleLinkClick}>
+                <div className="user-dropdown-item-icon icon-action">
+                  <Store size={16} />
+                </div>
+                <div className="user-dropdown-item-text">
+                  <span className="user-dropdown-item-title">Become a Seller</span>
+                  <span className="user-dropdown-item-desc">Upgrade to sell cars & parts</span>
                 </div>
               </Link>
             )}
@@ -214,18 +215,6 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               <div className="user-dropdown-item-text">
                 <span className="user-dropdown-item-title">My Wallet</span>
                 <span className="user-dropdown-item-desc">Earnings, payouts & cash-outs</span>
-              </div>
-            </Link>
-
-            <Link to="/perks" className="user-dropdown-item" onClick={handleLinkClick}>
-              <div className="user-dropdown-item-icon icon-action">
-                <BadgePercent size={16} />
-              </div>
-              <div className="user-dropdown-item-text">
-                <span className="user-dropdown-item-title">Member Perks</span>
-                <span className="user-dropdown-item-desc">
-                  {user?.is_perks_member ? 'Active member · deals unlocked' : `Up to ${program.perks.max_part_discount_pct}% off parts · ₱${program.perks.subscription_fee}/yr`}
-                </span>
               </div>
             </Link>
 
@@ -241,25 +230,35 @@ export default function UserMenu({ user, logout, isTransparent = false }) {
               </Link>
             )}
 
-            {!isSeller && (
-              <Link to="/become-seller" className="user-dropdown-item" onClick={handleLinkClick}>
-                <div className="user-dropdown-item-icon icon-action">
-                  <Store size={16} />
-                </div>
-                <div className="user-dropdown-item-text">
-                  <span className="user-dropdown-item-title">Become a Seller</span>
-                  <span className="user-dropdown-item-desc">Upgrade to sell cars & parts</span>
-                </div>
-              </Link>
-            )}
-
-            <Link to="/my-orders" className="user-dropdown-item" onClick={handleLinkClick}>
-              <div className="user-dropdown-item-icon">
-                <ShoppingBag size={16} />
+            <Link to="/agent" className="user-dropdown-item" onClick={handleLinkClick}>
+              <div className="user-dropdown-item-icon icon-action">
+                <Sparkles size={16} />
               </div>
               <div className="user-dropdown-item-text">
-                <span className="user-dropdown-item-title">My Orders</span>
-                <span className="user-dropdown-item-desc">Purchases, payments & receipts</span>
+                <span className="user-dropdown-item-title">Sales Agent Dashboard</span>
+                <span className="user-dropdown-item-desc">{user?.agent_code ? `Code: ${user.agent_code}` : `Earn ${program.agent.commission_car_pct}% cars · ${program.agent.commission_part_pct}% parts sharing`}</span>
+              </div>
+            </Link>
+
+            <Link to="/perks" className="user-dropdown-item" onClick={handleLinkClick}>
+              <div className="user-dropdown-item-icon icon-action">
+                <BadgePercent size={16} />
+              </div>
+              <div className="user-dropdown-item-text">
+                <span className="user-dropdown-item-title">Member Perks</span>
+                <span className="user-dropdown-item-desc">
+                  {user?.is_perks_member ? 'Active member · deals unlocked' : `Up to ${program.perks.max_part_discount_pct}% off parts · ₱${program.perks.subscription_fee}/yr`}
+                </span>
+              </div>
+            </Link>
+
+            <Link to="/settings" className="user-dropdown-item" onClick={handleLinkClick}>
+              <div className="user-dropdown-item-icon">
+                <SlidersHorizontal size={16} />
+              </div>
+              <div className="user-dropdown-item-text">
+                <span className="user-dropdown-item-title">Account Settings</span>
+                <span className="user-dropdown-item-desc">Profile, address book, KYC & security</span>
               </div>
             </Link>
           </div>

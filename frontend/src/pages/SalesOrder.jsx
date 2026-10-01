@@ -80,9 +80,6 @@ export default function SalesOrder() {
   const [payRef, setPayRef] = useState('')
   const [payConfirming, setPayConfirming] = useState(false)
   const [payError, setPayError] = useState('')
-  const [pinEditing, setPinEditing] = useState(false)
-  const [pinSaving, setPinSaving] = useState(false)
-  const [pinError, setPinError] = useState('')
   const [inspectActing, setInspectActing] = useState(false)
   const [inspectError, setInspectError] = useState('')
   const [rejectBoxOpen, setRejectBoxOpen] = useState(false)
@@ -213,24 +210,9 @@ export default function SalesOrder() {
   const isRejected = verification === 'rejected'
   const isCompleted = order.status === 'completed'
 
-  // Precise delivery pinpoint (parts freight, pinned after acceptance).
+  // Precise delivery pinpoint (parts freight). Read-only on the receipt —
+  // the receipt just shows the saved zone; pinning lives outside it.
   const delivery = order.delivery || {}
-  const hasPin = Boolean(delivery.has_pin)
-  const canEditPin = isAccepted && !['delivered', 'completed', 'cancelled'].includes(order.status)
-
-  const handlePinSave = async (pin) => {
-    try {
-      setPinSaving(true)
-      setPinError('')
-      const updated = await ordersApi.updateDeliveryLocation(orderNum, pin)
-      setOrder(updated)
-      setPinEditing(false)
-    } catch (err) {
-      setPinError(err?.response?.data?.message || 'Failed to save delivery pin.')
-    } finally {
-      setPinSaving(false)
-    }
-  }
 
   // Money lifecycle splits by item type. CARS use escrow: settled funds
   // are HELD (paid) → confirmed (house verifies) → released to seller on
@@ -693,6 +675,12 @@ export default function SalesOrder() {
               <div style={{ color: 'var(--color-text-muted)', fontSize: 11, marginBottom: 2 }}>Shipping Address:</div>
               <MapPin size={13} style={{ display: 'inline', marginRight: 4, color: '#d8622c' }} />
               {buyer.full_address || order.shipping_address || 'Makati Showroom Depot Pickup'}
+              {delivery.has_pin && (
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'monospace', marginTop: 4 }}>
+                  Pin: {Number(delivery.latitude).toFixed(5)}, {Number(delivery.longitude).toFixed(5)}
+                  {delivery.label ? ` · ${delivery.label}` : ''}
+                </div>
+              )}
             </div>
           </div>
 
@@ -748,59 +736,59 @@ export default function SalesOrder() {
 
         </div>
 
-        {/* SECTION: DELIVERY LOCATION PIN (parts freight, after acceptance) */}
-        {!isCarOrder && (
+        {/* SECTION: MEETUP LOCATIONS (car builds) — both parties see each other's pin */}
+        {isCarOrder && (
         <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MapPin size={14} /> Delivery Location Pin
-            {hasPin && (
-              <span style={{ background: 'var(--color-success)', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4 }}>
-                Pinned
-              </span>
-            )}
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <MapPin size={14} /> Meetup Locations
+            <span style={{
+              fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 12,
+              background: (order.meetup?.mode || order.handover_mode || 'dropoff') === 'onsite_visit' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(216, 98, 44, 0.15)',
+              color: (order.meetup?.mode || order.handover_mode || 'dropoff') === 'onsite_visit' ? 'var(--color-info-text)' : 'var(--color-accent)',
+            }}>
+              {(order.meetup?.mode || order.handover_mode || 'dropoff') === 'onsite_visit' ? 'ON-SITE VISIT — SELLER COMES TO YOU' : 'GARAGE DROP-OFF — MEET AT SELLER POINT'}
+            </span>
           </div>
-
           <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12, padding: 20 }}>
-            {!isAccepted && !hasPin ? (
-              <div style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-                Pinpointing unlocks once the seller verifies & accepts this request — the courier delivers the part exactly where you pin it.
-              </div>
-            ) : hasPin && !pinEditing ? (
-              <div>
-                <DeliveryMapPicker
-                  readonly
-                  height={240}
-                  value={{ latitude: delivery.latitude, longitude: delivery.longitude, label: delivery.label }}
-                />
-                {canEditPin && (
-                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={() => { setPinError(''); setPinEditing(true) }}>
-                    Update Pin
-                  </button>
-                )}
-              </div>
-            ) : canEditPin ? (
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 12px 0', lineHeight: 1.6 }}>
-                  Drag the pin to your exact drop-off point so the freight courier delivers precisely. Address resolves automatically.
-                </p>
-                <DeliveryMapPicker
-                  height={320}
-                  value={hasPin ? { latitude: delivery.latitude, longitude: delivery.longitude, label: delivery.label } : null}
-                  confirmLabel={pinSaving ? 'Saving Pin…' : hasPin ? 'Update Delivery Pin' : 'Confirm Delivery Pin'}
-                  onConfirm={handlePinSave}
-                />
-                {pinError && <div style={{ color: 'var(--color-error)', fontSize: 12, marginTop: 8 }}>{pinError}</div>}
-                {hasPin && (
-                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 8 }} onClick={() => setPinEditing(false)}>
-                    Cancel
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-                Pinpointing unlocks once the seller verifies & accepts this request.
-              </div>
-            )}
+            {(() => {
+              const pins = []
+              if (delivery.has_pin) {
+                pins.push({
+                  latitude: delivery.latitude,
+                  longitude: delivery.longitude,
+                  label: delivery.label || buyer.full_address || order.shipping_address || 'Buyer location',
+                  kind: 'buyer',
+                  title: buyer.name || 'Buyer',
+                })
+              }
+              const sp = order.meetup?.seller_pin
+              if (sp && sp.latitude != null && sp.longitude != null) {
+                pins.push({
+                  latitude: sp.latitude,
+                  longitude: sp.longitude,
+                  label: sp.label || 'Seller / garage point',
+                  kind: 'seller',
+                  title: 'Seller point',
+                })
+              }
+              if (pins.length === 0) {
+                return (
+                  <div style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
+                    No meetup pins yet — the buyer pins the handover location at checkout.
+                  </div>
+                )
+              }
+              return (
+                <>
+                  <DeliveryMapPicker readonly height={300} markers={pins} />
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8, lineHeight: 1.6 }}>
+                    {(order.meetup?.mode || order.handover_mode || 'dropoff') === 'onsite_visit'
+                      ? 'The seller travels to your (orange) pin for the handover.'
+                      : 'You travel to the seller (green) point for the handover.'}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
         )}

@@ -78,6 +78,14 @@ class OrderController extends Controller
             abort(422, 'Only accepted orders can move into fulfillment.');
         }
 
+        // Funds first: no fulfillment move until the house has verified
+        // (confirmed) the buyer's payment. Completion keeps its own
+        // submitted-funds rule below.
+        if (in_array($validated['status'], ['preparing', 'sold', 'shipped', 'delivered'], true)
+            && !in_array($order->payment_status, ['confirmed', 'released'], true)) {
+            abort(422, 'Verify funds first — payment must be confirmed before fulfillment can move.');
+        }
+
         if ($validated['status'] === 'completed' && !in_array($order->payment_status, ['paid', 'confirmed', 'released'], true)) {
             abort(422, 'Funds must be submitted before an order can be completed.');
         }
@@ -116,6 +124,38 @@ class OrderController extends Controller
         // Every admin move messages the buyer in-thread.
         try {
             app(\App\Services\OrderStatusMessenger::class)->announce($order->refresh(), $fromStatus);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return (new OrderResource($order->refresh()))->response();
+    }
+
+    /**
+     * Admin delivery papers update — courier, tracking number/URL, ETA —
+     * without a status move. The status endpoint requires a forward
+     * transition, so shipped/delivered orders otherwise have no way to
+     * fix tracking. Broadcasts explicitly (the observer only fires on
+     * status/payment/verification changes) so buyer screens refresh live.
+     * Blocked only on closed orders (cancelled/refunded).
+     */
+    public function updateDelivery(Request $request, Order $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'tracking_number' => ['nullable', 'string', 'max:100'],
+            'tracking_url' => ['nullable', 'url', 'max:500'],
+            'carrier' => ['nullable', 'string', 'max:100'],
+            'estimated_arrival' => ['nullable', 'date'],
+        ]);
+
+        if (in_array($order->status, ['cancelled', 'refunded'], true)) {
+            abort(422, 'This order is closed and its delivery info can no longer change.');
+        }
+
+        $order->update($validated);
+
+        try {
+            \App\Events\OrderStatusChanged::dispatch($order->refresh());
         } catch (\Throwable $e) {
             report($e);
         }
@@ -398,6 +438,7 @@ class OrderController extends Controller
             'delivery_latitude' => $data['delivery_latitude'] ?? null,
             'delivery_longitude' => $data['delivery_longitude'] ?? null,
             'delivery_label' => $data['delivery_label'] ?? null,
+            'handover_mode' => $data['handover_mode'] ?? null,
 
             // Vehicle Fitment & Identification Details (parts: buyer's vehicle; cars: purchased vehicle's own VIN)
             'chassis_number' => $chassisNumber,
@@ -926,7 +967,7 @@ class OrderController extends Controller
      */
     public function show(string $identifier): JsonResponse
     {
-        $order = Order::with('warehouse')
+        $order = Order::with(['warehouse', 'seller'])
             ->where('order_number', $identifier)
             ->orWhere('id', is_numeric($identifier) ? (int) $identifier : 0)
             ->first();

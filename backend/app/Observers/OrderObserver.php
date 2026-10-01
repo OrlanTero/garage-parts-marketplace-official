@@ -24,7 +24,7 @@ class OrderObserver
 
     public function updated(Order $order): void
     {
-        if (!$order->wasChanged(['status', 'payment_status', 'verification_status'])) {
+        if (!$order->wasChanged(['status', 'payment_status', 'verification_status', 'proof_status'])) {
             return;
         }
 
@@ -78,7 +78,12 @@ class OrderObserver
     private function notifyChanged(Order $order): void
     {
         $changes = array_keys($order->getChanges());
+        $proofOnly = in_array('proof_status', $changes, true)
+            && !in_array('status', $changes, true)
+            && !in_array('payment_status', $changes, true)
+            && !in_array('verification_status', $changes, true);
         $label = match (true) {
+            $proofOnly => 'handover proof ' . ($order->proof_status ?? 'updated'),
             in_array('verification_status', $changes, true) => $order->verification_status === 'accepted'
                 ? 'verified & accepted' : 'updated (' . $order->verification_status . ')',
             in_array('payment_status', $changes, true) => 'payment ' . $order->payment_status,
