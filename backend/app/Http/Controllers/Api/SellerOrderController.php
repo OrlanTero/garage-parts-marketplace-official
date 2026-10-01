@@ -170,6 +170,16 @@ class SellerOrderController extends Controller
             ]);
         }
 
+        // Proof-first delivery (car builds): the seller submits handover
+        // proof at shipped, then marks delivered. No proof → no delivery.
+        if (($validated['status'] ?? null) === 'delivered'
+            && ($order->item_type ?? 'part') === 'car'
+            && !in_array($order->proof_status ?? 'none', ['pending', 'approved'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Submit handover proof before marking this build delivered.'],
+            ]);
+        }
+
         if ($validated['status'] === 'completed'
             && !in_array($order->payment_status, ['paid', 'confirmed', 'released'], true)) {
             throw ValidationException::withMessages([

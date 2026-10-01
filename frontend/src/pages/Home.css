@@ -893,6 +893,62 @@
 }
 
 /* ==========================================================================
+   5b. PICKED FOR YOU — personalized ranking rail
+   ========================================================================== */
+
+.section--picks {
+  background: var(--color-surface-subtle);
+}
+
+.modern-picks-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.pick-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pick-reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  max-width: 100%;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-rust);
+  background: rgba(216, 98, 44, 0.1);
+  border: 1px solid rgba(216, 98, 44, 0.25);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pick-reason svg {
+  flex-shrink: 0;
+}
+
+.pick-reason span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1024px) {
+  .modern-picks-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .modern-picks-grid { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
    6. TRENDING PARTS & PERFORMANCE COMPONENTS
    ========================================================================== */
 

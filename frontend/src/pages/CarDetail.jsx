@@ -29,6 +29,7 @@ import ShareModal from '../components/ShareModal.jsx'
 import ReviewSection from '../components/ReviewSection.jsx'
 import NotifyMeButton from '../components/NotifyMeButton.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
+import { recordListingView } from '../utils/recommendations.js'
 import './Details.css'
 
 const DEFAULT_CAR_IMAGES = [
@@ -76,6 +77,7 @@ export default function CarDetail() {
       .then((data) => {
         setCar(data)
         setSelectedImgIdx(0)
+        recordListingView(data, 'car')
       })
       .catch((e) => setError(
         e.response?.status === 404 || e.response?.status === 403

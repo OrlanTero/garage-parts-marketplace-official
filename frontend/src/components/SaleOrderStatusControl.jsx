@@ -141,6 +141,22 @@ export default function SaleOrderStatusControl({ listingType, listingId, role, c
                 </span>
               )
             }
+            // Proof-first delivery (car builds): delivery unlocks only
+            // after handover proof is submitted — same backend rule.
+            const needsProofFirst = next === 'delivered'
+              && (selected.item?.type || selected.item_type) === 'car'
+              && !['pending', 'approved'].includes(selected.proof?.status || 'none')
+            if (needsProofFirst) {
+              return (
+                <span
+                  className="messages-hub-counterparty-chip"
+                  title="Submit handover proof first — delivery unlocks after submission"
+                  style={{ opacity: 0.7, cursor: 'not-allowed' }}
+                >
+                  Proof first, then deliver
+                </span>
+              )
+            }
             return (
               <button
                 type="button"

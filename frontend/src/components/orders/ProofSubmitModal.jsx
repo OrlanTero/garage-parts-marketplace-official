@@ -1,23 +1,56 @@
-import { useState } from 'react'
-import { X, Camera, FileCheck2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { X, Camera, FileCheck2, Upload, Trash2, Loader2 } from 'lucide-react'
 import { sellerOrdersApi } from '../../api/seller.js'
+import { mediaApi } from '../../api/media.js'
 
 export default function ProofSubmitModal({ order, onClose, onSubmitted }) {
   const [note, setNote] = useState('')
   const [urls, setUrls] = useState('')
+  const [uploads, setUploads] = useState([]) // uploaded URLs from device files
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const fileRef = useRef(null)
 
   if (!order) return null
   const orderNum = order.order_number || `#${order.id}`
   const isResubmit = order?.proof?.status === 'pending' || order?.proof?.status === 'rejected'
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'))
+    if (files.length === 0) return
+    if (uploads.length + files.length > 10) {
+      setUploadError('Maximum 10 proof photos per submission.')
+      return
+    }
+    e.target.value = ''
+    setUploading(true)
+    setUploadError('')
+    try {
+      const res = await mediaApi.uploadMultiple(files, { caption: `Handover proof ${orderNum}` })
+      const rows = res?.data ?? res ?? []
+      const newUrls = (Array.isArray(rows) ? rows : [rows])
+        .map((m) => m?.url)
+        .filter(Boolean)
+      if (newUrls.length === 0) throw new Error('Upload returned no URLs.')
+      setUploads((prev) => [...prev, ...newUrls].slice(0, 10))
+    } catch (err) {
+      setUploadError(err?.response?.data?.message || 'Photo upload failed — try again or paste URLs below.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeUpload = (url) => setUploads((prev) => prev.filter((u) => u !== url))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSaving(true)
     setError('')
     try {
-      const images = urls.split(/[\n,]+/).map((u) => u.trim()).filter(Boolean)
+      const typed = urls.split(/[\n,]+/).map((u) => u.trim()).filter(Boolean)
+      const images = [...uploads, ...typed].filter((u, i, arr) => arr.indexOf(u) === i).slice(0, 10)
       const updated = await sellerOrdersApi.submitProof(order.id, {
         images,
         note: note.trim() || undefined,
@@ -60,8 +93,41 @@ export default function ProofSubmitModal({ order, onClose, onSubmitted }) {
               placeholder="Turnover location, odometer reading, keys / OR-CR handed over…"
             />
           </label>
+          <div>
+            <span className="proof-upload-label"><Camera size={13} /> Handover photos — upload from device</span>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFiles}
+              style={{ display: 'none' }}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm proof-upload-btn"
+              disabled={uploading || uploads.length >= 10}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+              {uploading ? 'Uploading…' : uploads.length > 0 ? `Add more (${uploads.length}/10)` : 'Choose photos'}
+            </button>
+            {uploadError && <div className="my-listings-alert my-listings-alert--error" style={{ marginTop: 8 }}>{uploadError}</div>}
+            {uploads.length > 0 && (
+              <div className="proof-upload-thumbs">
+                {uploads.map((src) => (
+                  <span key={src} className="proof-upload-thumb">
+                    <img src={src} alt="Handover proof" loading="lazy" />
+                    <button type="button" title="Remove" onClick={() => removeUpload(src)}>
+                      <Trash2 size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <label>
-            <span><Camera size={13} /> Photo proof URLs (one per line or comma-separated)</span>
+            <span>…or paste photo proof URLs (one per line or comma-separated)</span>
             <textarea
               rows={3}
               value={urls}

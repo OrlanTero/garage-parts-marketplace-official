@@ -28,6 +28,7 @@ import { useChat } from '../context/ChatContext.jsx'
 import ListingStatusPicker from '../components/ListingStatusPicker.jsx'
 import ShareModal from '../components/ShareModal.jsx'
 import ReviewSection from '../components/ReviewSection.jsx'
+import { recordListingView } from '../utils/recommendations.js'
 import NotifyMeButton from '../components/NotifyMeButton.jsx'
 import { getActiveReferralCode } from '../utils/referral.js'
 import { canManagePart, isHouseAccount } from '../utils/listingAccess.js'
@@ -86,6 +87,7 @@ export default function PartDetail() {
       .then((data) => {
         setPart(data)
         setSelectedImgIdx(0)
+        recordListingView(data, 'part')
       })
       .catch((e) => setError(
         e.response?.status === 404 || e.response?.status === 403

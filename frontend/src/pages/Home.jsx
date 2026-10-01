@@ -25,6 +25,8 @@ import { marketplaceCars } from '../api/cars.js'
 import { marketplaceParts } from '../api/parts.js'
 import { useTaxonomy, groupBrandsByRegion, categoryDisplay, formatCount } from '../api/taxonomy.js'
 import { applyCarPreset, applyPartPreset } from '../utils/catalogFilters.js'
+import { rankForYou } from '../utils/recommendations.js'
+import { useAuth } from '../auth/AuthContext.jsx'
 import CarCard from '../components/CarCard.jsx'
 import PartCard from '../components/PartCard.jsx'
 import CategoryCard from '../components/CategoryCard.jsx'
@@ -99,6 +101,14 @@ export default function Home() {
   const [liveParts, setLiveParts] = useState([])
   const [isLoadingCars, setIsLoadingCars] = useState(true)
   const [isLoadingParts, setIsLoadingParts] = useState(true)
+
+  // Personalized picks — interests + recent browse history drive the rank.
+  const { user } = useAuth()
+  const picks = useMemo(
+    () => rankForYou(liveCars, liveParts, user, { limit: 8 }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [liveCars, liveParts, user?.id, JSON.stringify(user?.interests || [])],
+  )
 
   // Live taxonomy — brands, models & categories served by the backend.
   const { brands: liveBrands, categories: liveCategories, models: allModels } = useTaxonomy()
@@ -698,6 +708,51 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ===================================================================
+          5b. PICKED FOR YOU — interests + recent browse history ranking
+          =================================================================== */}
+      {picks.length > 0 && (
+        <section className="section-modern section--picks">
+          <div className="section-container">
+            <div className="section-header reveal">
+              <div>
+                <span className="section-eyebrow">Personal Algorithm</span>
+                <h2 className="section-title">Picked for You</h2>
+                <p className="section-subtitle">
+                  {user?.interests?.length > 0
+                    ? 'Ranked from your interests and recent browsing — the more you explore, the sharper it gets.'
+                    : 'Based on your recent browsing — set interests in Settings for sharper picks.'}
+                </p>
+              </div>
+              <div className="section-header-side">
+                <Link to="/marketplace" className="section-browse-all">
+                  <span>Shop all cars</span>
+                  <ArrowRight size={15} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="modern-picks-grid">
+              {picks.map((pick, i) => (
+                <div key={`${pick.kind}-${pick.item.id || pick.item.uuid || i}`} className={`pick-wrap reveal reveal-delay-${(i % 4) + 1}`}>
+                  {pick.reasons.length > 0 && (
+                    <div className="pick-reason" title={pick.reasons.join(' · ')}>
+                      <Sparkles size={12} />
+                      <span>{pick.reasons[0]}</span>
+                    </div>
+                  )}
+                  {pick.kind === 'car' ? (
+                    <CarCard car={pick.item} />
+                  ) : (
+                    <PartCard part={pick.item} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ===================================================================
           6. SHOWROOM & BARAKO CAFÉ (Wholesome Lifestyle Feature)

@@ -177,6 +177,14 @@ export default function SellerOrderDetail({ orderId, orderNumber, onBack, showLi
 
   const handleStatus = (nextStatus) => {
     if (!nextStatus || nextStatus === status) return
+    // Proof-first delivery: no submitted proof → open the proof modal
+    // instead of moving. Backend enforces the same rule.
+    if (nextStatus === 'delivered' && isCar && !['pending', 'approved'].includes(proofStatus)) {
+      setError('')
+      setNotice('Submit handover proof first — Mark Delivered unlocks after submission.')
+      setProofOpen(true)
+      return
+    }
     run(
       'status',
       () => sellerOrdersApi.updateStatus(order.id, { status: nextStatus }),

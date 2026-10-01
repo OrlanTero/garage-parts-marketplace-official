@@ -85,6 +85,14 @@ export default function SellerOrderCard({ order, onChanged, showListing = true, 
 
   const handleStatus = (nextStatus) => {
     if (!nextStatus || nextStatus === status) return
+    // Proof-first delivery: no submitted proof → open the proof modal
+    // instead of moving. Backend enforces the same rule.
+    if (nextStatus === 'delivered' && isCar && !['pending', 'approved'].includes(proofStatus)) {
+      setError('')
+      setOk('Submit handover proof first — Mark Delivered unlocks after submission.')
+      setProofOpen(true)
+      return
+    }
     if (!window.confirm(`Move order ${order.order_number || `#${order.id}`} to “${nextStatus}”?`)) return
     run(`status-${order.id}`, () => sellerOrdersApi.updateStatus(order.id, { status: nextStatus }), `Order moved to ${nextStatus}.`)
   }

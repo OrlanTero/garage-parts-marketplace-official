@@ -953,7 +953,7 @@ export default function Showroom() {
                                 <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 12 }}>
                                   {car.year} · {car.brand} {car.model} · {car.transmission || 'Manual'}
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'centerzzzzzzzzzzzzzz', gap: 10, flexWrap: 'wrap' }}>
                                   <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-rust)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                     {formatPeso(car.price)}
                                   </span>
