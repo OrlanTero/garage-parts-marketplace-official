@@ -19,6 +19,9 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DealOfferController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\RestockController;
+use App\Http\Controllers\Api\WantedController;
+use App\Http\Controllers\Api\PerksController;
+use App\Http\Controllers\Api\ProgramController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\KycController;
@@ -89,8 +92,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         // Canonical
         Route::get('/auth/me', [AuthController::class, 'me'])->name('api.auth.me');
-        Route::patch('/auth/profile', [AuthController::class, 'updateProfile'])->name('api.auth.profile');
-        Route::post('/auth/password', [AuthController::class, 'changePassword'])->name('api.auth.password');
+Route::patch('/auth/profile', [AuthController::class, 'updateProfile'])->name('api.auth.profile');
+Route::post('/auth/password', [AuthController::class, 'changePassword'])->name('api.auth.password');
+Route::post('/auth/onboarding', [AuthController::class, 'saveOnboarding'])->name('api.auth.onboarding');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll'])->name('api.auth.logoutAll');
 
@@ -177,6 +181,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/restocks', [RestockController::class, 'store'])->name('api.restocks.store');
         Route::delete('/restocks/{subscription}', [RestockController::class, 'destroy'])->name('api.restocks.destroy');
 
+        // Wanted ads — my board actions (public board lives outside auth).
+        Route::post('/wanted-requests', [WantedController::class, 'store'])->name('api.wanted.store');
+        Route::patch('/wanted-requests/{wantedRequest}', [WantedController::class, 'update'])->name('api.wanted.update');
+        Route::post('/wanted-requests/{wantedRequest}/status', [WantedController::class, 'setStatus'])->name('api.wanted.status');
+        Route::post('/wanted-requests/{wantedRequest}/offers', [WantedController::class, 'offer'])->name('api.wanted.offer');
+        Route::post('/wanted-requests/{wantedRequest}/accept', [WantedController::class, 'accept'])->name('api.wanted.accept');
+        Route::delete('/wanted-requests/{wantedRequest}', [WantedController::class, 'destroy'])->name('api.wanted.destroy');
+
         // Wallet: balance, billing statements, payout accounts, cash-outs.
         // Any authenticated user (sellers earn payouts, agents earn
         // commissions) — zero balances simply report empty.
@@ -213,10 +225,18 @@ Route::prefix('v1')->group(function () {
             Route::post('/{application}/withdraw', [SellerApplicationController::class, 'withdraw'])->name('withdraw');
         });
 
-        // Sales Agent Portal & Performance
+        // Sales Agent Portal & Performance (yearly subscription + KYC gated)
         Route::prefix('agent')->name('api.agent.')->group(function () {
             Route::get('/stats', [AgentController::class, 'stats'])->name('stats');
+            Route::get('/subscription', [AgentController::class, 'subscription'])->name('subscription');
+            Route::post('/subscribe', [AgentController::class, 'subscribe'])->name('subscribe');
             Route::post('/profile', [AgentController::class, 'updateProfile'])->name('profile');
+        });
+
+        // Member perks (discount club): status, yearly subscribe, catalog.
+        Route::prefix('perks')->name('api.perks.')->group(function () {
+            Route::get('/', [PerksController::class, 'status'])->name('status');
+            Route::post('/subscribe', [PerksController::class, 'subscribe'])->name('subscribe');
         });
 
         // Legacy alias (pre-session-module clients)
@@ -270,7 +290,13 @@ Route::prefix('v1')->group(function () {
     });
 
     // --- Checkout & Sales Orders (Public / Customer) ---
+    Route::get('/program', [ProgramController::class, 'show'])->name('api.program.show');
+    Route::get('/freight-policy', [OrderController::class, 'freightPolicy'])->name('api.freight.policy');
+    Route::get('/perks/catalog', [PerksController::class, 'catalog'])->name('api.perks.catalog');
     Route::get('/delivery-quote', [OrderController::class, 'deliveryQuote'])->name('api.delivery.quote');
+    // Wanted ads — public board (my actions + offers need auth, above).
+    Route::get('/wanted-requests', [WantedController::class, 'index'])->name('api.wanted.index');
+    Route::get('/wanted-requests/{wantedRequest}', [WantedController::class, 'show'])->name('api.wanted.show');
     Route::get('/offer-quote', [OrderController::class, 'offerQuote'])->name('api.offer.quote');
     // Registered before /orders/{identifier} so `verify` is not captured as an identifier.
     Route::get('/orders/verify/{hash}', [OrderController::class, 'verify'])->name('api.orders.verify');
@@ -373,6 +399,7 @@ Route::prefix('v1')->group(function () {
         ->prefix('admin')->name('api.admin.')->group(function () {
             // Car Moderation & Vehicle Inspection Lifecycle
             Route::get('/moderation/cars', [AdminCarModerationController::class, 'index'])->name('moderation.cars.index');
+Route::get('/moderation/cars/{car}', [AdminCarModerationController::class, 'show'])->name('moderation.cars.show');
             Route::post('/moderation/cars/{car}/schedule-inspection', [AdminCarModerationController::class, 'scheduleInspection'])->name('moderation.cars.schedule');
             Route::post('/moderation/cars/{car}/record-inspection', [AdminCarModerationController::class, 'recordInspection'])->name('moderation.cars.record');
             Route::post('/moderation/cars/{car}/approve', [AdminCarModerationController::class, 'approve'])->name('moderation.cars.approve');
@@ -391,6 +418,7 @@ Route::prefix('v1')->group(function () {
             Route::middleware(['role:admin,super_admin'])->group(function () {
             // Users, Buyers, Sellers, Dealers & RBAC Permissions
             Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+            Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
             Route::get('/staff', [AdminUserController::class, 'staff'])->name('staff.index');
             Route::patch('/users/{user}/role', [AdminUserController::class, 'updateRole'])->name('users.updateRole');
 
@@ -398,6 +426,15 @@ Route::prefix('v1')->group(function () {
             Route::get('/kyc-verifications', [AdminKycController::class, 'index'])->name('kyc.index');
             Route::post('/kyc-verifications/{user}/approve', [AdminKycController::class, 'approve'])->name('kyc.approve');
             Route::post('/kyc-verifications/{user}/reject', [AdminKycController::class, 'reject'])->name('kyc.reject');
+
+            // Wanted ads moderation (board itself is public; remove only).
+            Route::delete('/wanted-requests/{wantedRequest}', [WantedController::class, 'adminDestroy'])->name('wanted.adminDestroy');
+
+            // Member perks catalog moderation.
+            Route::get('/perks', [PerksController::class, 'adminIndex'])->name('perks.index');
+            Route::post('/perks', [PerksController::class, 'store'])->name('perks.store');
+            Route::patch('/perks/{perk}', [PerksController::class, 'update'])->name('perks.update');
+            Route::delete('/perks/{perk}', [PerksController::class, 'destroy'])->name('perks.destroy');
 
             // Buyer-to-Seller Upgrade Application Review
             Route::get('/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('seller-applications.index');
@@ -407,6 +444,7 @@ Route::prefix('v1')->group(function () {
             // Sales Orders Management
             Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
             Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+            Route::patch('/orders/{order}/delivery', [OrderController::class, 'updateDelivery'])->name('orders.updateDelivery');
 
             // Car build transactions: holds, handover proofs, fund release
             Route::get('/car-transactions', [AdminCarTransactionController::class, 'index'])->name('carTransactions.index');

@@ -105,6 +105,15 @@ class AdminKycController extends Controller
             'kyc_rejection_reason' => null,
         ])->save();
 
+        // If this user was referred AND already paid the agent subscription,
+        // KYC approval completes the "become an agent" requirements — pay the
+        // referrer their ₱50 wallet reward exactly once.
+        try {
+            \App\Services\AgentService::maybeRewardReferrer($user->refresh());
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         try {
             app(\App\Services\NotificationService::class)->send(
                 $user,

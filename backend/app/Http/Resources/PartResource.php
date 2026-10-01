@@ -43,6 +43,7 @@ class PartResource extends JsonResource
             'price' => $this->price,
             'original_price' => $this->original_price,
             'origPrice' => $this->original_price,
+            'perks_discount_pct' => (int) ($this->perks_discount_pct ?? 0),
             'free_shipping' => (bool) $this->free_shipping,
             'freeShip' => (bool) $this->free_shipping,
             'description' => $this->description,

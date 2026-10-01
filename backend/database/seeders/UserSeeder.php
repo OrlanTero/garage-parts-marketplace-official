@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Models\Address;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -290,6 +291,10 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($buyers as $buyerData) {
+            // Community buyers carry a referral identity (agent_code) so the
+            // agent flow is demoable, but they are NOT agents: no KYC, no
+            // subscription, no commission override — type rates apply if
+            // they ever qualify. Never seed is_agent=true without both.
             User::firstOrCreate(
                 ['email' => $buyerData['email']],
                 [
@@ -300,11 +305,77 @@ class UserSeeder extends Seeder
                     'avatar_url' => $buyerData['avatar_url'],
                     'agent_code' => $buyerData['agent_code'] ?? null,
                     'agent_tagline' => $buyerData['agent_tagline'] ?? null,
-                    'commission_rate' => 5.00,
-                    'is_agent' => true,
                     'email_verified_at' => now(),
                 ]
             );
+        }
+
+        // Required profile info (mirrors the setup wizard's mandatory
+        // step): demo buyers log straight in with phone + onboarding done.
+        $buyerProfiles = [
+            'buyer@garagemarket.ph' => [
+                'phone' => '0917-555-1294',
+                'address' => [
+                    'label' => 'Home',
+                    'address_line' => 'Unit 14B Tower 2, Ayala Avenue, Bel-Air',
+                    'city' => 'Makati',
+                    'postal_code' => '1209',
+                    'latitude' => 14.5610,
+                    'longitude' => 121.0215,
+                    'landmark' => 'Bel-Air, near Glorietta',
+                ],
+            ],
+            'mark.ranillo@garagemarket.ph' => [
+                'phone' => '0918-883-9920',
+                'address' => [
+                    'label' => 'Home',
+                    'address_line' => '45 Mango Avenue, Lahug',
+                    'city' => 'Cebu City',
+                    'postal_code' => '6000',
+                    'latitude' => 10.3380,
+                    'longitude' => 123.9110,
+                    'landmark' => 'Lahug, near Cebu IT Park',
+                ],
+            ],
+        ];
+
+        foreach ($buyerProfiles as $email => $profile) {
+            $user = User::where('email', $email)->first();
+            if (! $user) {
+                continue;
+            }
+            $user->forceFill([
+                'phone' => $user->phone ?? $profile['phone'],
+                'onboarding_completed_at' => $user->onboarding_completed_at ?? now(),
+            ])->save();
+
+            $addr = $profile['address'];
+            $existing = Address::where('user_id', $user->id)->orderByDesc('is_default')->orderBy('id')->first();
+            if ($existing) {
+                $existing->update([
+                    'phone' => $existing->phone ?? $profile['phone'],
+                    'address_line' => $addr['address_line'],
+                    'city' => $addr['city'],
+                    'postal_code' => $addr['postal_code'],
+                    'latitude' => $addr['latitude'],
+                    'longitude' => $addr['longitude'],
+                    'landmark' => $addr['landmark'],
+                ]);
+            } else {
+                Address::create([
+                    'user_id' => $user->id,
+                    'label' => $addr['label'],
+                    'recipient_name' => $user->name,
+                    'phone' => $profile['phone'],
+                    'address_line' => $addr['address_line'],
+                    'city' => $addr['city'],
+                    'postal_code' => $addr['postal_code'],
+                    'latitude' => $addr['latitude'],
+                    'longitude' => $addr['longitude'],
+                    'landmark' => $addr['landmark'],
+                    'is_default' => true,
+                ]);
+            }
         }
     }
 }

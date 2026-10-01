@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Showroom & Verified Builders Hub CSS
    High-utility, modern automotive marketplace styling for the Garage Showroom.
    ========================================================================== */
@@ -151,7 +151,8 @@
   position: sticky;
   top: 70px;
   z-index: 30;
-  background: rgba(245, 242, 235, 0.95);
+  background: var(--topbar-bg-translucent);
+  background: color-mix(in srgb, var(--color-background) 94%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
   padding: 16px 0;
@@ -181,7 +182,7 @@
 .showroom-search-box input {
   width: 100%;
   padding: 12px 16px 12px 42px;
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-pill);
   font-size: 14px;
@@ -213,7 +214,7 @@
 .showroom-sort-box select {
   width: 100%;
   padding: 11px 16px;
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-pill);
   font-size: 13.5px;
@@ -240,7 +241,7 @@
   padding: 8px 16px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-border);
-  background: #ffffff;
+  background: var(--card-bg);
   color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
@@ -288,19 +289,36 @@
 
 .showroom-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
   gap: 28px;
 }
 
 @media (max-width: 640px) {
   .showroom-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
+  .showroom-main { margin-top: 24px; }
+  .showroom-controls-wrapper { top: 60px; padding: 12px 0; }
+  .seller-card-header { padding: 18px 16px 14px; }
+  .seller-avatar { width: 56px; height: 56px; font-size: 20px; }
+  .seller-card-footer { flex-direction: column; }
+  .seller-card-footer .btn { width: 100%; }
+  .garage-highlights-grid { gap: 16px; }
+  .highlight-image-box { height: 180px; }
+}
+
+@media (max-width: 480px) {
+  .seller-kpi-item { padding: 10px 8px; }
+  .seller-kpi-val { font-size: 14px; }
+  .showcase-modal-banner { padding: 28px 20px; }
+  .showcase-profile-row { gap: 14px; }
+  .showcase-large-avatar { width: 64px; height: 64px; }
 }
 
 /* Individual Seller Card */
 .seller-showroom-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -320,7 +338,7 @@
 /* Card Header Banner */
 .seller-card-header {
   padding: 24px 24px 18px;
-  background: linear-gradient(180deg, #faf7f2 0%, #ffffff 100%);
+  background: var(--gradient-warm-card);
   border-bottom: 1px solid var(--color-border-subtle);
   position: relative;
 }
@@ -358,7 +376,7 @@
   right: -2px;
   width: 24px;
   height: 24px;
-  background: #10b981;
+  background: var(--color-success);
   color: #ffffff;
   border: 2px solid #ffffff;
   border-radius: 50%;
@@ -402,19 +420,19 @@
 }
 
 .seller-role-badge.builder {
-  background: #fbeee7;
-  color: var(--color-rust);
+  background: var(--color-orange-light);
+  color: var(--color-accent);
   border: 1px solid rgba(146, 68, 36, 0.2);
 }
 
 .seller-role-badge.dealer {
-  background: #edf2f5;
-  color: var(--color-steel);
+  background: var(--color-info-bg);
+  color: var(--color-info);
   border: 1px solid rgba(44, 66, 80, 0.2);
 }
 
 .seller-role-badge.parts_seller {
-  background: #e8f5ec;
+  background: var(--color-success-bg);
   color: var(--color-success);
   border: 1px solid rgba(27, 135, 63, 0.2);
 }
@@ -450,7 +468,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   border-bottom: 1px solid var(--color-border-subtle);
-  background: #ffffff;
+  background: var(--card-bg);
 }
 
 .seller-kpi-item {
@@ -606,7 +624,7 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 80px 24px;
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
 }
@@ -640,7 +658,7 @@
 }
 
 .showcase-modal {
-  background: #ffffff;
+  background: var(--card-bg);
   width: min(1140px, 96vw);
   max-height: 90vh;
   border-radius: var(--radius-xl);
@@ -649,7 +667,62 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--card-border);
+}
+
+/* Mobile back bar — only shown when the showcase renders as a page. */
+.showcase-mobile-bar {
+  display: none;
+}
+
+.showcase-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--color-heading);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+
+/* Mobile: showcase is a full page, not a popup. */
+@media (max-width: 768px) {
+  .showcase-modal-overlay {
+    padding: 0;
+    display: block;
+    overflow-y: auto;
+    background: var(--color-background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .showcase-modal {
+    width: 100%;
+    max-height: none;
+    min-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .showcase-close-btn {
+    display: none;
+  }
+  .showcase-mobile-bar {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 12px 16px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    background: var(--topbar-bg-translucent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-border);
+  }
 }
 
 /* Showcase Banner Header */
@@ -892,7 +965,7 @@
 
 .garage-highlights-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
   gap: 22px;
 }
 
@@ -998,7 +1071,7 @@
   gap: 8px;
   font-size: 12.5px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #a0aec0; /* fixed light gray — parent highlight card is dark in both themes */
   margin-bottom: 8px;
 }
 
@@ -1022,7 +1095,7 @@
 .highlight-price-label {
   font-size: 10.5px;
   font-weight: 700;
-  color: #94a3b8;
+  color: #a0aec0; /* fixed light gray — parent highlight card is dark in both themes */
   letter-spacing: 0.04em;
 }
 
@@ -1036,12 +1109,12 @@
 /* Official Seller Card styling */
 .seller-showroom-card.seller-card-official {
   border: 2px solid rgba(216, 98, 44, 0.4);
-  background: linear-gradient(180deg, #fffcf9 0%, #ffffff 100%);
+  background: linear-gradient(180deg, var(--color-orange-light) 0%, var(--card-bg) 100%);
   box-shadow: 0 4px 16px -2px rgba(216, 98, 44, 0.12);
 }
 
 .seller-role-badge.official {
-  background: #ffedd5;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-border);
 }

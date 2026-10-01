@@ -59,8 +59,8 @@ export function AccordionHeader({ id, title, subtitle, badge, icon: Icon, action
   return (
     <div
       onClick={() => toggleItem(id)}
+      className="admin-accordion-head"
       style={{
-        padding: '16px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -146,8 +146,8 @@ export function AccordionBody({ id, children, style = {} }) {
 
   return (
     <div
+      className="admin-accordion-body"
       style={{
-        padding: '20px',
         borderTop: '1px solid var(--admin-border-subtle)',
         backgroundColor: '#FFFFFF',
         animation: 'fadeIn 0.2s ease-out',

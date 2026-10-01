@@ -98,7 +98,8 @@ class AgentCommissionTest extends TestCase
     public function test_third_party_agent_commission_settles_to_wallet_once(): void
     {
         $seller = User::factory()->create(['role' => 'seller']);
-        $agent = User::factory()->create(['agent_code' => 'AGT-WALLET', 'commission_rate' => 5.00]);
+        $agent = User::factory()->kycVerified()->create(['agent_code' => 'AGT-WALLET', 'commission_rate' => 5.00]);
+        \App\Services\AgentService::subscribe($agent, 'gcash', 'WALLET-SUB');
         $admin = User::factory()->create(['role' => 'admin']);
         $part = $this->makePart($seller);
 

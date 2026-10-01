@@ -26,6 +26,8 @@ class StoreOrderRequest extends FormRequest
             'delivery_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'delivery_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'delivery_label' => ['nullable', 'string', 'max:500'],
+            // Car-build meetup mode: garage drop-off or on-site visit.
+            'handover_mode' => ['nullable', 'string', 'in:dropoff,onsite_visit'],
 
             // Vehicle Fitment & Identification Details.
             // Mandatory for PART orders (buyer's vehicle must match the part).

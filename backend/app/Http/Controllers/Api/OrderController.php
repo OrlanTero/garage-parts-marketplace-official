@@ -12,8 +12,10 @@ use App\Models\Order;
 use App\Models\Part;
 use App\Models\PlatformTransaction;
 use App\Models\Warehouse;
+use App\Services\AgentService;
 use App\Services\DeliveryFeeService;
 use App\Services\InventoryService;
+use App\Services\PerksService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -76,6 +78,14 @@ class OrderController extends Controller
             abort(422, 'Only accepted orders can move into fulfillment.');
         }
 
+        // Funds first: no fulfillment move until the house has verified
+        // (confirmed) the buyer's payment. Completion keeps its own
+        // submitted-funds rule below.
+        if (in_array($validated['status'], ['preparing', 'sold', 'shipped', 'delivered'], true)
+            && !in_array($order->payment_status, ['confirmed', 'released'], true)) {
+            abort(422, 'Verify funds first — payment must be confirmed before fulfillment can move.');
+        }
+
         if ($validated['status'] === 'completed' && !in_array($order->payment_status, ['paid', 'confirmed', 'released'], true)) {
             abort(422, 'Funds must be submitted before an order can be completed.');
         }
@@ -122,6 +132,38 @@ class OrderController extends Controller
     }
 
     /**
+     * Admin delivery papers update — courier, tracking number/URL, ETA —
+     * without a status move. The status endpoint requires a forward
+     * transition, so shipped/delivered orders otherwise have no way to
+     * fix tracking. Broadcasts explicitly (the observer only fires on
+     * status/payment/verification changes) so buyer screens refresh live.
+     * Blocked only on closed orders (cancelled/refunded).
+     */
+    public function updateDelivery(Request $request, Order $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'tracking_number' => ['nullable', 'string', 'max:100'],
+            'tracking_url' => ['nullable', 'url', 'max:500'],
+            'carrier' => ['nullable', 'string', 'max:100'],
+            'estimated_arrival' => ['nullable', 'date'],
+        ]);
+
+        if (in_array($order->status, ['cancelled', 'refunded'], true)) {
+            abort(422, 'This order is closed and its delivery info can no longer change.');
+        }
+
+        $order->update($validated);
+
+        try {
+            \App\Events\OrderStatusChanged::dispatch($order->refresh());
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return (new OrderResource($order->refresh()))->response();
+    }
+
+    /**
      * Public delivery-fee quote from the GAP Valenzuela Main Depot.
      * GET /delivery-quote?latitude=&longitude=&city=&part_id=&quantity=
      */
@@ -157,7 +199,17 @@ class OrderController extends Controller
             $quantity,
         );
 
-        return response()->json(['status' => 'success', 'data' => $quote]);
+        return response()->json(['status' => 'success', 'data' => $quote + ['policy' => DeliveryFeeService::policy()]]);
+    }
+
+    /**
+     * Public freight policy (thresholds/fees) so the storefront badges and
+     * checkout mirror the backend rule without hardcoding. No auth needed.
+     * GET /freight-policy
+     */
+    public function freightPolicy(): JsonResponse
+    {
+        return response()->json(['status' => 'success', 'data' => DeliveryFeeService::policy()]);
     }
 
     /** House dispatch warehouse: active default first, else oldest active. */
@@ -298,7 +350,14 @@ class OrderController extends Controller
         );
         $shippingFee = $quote['fee'];
 
-        $totalAmount = ($unitPrice * $quantity) + $shippingFee;
+        // Member perks discount (parts only, capped per listing).
+        $buyer = $request->user();
+        $perkDeal = ['pct' => 0, 'amount' => 0.0];
+        if ($itemType === 'part' && $part) {
+            $perkDeal = PerksService::lineDiscount($buyer, $part, $unitPrice, $quantity);
+        }
+
+        $totalAmount = ($unitPrice * $quantity) + $shippingFee - $perkDeal['amount'];
 
         // Resolve Sales Agent Attribution & Commission
         $agentCodeInput = trim((string) ($data['agent_code'] ?? $data['ref'] ?? ''));
@@ -306,7 +365,7 @@ class OrderController extends Controller
         $agentId = null;
         $agentCode = null;
         $agentName = null;
-        $commissionRate = 5.00;
+        $commissionRate = AgentService::commissionFor($itemType);
         $commissionAmount = 0.00;
         $commissionStatus = 'pending';
 
@@ -328,16 +387,25 @@ class OrderController extends Controller
                     || ($buyerEmail !== '' && strtolower((string) ($agentUser->email ?? '')) === $buyerEmail);
             }
 
-            if ($agentUser && !$isSelfDeal) {
+            // Only ACTIVE agents (verified KYC + paid yearly subscription)
+            // earn order commissions. Inactive/expired codes are ignored so
+            // stats stay honest and unverified agents earn nothing.
+            $isAgentActive = $agentUser ? AgentService::isActive($agentUser) : false;
+
+            if ($agentUser && !$isSelfDeal && $isAgentActive) {
                 $agentId = $agentUser->id;
                 $agentCode = $agentUser->agent_code;
                 $agentName = $agentUser->name;
-                $commissionRate = (float) ($agentUser->commission_rate ?? 5.00);
+                $commissionRate = AgentService::commissionFor($itemType, $agentUser->commission_rate ?? null);
                 $commissionAmount = round(($unitPrice * $quantity) * ($commissionRate / 100), 2);
-            } elseif (!$isSelfDeal) {
+            } elseif (!$agentUser && !$isSelfDeal) {
+                // Unknown code: preserve legacy attribution stub (no payee).
                 $agentCode = $agentCodeInput;
-                $commissionAmount = round(($unitPrice * $quantity) * (5.00 / 100), 2);
+                $unknownRate = AgentService::commissionFor($itemType);
+                $commissionAmount = round(($unitPrice * $quantity) * ($unknownRate / 100), 2);
             }
+            // Known but INACTIVE agents (no KYC / no subscription / expired):
+            // drop attribution entirely — no code, no commission.
         }
 
         $orderNumber = 'SO-' . date('Y') . '-' . strtoupper(Str::random(6));
@@ -370,6 +438,7 @@ class OrderController extends Controller
             'delivery_latitude' => $data['delivery_latitude'] ?? null,
             'delivery_longitude' => $data['delivery_longitude'] ?? null,
             'delivery_label' => $data['delivery_label'] ?? null,
+            'handover_mode' => $data['handover_mode'] ?? null,
 
             // Vehicle Fitment & Identification Details (parts: buyer's vehicle; cars: purchased vehicle's own VIN)
             'chassis_number' => $chassisNumber,
@@ -393,6 +462,8 @@ class OrderController extends Controller
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
             'shipping_fee' => $shippingFee,
+            'discount_amount' => $perkDeal['amount'],
+            'perks_discount_pct' => $perkDeal['pct'],
             'delivery_distance_km' => $quote['distance_km'],
             'delivery_zone' => $quote['zone'],
             'warehouse_id' => $originWarehouse?->id,
@@ -415,7 +486,7 @@ class OrderController extends Controller
                 $car,
                 $order,
                 $totalAmount,
-                5.00,
+                AgentService::commissionFor('car'),
                 $order->payment_method ?? 'bank_transfer',
                 $order->order_number,
                 $request->user()
@@ -427,7 +498,7 @@ class OrderController extends Controller
                 $part,
                 $order,
                 $unitPrice * $quantity,
-                5.00,
+                AgentService::commissionFor('part'),
                 $order->payment_method ?? 'bank_transfer',
                 $order->order_number,
                 $request->user()
@@ -896,7 +967,7 @@ class OrderController extends Controller
      */
     public function show(string $identifier): JsonResponse
     {
-        $order = Order::with('warehouse')
+        $order = Order::with(['warehouse', 'seller'])
             ->where('order_number', $identifier)
             ->orWhere('id', is_numeric($identifier) ? (int) $identifier : 0)
             ->first();

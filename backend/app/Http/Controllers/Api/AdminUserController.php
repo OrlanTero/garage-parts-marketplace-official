@@ -68,7 +68,11 @@ class AdminUserController extends Controller
                 'avatar_url' => $user->avatar_url,
                 'agent_code' => $user->agent_code,
                 'agent_tagline' => $user->agent_tagline,
-                'is_agent' => (bool) $user->is_agent,
+                'is_agent' => (bool) $user->isAgentActive(),
+                'is_agent_active' => (bool) $user->isAgentActive(),
+                'agent_subscription_status' => $user->agent_subscription_status ?? 'inactive',
+                'agent_expires_at' => $user->agent_expires_at?->toISOString(),
+                'referred_by_user_id' => $user->referred_by_user_id,
                 'commission_rate' => (float) ($user->commission_rate ?? 5.00),
                 'verified' => !is_null($user->email_verified_at),
                 'kyc_status' => $user->kyc_status ?? 'not_submitted',
@@ -176,7 +180,16 @@ class AdminUserController extends Controller
 
     public function show(User $user): JsonResponse
     {
-        $user->load(['orders.part', 'cars', 'parts', 'favorites']);
+        $user->load([
+            'orders.part',
+            'cars' => fn ($q) => $q->latest()->limit(10),
+            'parts' => fn ($q) => $q->latest()->limit(10),
+            'favorites',
+            'sellerApplications' => fn ($q) => $q->latest(),
+            'payoutAccounts',
+            'payoutWithdrawals' => fn ($q) => $q->latest()->limit(10),
+        ]);
+        $user->loadCount(['cars', 'parts', 'orders', 'favorites']);
         $userRole = $user->role instanceof UserRole ? $user->role->value : $user->role;
 
         return response()->json([
@@ -203,10 +216,23 @@ class AdminUserController extends Controller
                 'kyc_submitted_at' => $user->kyc_submitted_at?->toISOString(),
                 'kyc_verified_at' => $user->kyc_verified_at?->toISOString(),
                 'created_at' => $user->created_at?->toISOString(),
+                'phone' => $user->phone,
+                'last_login_at' => $user->last_login_at?->toISOString(),
+                'interests' => $user->interests ?? [],
+                'counts' => [
+                    'cars' => (int) ($user->cars_count ?? 0),
+                    'parts' => (int) ($user->parts_count ?? 0),
+                    'orders' => (int) ($user->orders_count ?? 0),
+                    'favorites' => (int) ($user->favorites_count ?? 0),
+                ],
                 'orders' => $user->orders,
                 'cars' => $user->cars,
                 'parts' => $user->parts,
                 'favorites_count' => $user->favorites->count(),
+                'seller_applications' => $user->sellerApplications,
+                'payout_accounts' => $user->payoutAccounts,
+                'payout_withdrawals' => $user->payoutWithdrawals,
+                'wallet' => \App\Http\Controllers\Api\SellerWalletController::balanceFor($user),
             ],
         ]);
     }

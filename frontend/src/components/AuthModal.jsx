@@ -16,6 +16,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
+import GoogleSignInButton from './GoogleSignInButton.jsx'
 import './AuthModal.css'
 
 const ROLES = [
@@ -26,7 +27,7 @@ const ROLES = [
 ]
 
 export default function AuthModal({ isOpen, initialView = 'login', onClose, onSuccess }) {
-  const { login, register, startOAuth } = useAuth()
+  const { login, register } = useAuth()
   const navigate = useNavigate()
   const modalRef = useRef(null)
 
@@ -47,6 +48,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
     role: 'buyer',
     password: '',
     password_confirmation: '',
+    referral_code: (() => { try { return localStorage.getItem('gpm_referral_agent_code') || '' } catch { return '' } })(),
     agree: true,
   })
   const [showRegPw, setShowRegPw] = useState(false)
@@ -100,12 +102,14 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
 
     setLoading(true)
     try {
-      await login({
+      const u = await login({
         email: loginForm.email.trim(),
         password: loginForm.password,
       })
       if (onSuccess) onSuccess()
       onClose()
+      // Fresh accounts (no onSuccess handler, e.g. topbar modal) go to setup.
+      if (!onSuccess && u?.needs_onboarding) navigate('/welcome')
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.errors?.email?.[0] || 'Sign in failed. Check your credentials.'
       setError(msg)
@@ -142,15 +146,18 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
     setLoading(true)
     try {
       const name = `${regForm.firstName.trim()} ${regForm.lastName.trim()}`
-      await register({
+      const u = await register({
         name,
         email: regForm.email.trim() || `${regForm.username.trim().toLowerCase()}@placeholder.local`,
         password: regForm.password,
         password_confirmation: regForm.password_confirmation,
         role: regForm.role,
+        referral_code: (regForm.referral_code || '').trim().toUpperCase(),
       })
       if (onSuccess) onSuccess()
       onClose()
+      // Fresh accounts (no onSuccess handler, e.g. topbar modal) go to setup.
+      if (!onSuccess && u?.needs_onboarding) navigate('/welcome')
     } catch (err) {
       const data = err.response?.data
       const msg = data?.message || (data?.errors && Object.values(data.errors).flat().join(' ')) || 'Could not create account.'
@@ -317,19 +324,7 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
               </div>
 
               <div className="oauth-button-grid">
-                <button 
-                  type="button" 
-                  className="oauth-btn" 
-                  onClick={() => startOAuth('google')}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.66-5.17 3.66-9.12z" />
-                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.13C3.27 21.4 7.34 24 12 24z" />
-                    <path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.26C.46 8.17 0 9.97 0 12s.46 3.83 1.26 5.42l4.02-3.13z" />
-                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.6 1.26 6.58l4.02 3.13c.95-2.83 3.6-4.96 6.72-4.96z" />
-                  </svg>
-                  <span>Google Account</span>
-                </button>
+                <GoogleSignInButton role="buyer" label="Continue with Google" />
               </div>
 
               <div className="auth-modal-switch">
@@ -485,6 +480,19 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
                 </div>
               </div>
 
+              <div className="form-group">
+                <label className="field-label" htmlFor="modal-reg-ref">Referral Code (optional — agent who invited you)</label>
+                <input
+                  id="modal-reg-ref"
+                  type="text"
+                  className="field-input"
+                  placeholder="e.g. AGT-JUAN-XXXX"
+                  value={regForm.referral_code}
+                  onChange={(e) => setRegForm({ ...regForm, referral_code: e.target.value.toUpperCase() })}
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
+
               <div className="terms-checkbox-wrap">
                 <label className="checkbox-label" style={{ alignItems: 'flex-start' }}>
                   <input
@@ -516,6 +524,17 @@ export default function AuthModal({ isOpen, initialView = 'login', onClose, onSu
                   </>
                 )}
               </button>
+
+              <div className="auth-modal-divider">
+                <span>Or sign up with</span>
+              </div>
+
+              <div className="oauth-button-grid">
+                <GoogleSignInButton
+                  role={['buyer', 'seller'].includes(regForm.role) ? regForm.role : 'buyer'}
+                  label="Sign up with Google"
+                />
+              </div>
 
               <div className="auth-modal-switch">
                 <span>Already have an account?</span>

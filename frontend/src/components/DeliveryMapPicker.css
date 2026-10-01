@@ -27,6 +27,15 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
+/* Meetup parties: buyer orange (default), seller green */
+.gpm-pin--seller {
+  background: #10b981;
+}
+
+.gpm-pin--buyer {
+  background: #d8622c;
+}
+
 .gpm-search {
   position: absolute;
   top: 10px;

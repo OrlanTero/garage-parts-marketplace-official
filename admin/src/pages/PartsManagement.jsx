@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Layers,
   Search,
@@ -17,6 +17,8 @@ import {
   MapPin,
   Wrench,
   CheckCircle2,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 import { partsApi } from '../api/parts.js'
 import MediaUploadField from '../components/MediaUploadField.jsx'
@@ -92,6 +94,14 @@ export default function PartsManagement() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [viewMode, setViewMode] = useState('cards') // 'cards' | 'table'
+  // Client-side dimensions (instant, over the fetched catalog).
+  const [brandFilter, setBrandFilter] = useState('all')
+  const [conditionFilter, setConditionFilter] = useState('all')
+  const [stockFilter, setStockFilter] = useState('all') // all | in | low | out
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
   const [liveCategories, setLiveCategories] = useState([])
   const [liveSpecs, setLiveSpecs] = useState({})
 
@@ -130,13 +140,16 @@ export default function PartsManagement() {
     safety_stock: 0,
   })
 
-  const fetchParts = async () => {
+  const fetchParts = async (overrides = {}) => {
     setLoading(true)
     try {
       const params = {}
-      if (search.trim()) params.q = search.trim()
-      if (categoryFilter !== 'all') params.category = categoryFilter
-      if (statusFilter !== 'all') params.status = statusFilter
+      const q = overrides.search !== undefined ? overrides.search : search
+      const cat = overrides.category !== undefined ? overrides.category : categoryFilter
+      const st = overrides.status !== undefined ? overrides.status : statusFilter
+      if (String(q || '').trim()) params.q = String(q).trim()
+      if (cat !== 'all') params.category = cat
+      if (st !== 'all') params.status = st
 
       // House-catalog scope (all statuses) — the public marketplace list
       // hides drafts/unpublished, which is why new parts never appeared.
@@ -164,6 +177,58 @@ export default function PartsManagement() {
   const handleSearchSubmit = (e) => {
     e.preventDefault()
     fetchParts()
+  }
+
+  const brandOptions = useMemo(() => {
+    const set = new Set()
+    parts.forEach((p) => {
+      const b = (p.brand || '').trim()
+      if (b) set.add(b)
+    })
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [parts])
+
+  const filteredParts = useMemo(() => {
+    const lo = minPrice !== '' ? Number(minPrice) : null
+    const hi = maxPrice !== '' ? Number(maxPrice) : null
+    const out = parts.filter((p) => {
+      if (brandFilter !== 'all' && (p.brand || '') !== brandFilter) return false
+      if (conditionFilter !== 'all' && String(p.condition || '') !== conditionFilter) return false
+      const qty = Number(p.quantity ?? p.stock_quantity ?? 1)
+      if (stockFilter === 'in' && qty <= 0) return false
+      if (stockFilter === 'out' && qty > 0) return false
+      if (stockFilter === 'low' && (qty <= 0 || qty > 5)) return false
+      const price = Number(p.price || 0)
+      if (lo !== null && !Number.isNaN(lo) && price < lo) return false
+      if (hi !== null && !Number.isNaN(hi) && price > hi) return false
+      return true
+    })
+    const byPrice = (a, b) => Number(a.price || 0) - Number(b.price || 0)
+    const byQty = (a, b) => Number(a.quantity ?? a.stock_quantity ?? 0) - Number(b.quantity ?? b.stock_quantity ?? 0)
+    switch (sortBy) {
+      case 'price-asc': return [...out].sort(byPrice)
+      case 'price-desc': return [...out].sort((a, b) => byPrice(b, a))
+      case 'stock-asc': return [...out].sort(byQty)
+      case 'title-asc': return [...out].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
+      default: return out
+    }
+  }, [parts, brandFilter, conditionFilter, stockFilter, minPrice, maxPrice, sortBy])
+
+  const hasClientFilters =
+    brandFilter !== 'all' || conditionFilter !== 'all' || stockFilter !== 'all' ||
+    minPrice !== '' || maxPrice !== '' || sortBy !== 'newest'
+
+  const resetAllFilters = () => {
+    setSearch('')
+    setCategoryFilter('all')
+    setStatusFilter('all')
+    setBrandFilter('all')
+    setConditionFilter('all')
+    setStockFilter('all')
+    setMinPrice('')
+    setMaxPrice('')
+    setSortBy('newest')
+    fetchParts({ search: '', category: 'all', status: 'all' })
   }
 
   const handleOpenCreate = () => {
@@ -390,6 +455,28 @@ export default function PartsManagement() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div className="view-mode-toggle" role="tablist" aria-label="Layout view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'cards'}
+              className={`view-mode-btn ${viewMode === 'cards' ? 'active' : ''}`}
+              onClick={() => setViewMode('cards')}
+              title="Cards view"
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'table'}
+              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Table view"
+            >
+              <List size={15} />
+            </button>
+          </div>
           <button type="button" onClick={fetchParts} className="btn btn-secondary btn-sm">
             <RefreshCw size={14} />
             <span>Refresh</span>
@@ -416,7 +503,7 @@ export default function PartsManagement() {
       </div>
 
       {actionSuccess && (
-        <div className="admin-card" style={{ padding: '12px 16px', marginBottom: 16, borderColor: 'var(--color-emerald)', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--color-emerald)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="admin-card" style={{ padding: '12px 16px', marginBottom: 16, borderColor: 'var(--admin-success)', background: 'var(--admin-success-bg)', color: 'var(--admin-success)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>{actionSuccess}</span>
           <button type="button" onClick={() => setActionSuccess(null)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>×</button>
         </div>
@@ -552,11 +639,69 @@ export default function PartsManagement() {
             </button>
           ))}
         </div>
+
+        <div className="admin-filters" style={{ width: '100%', paddingTop: 12, borderTop: '1px solid var(--admin-border-subtle)' }}>
+          <label className="admin-filter-field">
+            <span>Brand</span>
+            <select className="admin-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
+              <option value="all">All brands</option>
+              {brandOptions.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-filter-field">
+            <span>Condition</span>
+            <select className="admin-select" value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)}>
+              <option value="all">Any</option>
+              <option value="new">Brand new</option>
+              <option value="used">Used surplus</option>
+              <option value="refurbished">Refurbished</option>
+            </select>
+          </label>
+          <label className="admin-filter-field">
+            <span>Stock</span>
+            <select className="admin-select" value={stockFilter} onChange={(e) => setStockFilter(e.target.value)}>
+              <option value="all">Any stock</option>
+              <option value="in">In stock</option>
+              <option value="low">Low (1–5)</option>
+              <option value="out">Out of stock</option>
+            </select>
+          </label>
+          <label className="admin-filter-field">
+            <span>Min price ₱</span>
+            <input type="number" min="0" className="admin-input" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" />
+          </label>
+          <label className="admin-filter-field">
+            <span>Max price ₱</span>
+            <input type="number" min="0" className="admin-input" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="No cap" />
+          </label>
+          <label className="admin-filter-field">
+            <span>Sort</span>
+            <select className="admin-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="newest">Newest first</option>
+              <option value="price-asc">Price · low to high</option>
+              <option value="price-desc">Price · high to low</option>
+              <option value="stock-asc">Stock · lowest</option>
+              <option value="title-asc">Title · A–Z</option>
+            </select>
+          </label>
+          <div className="admin-filter-actions">
+            <span className="admin-result-count">{filteredParts.length} of {parts.length} parts</span>
+            {(hasClientFilters || search.trim() || statusFilter !== 'all' || categoryFilter !== 'all') && (
+              <button type="button" className="btn btn-secondary btn-sm" onClick={resetAllFilters}>
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Parts Table */}
+      {viewMode === 'table' ? (
       <div className="table-container admin-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="admin-table">
+        <div style={{ overflowX: 'auto' }}>
+        <table className="admin-table admin-parts-table">
           <thead>
               <tr>
                 <th>Part & Brand</th>
@@ -577,16 +722,21 @@ export default function PartsManagement() {
                   <div>Loading parts catalog...</div>
                 </td>
               </tr>
-            ) : parts.length === 0 ? (
+            ) : filteredParts.length === 0 ? (
               <tr>
                 <td colSpan="8" style={{ textAlign: 'center', padding: 48, color: 'var(--admin-text-muted)' }}>
                   <Package size={36} style={{ color: 'var(--admin-text-muted)', marginBottom: 12 }} />
                   <h3 style={{ margin: '0 0 6px 0', color: 'var(--admin-text-primary)' }}>No Parts Found</h3>
-                  <p style={{ margin: 0, fontSize: 14 }}>No components match your search criteria.</p>
+                  <p style={{ margin: '0 0 14px', fontSize: 14 }}>No components match your search criteria.</p>
+                  {(hasClientFilters || search.trim() || statusFilter !== 'all' || categoryFilter !== 'all') && (
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={resetAllFilters}>
+                      Reset all filters
+                    </button>
+                  )}
                 </td>
               </tr>
             ) : (
-              parts.map((part) => {
+              filteredParts.map((part) => {
                 const imageUrl = part.primary_image_url || (part.media && part.media[0]?.url)
                 const qty = part.quantity || part.stock_quantity || 1
 
@@ -705,9 +855,125 @@ export default function PartsManagement() {
                 )
               })
             )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+          </div>
       </div>
+      ) : (
+      <div className="admin-car-grid">
+        {loading ? (
+          [0, 1, 2, 3].map((i) => (
+            <div key={i} className="admin-card admin-car-card" aria-hidden="true">
+              <div className="admin-car-media" style={{ background: 'var(--admin-bg-subtle)' }} />
+              <div style={{ padding: 14 }}>
+                <div style={{ height: 14, borderRadius: 6, background: 'var(--admin-bg-subtle)', marginBottom: 8 }} />
+                <div style={{ height: 12, borderRadius: 6, background: 'var(--admin-bg-subtle)', width: '60%' }} />
+              </div>
+            </div>
+          ))
+        ) : filteredParts.length === 0 ? (
+          <div className="admin-card" style={{ gridColumn: '1 / -1', padding: 48, textAlign: 'center', color: 'var(--admin-text-muted)' }}>
+            <Package size={36} style={{ marginBottom: 12 }} />
+            <h3 style={{ margin: '0 0 6px 0', color: 'var(--admin-text-primary)' }}>No Parts Found</h3>
+            <p style={{ margin: '0 0 14px', fontSize: 14 }}>No components match your search criteria.</p>
+            {(hasClientFilters || search.trim() || statusFilter !== 'all' || categoryFilter !== 'all') && (
+              <button type="button" className="btn btn-secondary btn-sm" onClick={resetAllFilters}>
+                Reset all filters
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredParts.map((part) => {
+            const title = part.title || 'Untitled Part'
+            const imageUrl = part.primary_image_url || (part.media && part.media[0]?.url)
+            const qty = Number(part.quantity ?? part.stock_quantity ?? 1)
+            return (
+              <div key={part.id} className="admin-card admin-car-card">
+                <button
+                  type="button"
+                  className="admin-car-media"
+                  style={{ cursor: 'pointer', border: 'none', padding: 0 }}
+                  onClick={() => handleOpenView(part)}
+                  title={title}
+                  aria-label={`View ${title}`}
+                >
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={title} loading="lazy" />
+                  ) : (
+                    <span className="admin-car-nomedia"><Package size={28} /></span>
+                  )}
+                  <span className={`badge ${part.status === 'active' ? 'badge-success' : part.status === 'sold' ? 'badge-info' : 'badge-neutral'} admin-car-badge`} style={{ textTransform: 'capitalize' }}>
+                    {part.status || 'draft'}
+                  </span>
+                </button>
+                <div className="admin-car-body">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenView(part)}
+                    className="admin-car-title"
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+                  >
+                    {title}
+                  </button>
+                  <div className="admin-car-sub">
+                    {[part.brand || 'OEM', part.part_number].filter(Boolean).join(' · ')}
+                  </div>
+                  <div className="admin-car-meta">
+                    <span style={{ textTransform: 'capitalize' }}>{part.condition || '—'}</span>
+                    <span className="admin-car-dot">•</span>
+                    <span style={{ color: qty > 0 ? 'inherit' : 'var(--admin-danger)', fontWeight: qty > 0 ? 400 : 700 }}>
+                      {qty > 0 ? `${qty} in stock` : 'Out of stock'}
+                    </span>
+                  </div>
+                  <div className="admin-car-foot">
+                    <span className="admin-car-price">
+                      ₱{Number(part.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className="admin-car-seller">{part.city || 'Depot'}</span>
+                  </div>
+                  <div className="admin-car-actions">
+                    {(part.status === 'draft' || part.status === 'archived') && (
+                      <button
+                        type="button"
+                        onClick={() => handlePublish(part.id)}
+                        className="btn btn-primary btn-sm"
+                        title="Publish to the marketplace"
+                      >
+                        Publish
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenView(part)}
+                      className="btn btn-secondary btn-sm"
+                      title="View Part Specs"
+                    >
+                      <Eye size={14} /> <span>View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(part)}
+                      className="btn btn-secondary btn-sm"
+                      title="Edit Part & Stock"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(part.id)}
+                      className="btn btn-danger btn-sm"
+                      title="Delete Part"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+      )}
 
       {/* View Part Modal */}
       {viewModalOpen && selectedPart && (

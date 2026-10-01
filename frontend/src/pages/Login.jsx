@@ -3,15 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import AuthModal from '../components/AuthModal.jsx'
 import { useAuth } from '../auth/AuthContext.jsx'
 
+/** Post-auth landing: fresh accounts finish the /welcome setup wizard. */
+export function authLanding(user) {
+  return user?.needs_onboarding ? '/welcome' : '/marketplace'
+}
+
 export default function Login() {
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/marketplace', { replace: true })
+      navigate(authLanding(user), { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [isAuthenticated, user, navigate])
 
   return (
     <div className="auth-shell">
@@ -19,7 +24,7 @@ export default function Login() {
         isOpen={true} 
         initialView="login" 
         onClose={() => navigate('/', { replace: true })} 
-        onSuccess={() => navigate('/marketplace', { replace: true })}
+        onSuccess={() => navigate(authLanding(user), { replace: true })}
       />
     </div>
   )

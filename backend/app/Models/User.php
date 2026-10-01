@@ -32,10 +32,25 @@ class User extends Authenticatable
         'provider',
         'provider_id',
         'avatar_url',
+        'interests',
+        'onboarding_completed_at',
         'agent_code',
         'commission_rate',
         'is_agent',
+        'is_house_staff',
         'agent_tagline',
+        'referred_by_user_id',
+        'agent_subscription_status',
+        'agent_subscribed_at',
+        'agent_expires_at',
+        'agent_last_payment_at',
+        'agent_last_payment_amount',
+        'referral_reward_paid_at',
+        'perks_status',
+        'perks_subscribed_at',
+        'perks_expires_at',
+        'perks_last_payment_at',
+        'perks_last_payment_amount',
         'kyc_status',
         'is_kyc_verified',
         'kyc_document_type',
@@ -66,12 +81,30 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'commission_rate' => 'decimal:2',
             'is_agent' => 'boolean',
+            'is_house_staff' => 'boolean',
             'is_kyc_verified' => 'boolean',
             'is_showroom_active' => 'boolean',
             'showroom_activated_at' => 'datetime',
             'kyc_submitted_at' => 'datetime',
             'kyc_verified_at' => 'datetime',
+            'agent_subscribed_at' => 'datetime',
+            'agent_expires_at' => 'datetime',
+            'agent_last_payment_at' => 'datetime',
+            'agent_last_payment_amount' => 'decimal:2',
+            'referral_reward_paid_at' => 'datetime',
+            'perks_subscribed_at' => 'datetime',
+            'perks_expires_at' => 'datetime',
+            'perks_last_payment_at' => 'datetime',
+            'perks_last_payment_amount' => 'decimal:2',
+            'interests' => 'array',
+            'onboarding_completed_at' => 'datetime',
         ];
+    }
+
+    /** True when the account still has to finish the /welcome setup wizard. */
+    public function needsOnboarding(): bool
+    {
+        return $this->onboarding_completed_at === null;
     }
 
     protected static function booted(): void
@@ -92,11 +125,13 @@ class User extends Authenticatable
                 $prefix = strtoupper(substr($slug, 0, 4)) ?: 'AGT';
                 $user->agent_code = 'AGT-' . $prefix . strtoupper(Str::random(4));
             }
-            if ($user->commission_rate === null) {
-                $user->commission_rate = 5.00;
-            }
+            // commission_rate stays null unless an admin sets a personal
+            // override — type rates apply otherwise (AgentService).
             if ($user->is_agent === null) {
-                $user->is_agent = true;
+                $user->is_agent = false;
+            }
+            if (empty($user->agent_subscription_status)) {
+                $user->agent_subscription_status = 'inactive';
             }
             if (empty($user->kyc_status)) {
                 $user->kyc_status = 'not_submitted';
@@ -171,10 +206,68 @@ class User extends Authenticatable
         return (bool) $this->is_kyc_verified && $this->kyc_status === 'approved';
     }
 
+    /**
+     * Active Sales Agent = verified KYC + active (non-expired) yearly subscription.
+     */
+    public function isAgentActive(): bool
+    {
+        if (! $this->isKycVerified()) {
+            return false;
+        }
+        if (($this->agent_subscription_status ?? 'inactive') !== 'active') {
+            return false;
+        }
+        if ($this->agent_expires_at && $this->agent_expires_at->isPast()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Lazily flip stale `active` subscriptions to `expired` on read.
+     */
+    public function refreshIfStaleSubscription(): static
+    {
+        if (($this->agent_subscription_status ?? null) === 'active'
+            && $this->agent_expires_at
+            && $this->agent_expires_at->isPast()) {
+            $this->forceFill(['agent_subscription_status' => 'expired'])->save();
+            $this->refresh();
+        }
+
+        return $this;
+    }
+
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referred_by_user_id');
+    }
+
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by_user_id');
+    }
+
+    public function agentSubscriptions(): HasMany
+    {
+        return $this->hasMany(AgentSubscription::class)->latest();
+    }
+
     /** House garage account (GAP Valenzuela Main) — sole parts catalog owner. */
     public function isHouse(): bool
     {
         return $this->username === static::HOUSE_USERNAME || $this->email === static::HOUSE_EMAIL;
+    }
+
+    /**
+     * Manages the house catalog: the house row itself plus flagged staff
+     * operator accounts (e.g. seller@garagemarket.ph). Treasury identity
+     * stays on isHouse() alone — this is catalog-management scope only.
+     */
+    public function managesHouseCatalog(): bool
+    {
+        return $this->isHouse() || (bool) $this->is_house_staff;
     }
 
     public static function house(): ?static

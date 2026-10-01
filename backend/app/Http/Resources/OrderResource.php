@@ -47,7 +47,20 @@ class OrderResource extends JsonResource
                 'name' => $this->buyer_name,
                 'email' => $this->buyer_email,
                 'phone' => $this->buyer_phone,
-                'shipping_address' => $this->shipping_address,
+            'shipping_address' => $this->shipping_address,
+            'handover_mode' => $this->handover_mode,
+            // Car-build meetup: drop-off at the seller/garage point or an
+            // on-site visit at the buyer's pin. The seller pin resolves to
+            // the dispatch warehouse when it has coords, else the main
+            // branch — so both parties always see each other's point.
+            'meetup' => $this->item_type === 'car' ? [
+                'mode' => $this->handover_mode ?? 'dropoff',
+                'seller_pin' => [
+                    'latitude' => (float) ($this->warehouse?->latitude ?? \App\Services\DeliveryFeeService::MAIN_BRANCH_LATITUDE),
+                    'longitude' => (float) ($this->warehouse?->longitude ?? \App\Services\DeliveryFeeService::MAIN_BRANCH_LONGITUDE),
+                    'label' => $this->warehouse?->name ?? \App\Services\DeliveryFeeService::MAIN_BRANCH_NAME,
+                ],
+            ] : null,
                 'city' => $this->shipping_city,
                 'postal_code' => $this->shipping_postal_code,
                 'full_address' => implode(', ', array_filter([
@@ -57,6 +70,15 @@ class OrderResource extends JsonResource
                 ])),
             ],
 
+            // Seller Information (eager-loaded on single reads only —
+            // lists skip it via whenLoaded to avoid N+1).
+            'seller' => $this->whenLoaded('seller', fn () => [
+                'user_id' => $this->seller->id,
+                'name' => $this->seller->name,
+                'username' => $this->seller->username ?? null,
+                'email' => $this->seller->email,
+                'phone' => $this->seller->phone ?? null,
+            ]),
             // Vehicle Fitment & Identification Details (Mandatory Sales Order Fields)
             'vehicle' => [
                 'chassis_number' => $this->chassis_number,
@@ -101,6 +123,8 @@ class OrderResource extends JsonResource
                 'id' => $this->warehouse->id,
                 'name' => $this->warehouse->name,
                 'city' => $this->warehouse->city,
+                'latitude' => $this->warehouse->latitude !== null ? (float) $this->warehouse->latitude : null,
+                'longitude' => $this->warehouse->longitude !== null ? (float) $this->warehouse->longitude : null,
             ] : null,
             'tracking_url' => app(\App\Services\TrackingUrlService::class)->resolve(
                 $this->tracking_url, $this->carrier, $this->tracking_number,
@@ -135,6 +159,11 @@ class OrderResource extends JsonResource
                 'formatted_unit_price' => '₱ ' . number_format((float) $this->unit_price, 2),
                 'shipping_fee' => (float) $this->shipping_fee,
                 'formatted_shipping_fee' => $this->shipping_fee > 0 ? '₱ ' . number_format((float) $this->shipping_fee, 2) : 'FREE',
+                'discount_amount' => (float) ($this->discount_amount ?? 0),
+                'formatted_discount' => ((float) ($this->discount_amount ?? 0)) > 0
+                    ? '−₱ ' . number_format((float) $this->discount_amount, 2)
+                    : null,
+                'perks_discount_pct' => (int) ($this->perks_discount_pct ?? 0),
                 'total_amount' => (float) $this->total_amount,
                 'formatted_total' => '₱ ' . number_format((float) $this->total_amount, 2),
                 'payment_method' => $this->payment_method,
@@ -158,6 +187,23 @@ class OrderResource extends JsonResource
                 },
             ],
 
+            // Settlement transparency — same ledger the admin Car
+            // Transactions page settles (hold → proof approval →
+            // commissions → payout). Pure column math, no extra queries:
+            // platform fee, agent commission, seller payout, release flag.
+            'settlement' => [
+                'platform_rate' => (float) ($this->commission_rate ?? 5.00),
+                'platform_fee' => round((float) $this->total_amount * ((float) ($this->commission_rate ?? 5.00)) / 100, 2),
+                'agent_fee' => (float) ($this->commission_amount ?? 0),
+                'agent_status' => $this->commission_status ?? 'pending',
+                'payout_released' => ($this->payment_status ?? 'pending') === 'released',
+                'seller_receives' => round(
+                    (float) $this->total_amount
+                    - (float) $this->total_amount * ((float) ($this->commission_rate ?? 5.00)) / 100
+                    - (float) ($this->commission_amount ?? 0),
+                    2
+                ),
+            ],
             // Line items array format for admin tables & multi-item compatibility
             'items' => [
                 [

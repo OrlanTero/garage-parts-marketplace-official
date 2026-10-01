@@ -6,12 +6,24 @@ use App\Models\Car;
 use App\Models\Order;
 use App\Models\Part;
 use App\Models\User;
+use App\Services\AgentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AgentSystemTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function makeActiveAgent(array $overrides = []): User
+    {
+        $agent = User::factory()->kycVerified()->create(array_merge([
+            'agent_subscription_status' => 'inactive',
+        ], $overrides));
+
+        AgentService::subscribe($agent, 'gcash', 'TEST-REF-' . $agent->id);
+
+        return $agent->refresh();
+    }
 
     public function test_user_is_assigned_an_agent_code_automatically(): void
     {
@@ -23,12 +35,15 @@ class AgentSystemTest extends TestCase
 
         $this->assertNotEmpty($user->agent_code);
         $this->assertStringStartsWith('AGT-', $user->agent_code);
-        $this->assertTrue($user->is_agent);
+        // New rule: agent_code is an identity, but privileges stay inactive
+        // until verified KYC + paid yearly subscription.
+        $this->assertFalse($user->isAgentActive());
+        $this->assertEquals('inactive', $user->agent_subscription_status);
     }
 
     public function test_can_verify_valid_agent_code_publicly(): void
     {
-        $agent = User::factory()->create([
+        $agent = $this->makeActiveAgent([
             'name' => 'Brian OConner',
             'email' => 'brian@r34tuners.ph',
             'agent_code' => 'AGT-BRIAN',
@@ -46,6 +61,20 @@ class AgentSystemTest extends TestCase
             ->assertJsonPath('agent.tagline', 'Certified JDM Performance Agent');
     }
 
+    public function test_inactive_agent_code_does_not_verify(): void
+    {
+        User::factory()->create([
+            'name' => 'Inactive Ivan',
+            'email' => 'ivan@garage.ph',
+            'agent_code' => 'AGT-INACTIVE',
+        ]);
+
+        $response = $this->getJson('/api/v1/agents/verify/AGT-INACTIVE');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('valid', false);
+    }
+
     public function test_verifying_invalid_agent_code_returns_404(): void
     {
         $response = $this->getJson('/api/v1/agents/verify/NON-EXISTENT-CODE');
@@ -56,7 +85,7 @@ class AgentSystemTest extends TestCase
 
     public function test_customer_order_attributes_commission_to_referring_agent(): void
     {
-        $agent = User::factory()->create([
+        $agent = $this->makeActiveAgent([
             'name' => 'Han Lue',
             'email' => 'han@rx7drift.ph',
             'agent_code' => 'AGT-HAN',
@@ -105,9 +134,50 @@ class AgentSystemTest extends TestCase
         ]);
     }
 
+    public function test_inactive_agent_earns_no_order_commission(): void
+    {
+        User::factory()->create([
+            'name' => 'No Sub Ned',
+            'email' => 'ned@garage.ph',
+            'agent_code' => 'AGT-NOSUB',
+            'commission_rate' => 10.00,
+        ]);
+
+        $seller = User::factory()->create(['role' => 'seller']);
+
+        $part = Part::create([
+            'seller_id' => $seller->id,
+            'title' => 'Stock Muffler',
+            'category' => 'exhaust',
+            'brand' => 'OEM',
+            'price' => 5000.00,
+            'status' => 'active',
+            'published_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'buyer_name' => 'Buyer B',
+            'buyer_email' => 'b@garage.ph',
+            'shipping_address' => 'Makati',
+            'chassis_number' => 'S15-009822',
+            'vin' => '1N4AL3AP8JC999998',
+            'vehicle_make_model' => 'Nissan Silvia S15 Spec-R',
+            'part_id' => $part->id,
+            'quantity' => 1,
+            'agent_code' => 'AGT-NOSUB',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('orders', [
+            'buyer_email' => 'b@garage.ph',
+            'agent_id' => null,
+            'commission_amount' => 0.00,
+        ]);
+    }
+
     public function test_agent_can_fetch_earnings_and_performance_stats(): void
     {
-        $agent = User::factory()->create([
+        $agent = $this->makeActiveAgent([
             'name' => 'Mia Toretto',
             'email' => 'mia@torettoauto.ph',
             'agent_code' => 'AGT-MIA',
@@ -142,6 +212,7 @@ class AgentSystemTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonPath('agent.agent_code', 'AGT-MIA')
+            ->assertJsonPath('agent.is_active', true)
             ->assertJsonPath('performance.total_orders', 1)
             ->assertJsonPath('performance.total_sales_volume', 4000)
             ->assertJsonPath('performance.total_commission', 200)

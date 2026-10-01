@@ -1,0 +1,26 @@
+/**
+ * Garage Marketplace — single style entry point.
+ *
+ * Directory map (ALL global styles live in src/styles/):
+ *   tokens.css    → day/night CSS variables (ONLY place theme colors live)
+ *   base.css      → reset, body, typography, links, focus, scrollbars
+ *   buttons.css   → .btn-* recipes
+ *   forms.css     → inputs/selects/textareas + .field-* (contrast-safe)
+ *   surfaces.css  → .card, .badge, modal, auth shell, night surface fixes
+ *   layout.css    → topbar, nav, drawers, page containers
+ *   responsive.css→ mobile module: breakpoints, overflow guards, stacking
+ *   index.css     → this file (imported once in main.jsx)
+ *
+ * Rules for the entire app:
+ *  1. Page/component CSS stays co-located BUT must use var(--*) tokens only.
+ *  2. Never hardcode #fff/#000/backgrounds for surfaces or input colors.
+ *  3. Text on colored fills stays #fff (both themes); body text uses tokens.
+ */
+
+@import './tokens.css';
+@import './base.css';
+@import './buttons.css';
+@import './forms.css';
+@import './surfaces.css';
+@import './layout.css';
+@import './responsive.css';

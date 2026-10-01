@@ -1,15 +1,20 @@
 /**
- * Organized theme system — Day / Night.
+ * Garage Marketplace — Design Tokens (single source of truth)
  *
- * Directory map (src/styles/):
- *   themes.css   → this file: semantic tokens per theme (the ONLY place
- *                  theme colors live). Everything else consumes tokens.
- *   (page & component CSS stays co-located with its component and must
- *   use var(--color-*) / var(--shadow-*) / var(--radius-*) tokens so both
- *   themes apply automatically — no hardcoded theme colors.)
+ * Location: src/styles/tokens.css
+ * This is the ONLY place theme colors live. Every component / page CSS must
+ * consume var(--color-*), var(--input-*), var(--shadow-*), var(--radius-*)
+ * so day + night apply automatically. No hardcoded theme colors elsewhere.
  *
  * Switching: <html data-theme="day|night"> (see context/ThemeContext.jsx).
- * Day is the default and matches the original Rust & Steel look.
+ * Day is default. An inline script in index.html sets the attribute
+ * before first paint to avoid a theme flash.
+ *
+ * Contrast notes (WCAG AA, normal text >= 4.5:1):
+ *  - Day:    bg #f5f2eb + text #4c5156 (~7:1), muted #626b75 (~5:1),
+ *            input #ffffff + text #14171a (~16:1), placeholder #6f777f (~4.6:1)
+ *  - Night:  bg #101216 + text #c3c9d1 (~10:1), muted #8b94a0 (~5:1),
+ *            input #12151a + text #f1f4f8 (~15:1), placeholder #8b94a0 (~4.6:1)
  */
 
 /* ================= Day (default) ================= */
@@ -17,7 +22,7 @@
 :root[data-theme='day'] {
   color-scheme: light;
 
-  /* Palette (brand — identical in both themes) */
+  /* Brand palette (identical in both themes — never use directly for surfaces/text) */
   --color-rust: #924424;
   --color-rust-hover: #7b371b;
   --color-rust-dark: #3a1e12;
@@ -26,14 +31,20 @@
   --color-metal: #4a4d52;
   --color-steel: #2c4250;
   --color-steel-light: #edf2f5;
+  --color-sand: #e6ded0;
+  --color-sand-light: #f7f4ee;
+  --color-concrete: #dfd9cf;
+  --color-offwhite: #ffffff;
+  --color-black: #14171a;
+  --color-charcoal: #23272b;
 
   /* Semantic surfaces & text */
   --color-primary: var(--color-rust);
   --color-primary-hover: var(--color-rust-hover);
   --color-secondary: var(--color-orange);
   --color-text: #4c5156;
-  --color-text-muted: #747b84;
-  --color-text-light: #9ba1a8;
+  --color-text-muted: #626b75;
+  --color-text-light: #8a919a;
   --color-link: #2c4250;
   --color-background: #f5f2eb;
   --color-surface: #ffffff;
@@ -43,8 +54,17 @@
   --color-border-subtle: #eee9e0;
   --color-heading: #14171a;
   --color-error: #b92b1b;
+  --color-error-bg: #fdecea;
   --color-success: #1b873f;
   --color-success-bg: #e8f5ec;
+  --color-warning: #92600a;
+  --color-warning-bg: #fef6e0;
+  --color-info: #2c4250;
+  --color-info-bg: #edf2f5;
+  /* Status text accents — dark enough for tinted bgs in day (see night below) */
+  --color-accent: #924424;
+  --color-info-text: #1d4ed8;
+  --color-violet-text: #6d28d9;
 
   /* Topbar (solid) */
   --topbar-bg: var(--color-surface);
@@ -60,11 +80,26 @@
   --card-border: var(--color-border);
   --overlay-scrim: rgba(20, 23, 26, 0.45);
 
-  /* Form controls */
+  /* Form controls — high-contrast pairs, see forms.css */
   --input-bg: #ffffff;
-  --input-border: #d9d6ce;
+  --input-bg-disabled: #f1ede5;
+  --input-border: #cfc9bb;
+  --input-border-hover: #b8b0a0;
   --input-text: #14171a;
-  --input-placeholder: #b8b3a6;
+  --input-placeholder: #6f777f;
+  --input-icon: #7a828c;
+  --input-focus-border: var(--color-rust);
+  --input-focus-ring: rgba(146, 68, 36, 0.16);
+  --input-error-border: var(--color-error);
+  --input-error-ring: rgba(185, 43, 27, 0.14);
+
+  /* Gradients + effects */
+  --gradient-rust: linear-gradient(135deg, #964726 0%, #682d17 100%);
+  --gradient-orange: linear-gradient(135deg, #e06c35 0%, #c4521e 100%);
+  --gradient-steel: linear-gradient(135deg, #2c4250 0%, #1c2b35 100%);
+  --gradient-dark: linear-gradient(180deg, #181b1e 0%, #101214 100%);
+  --gradient-hero: linear-gradient(135deg, rgba(20,23,26,0.92) 0%, rgba(20,23,26,0.78) 50%, rgba(58,30,18,0.75) 100%);
+  --gradient-warm-card: linear-gradient(145deg, #ffffff 0%, #faf7f2 100%);
 
   /* Shadows */
   --shadow-xs: 0 1px 2px rgba(20, 23, 26, 0.05);
@@ -73,6 +108,25 @@
   --shadow-hover: 0 16px 32px -4px rgba(35, 27, 22, 0.12), 0 6px 14px -2px rgba(35, 27, 22, 0.06);
   --shadow-modal: 0 24px 60px -8px rgba(20, 23, 26, 0.25);
   --shadow-glow: 0 0 24px rgba(216, 98, 44, 0.25);
+
+  /* Geometry */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
+
+  /* Typography */
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+
+  /* Motion */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 0.15s;
+  --dur-med: 0.25s;
 }
 
 /* ================= Night ================= */
@@ -92,8 +146,17 @@
   --color-border-subtle: #22272f;
   --color-heading: #f1f4f8;
   --color-error: #f87171;
+  --color-error-bg: rgba(248, 113, 113, 0.12);
   --color-success: #34d399;
   --color-success-bg: rgba(52, 211, 153, 0.1);
+  --color-warning: #fbbf24;
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
+  --color-info: #7fb3d5;
+  --color-info-bg: #1e2830;
+  /* Status text accents — lightened for dark surfaces at night */
+  --color-accent: #fb923c;
+  --color-info-text: #60a5fa;
+  --color-violet-text: #a78bfa;
   --color-orange-light: rgba(216, 98, 44, 0.14);
   --color-steel-light: #1e2830;
   --color-sand-light: #1e2229;
@@ -112,11 +175,18 @@
   --card-border: #2b313a;
   --overlay-scrim: rgba(0, 0, 0, 0.6);
 
-  /* Form controls */
+  /* Form controls — night pair: #12151a bg + #f1f4f8 text (~15:1) */
   --input-bg: #12151a;
-  --input-border: #2b313a;
+  --input-bg-disabled: #1a1e24;
+  --input-border: #333b46;
+  --input-border-hover: #465062;
   --input-text: #f1f4f8;
-  --input-placeholder: #5b6470;
+  --input-placeholder: #8b94a0;
+  --input-icon: #8b94a0;
+  --input-focus-border: #e06c35;
+  --input-focus-ring: rgba(224, 108, 53, 0.28);
+  --input-error-border: var(--color-error);
+  --input-error-ring: rgba(248, 113, 113, 0.2);
 
   /* Shadows deepen on dark */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
+  BadgePercent,
   Wallet,
   Users,
   UserCheck,
@@ -29,7 +30,6 @@ import {
   Wrench,
   CreditCard,
   AlertTriangle,
-  FileCheck,
   Star,
   Radio,
   LifeBuoy,
@@ -67,6 +67,7 @@ const NAV_GROUPS = [
       { to: '/parts', label: 'Product Management', icon: Layers },
       { to: '/inventory', label: 'Inventory', icon: Boxes },
       { to: '/orders', label: 'Parts Orders', icon: ShoppingBag, badge: 'Orders' },
+      { to: '/wanted', label: 'Wanted Requests', icon: Tag, badge: { label: 'Sourcing', variant: 'info' } },
       { to: '/car-transactions', label: 'Car Transactions', icon: Car, badge: { label: 'Deals', variant: 'warning' } },
     ],
   },
@@ -75,11 +76,10 @@ const NAV_GROUPS = [
     label: 'Trust & Moderation',
     icon: ShieldCheck,
     items: [
-      { to: '/kyc', label: 'KYC Verification', icon: UserCheck, badge: { label: 'KYC', variant: 'info' } },
+      { to: '/kyc', label: 'Seller KYC & Identity', icon: UserCheck, badge: { label: 'KYC', variant: 'info' } },
       { to: '/seller-applications', label: 'Seller Upgrade', icon: UserPlus, badge: { label: 'Apply', variant: 'warning' } },
       { to: '/moderation', label: 'Listing Approval', icon: ShieldCheck, badge: { label: 'Inspect', variant: 'warning' } },
       { to: '/configurations', label: 'Configurations', icon: SlidersHorizontal },
-      { to: '/verifications', label: 'Seller KYC & Trust', icon: FileCheck },
       { to: '/reviews', label: 'Customer Reviews', icon: Star },
       { to: '/chat-moderation', label: 'Chat Moderation', icon: MessageSquare, badge: 'PII' },
       { to: '/disputes', label: 'Disputes & Returns', icon: AlertTriangle },
@@ -92,6 +92,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/appointments', label: 'Appointment Monitoring', icon: Calendar, badge: 'Slots' },
       { to: '/promotions', label: 'Promotions & Boosts', icon: Tag },
+      { to: '/perks', label: 'Member Perks Club', icon: BadgePercent, badge: { label: 'Perks', variant: 'success' } },
       { to: '/payouts', label: 'Seller Payouts', icon: CreditCard },
       { to: '/notifications', label: 'WebSocket Broadcasts', icon: Radio },
       { to: '/my-notifications', label: 'My Notifications', icon: Bell },

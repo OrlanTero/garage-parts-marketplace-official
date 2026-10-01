@@ -3,12 +3,21 @@ import client from './client.js'
 export const adminApi = {
   // Listing Moderation & Vehicle Inspection
   getModerationCars: (params = {}) => client.get('/admin/moderation/cars', { params }).then((r) => r.data),
+  getModerationCar: (carId) => client.get(`/admin/moderation/cars/${carId}`).then((r) => r.data?.data ?? r.data),
   scheduleInspection: (carId, data) => client.post(`/admin/moderation/cars/${carId}/schedule-inspection`, data).then((r) => r.data),
   recordInspection: (carId, data) => client.post(`/admin/moderation/cars/${carId}/record-inspection`, data).then((r) => r.data),
   approveCar: (carId) => client.post(`/admin/moderation/cars/${carId}/approve`).then((r) => r.data),
   rejectCar: (carId, reason) => client.post(`/admin/moderation/cars/${carId}/reject`, { reason }).then((r) => r.data),
 
+  // Member perks catalog moderation
+  getPerks: () => client.get('/admin/perks').then((r) => r.data?.data ?? r.data),
+  createPerk: (payload) => client.post('/admin/perks', payload).then((r) => r.data?.data ?? r.data),
+  updatePerk: (id, payload) => client.patch(`/admin/perks/${id}`, payload).then((r) => r.data?.data ?? r.data),
+  deletePerk: (id) => client.delete(`/admin/perks/${id}`).then((r) => r.data),
+
   // Appointment Monitoring
+  getWantedRequests: (params = {}) => client.get('/wanted-requests', { params }).then((r) => r.data),
+  deleteWantedRequest: (id) => client.delete(`/admin/wanted-requests/${id}`).then((r) => r.data),
   getAppointments: (params = {}) => client.get('/admin/appointments', { params }).then((r) => r.data),
 
   // Basic Chat Moderation
@@ -17,6 +26,7 @@ export const adminApi = {
 
   // User & RBAC Management
   getUsers: (params = {}) => client.get('/admin/users', { params }).then((r) => r.data),
+  getUser: (userId) => client.get(`/admin/users/${userId}`).then((r) => r.data?.user ?? r.data),
   updateUserRole: (userId, role) => client.patch(`/admin/users/${userId}/role`, { role }).then((r) => r.data),
 
   // Staff directory for inspector assignment (slim id/name/role payload)
@@ -37,6 +47,7 @@ export const adminApi = {
   getOrders: (params = {}) => client.get('/admin/orders', { params }).then((r) => r.data),
   getOrder: (idOrNumber) => client.get(`/orders/${idOrNumber}`).then((r) => r.data?.data ?? r.data),
   updateOrderStatus: (orderId, data) => client.patch(`/admin/orders/${orderId}/status`, data).then((r) => r.data),
+  updateDelivery: (orderId, data) => client.patch(`/admin/orders/${orderId}/delivery`, data).then((r) => r.data?.data ?? r.data),
 
   // Seller Verification Queue (admins share the seller accept/reject endpoints)
   acceptSellerOrder: (orderId, verification_note) =>

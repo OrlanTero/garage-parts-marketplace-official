@@ -20,17 +20,23 @@ import {
 } from 'lucide-react'
 import { useTaxonomy, groupBrandsByRegion, specOptions, specLabel } from '../api/taxonomy.js'
 import { useMarketplaceCars } from '../marketplace/useMarketplaceCars.js'
+import { CAR_PRESETS } from '../utils/catalogFilters.js'
 import CarCard from '../components/CarCard.jsx'
 import './Marketplace.css'
 
-// Preset filter categories for quick enthusiast discovery
-const PRESETS = [
+// Preset filter categories for quick enthusiast discovery.
+// Matchers live in utils/catalogFilters.js (shared with Home showroom).
+const PRESET_META = [
   { id: 'all', label: 'All Inventory', icon: Sparkles },
-  { id: 'jdm', label: 'JDM Icons', icon: Flame, match: (c) => ['nissan', 'toyota', 'honda', 'mazda', 'subaru', 'mitsubishi'].includes(c.brand?.toLowerCase() || c.make?.toLowerCase()) },
-  { id: 'classics', label: 'Restored Classics', icon: Car, match: (c) => (c.year && c.year <= 1990) || c.category === 'classics' },
-  { id: '4x4', label: '4x4 & Overland', icon: Truck, match: (c) => c.body_style === 'suv' || c.body_style === 'pickup' || c.category === '4x4' },
-  { id: 'coupe', label: 'Coupes & Turbos', icon: Flame, match: (c) => c.body_style === 'coupe' || c.fuel_type?.includes('turbo') },
+  { id: 'jdm', label: 'JDM Icons', icon: Flame },
+  { id: 'classics', label: 'Restored Classics', icon: Car },
+  { id: '4x4', label: '4x4 & Overland', icon: Truck },
+  { id: 'coupe', label: 'Coupes & Turbos', icon: Flame },
 ]
+const PRESETS = PRESET_META.map((meta) => ({
+  ...meta,
+  match: CAR_PRESETS.find((p) => p.id === meta.id)?.match,
+}))
 
 // Fallback curated sample cars to ensure the marketplace is rich & visually complete
 const CURATED_SAMPLE_CARS = [
@@ -406,7 +412,7 @@ export default function Marketplace() {
             </div>
             <h3>No Vehicles Match Your Criteria</h3>
             <p>
-              We couldn&apos;t find any verified vehicles matching your current filter selection. 
+              We couldn&apos;t find any verified vehicles matching your current filter selection.
               Try adjusting your price range, clearing specific filters, or post a Wanted Ad.
             </p>
             <div className="empty-state-actions">
@@ -414,8 +420,8 @@ export default function Marketplace() {
                 <RotateCcw size={15} />
                 <span>Reset All Filters</span>
               </button>
-              <Link to="/sell" className="btn btn-secondary">
-                <span>List a Vehicle for Sale</span>
+              <Link to="/wanted/new" className="btn btn-secondary">
+                <span>Post a Wanted Ad</span>
               </Link>
             </div>
           </div>

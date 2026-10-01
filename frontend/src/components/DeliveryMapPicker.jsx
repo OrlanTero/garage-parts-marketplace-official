@@ -9,10 +9,10 @@ const PH_CENTER = [12.8797, 121.774]
 const PH_ZOOM = 6
 const PIN_ZOOM = 16
 
-const pinIcon = () =>
+const pinIcon = (kind) =>
   L.divIcon({
-    className: 'gpm-pin-wrap',
-    html: '<div class="gpm-pin"></div>',
+    className: `gpm-pin-wrap${kind ? ` gpm-pin--${kind}` : ''}`,
+    html: `<div class="gpm-pin${kind ? ` gpm-pin--${kind}` : ''}"></div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
   })
@@ -22,19 +22,25 @@ const hasPin = (v) =>
 
 /**
  * Reusable delivery-address pinpoint module (Leaflet + OpenStreetMap).
- * Drag the pin / click the map / search / use GPS — then confirm.
+ * Drag the pin / click the map / search / use GPS — then confirm,
+ * or set autoConfirm to save on every move with no button (common sense).
  *
  * Props:
- *   value      { latitude, longitude, label } | null
- *   onConfirm  ({ latitude, longitude, label }) => void
- *   readonly   render a locked mini-map of a saved pin (no editing)
- *   height     map height in px
+ *   value       { latitude, longitude, label } | null
+ *   onConfirm   ({ latitude, longitude, label }) => void
+ *   autoConfirm save immediately on drag / click / search / GPS (no button)
+ *   readonly    render a locked mini-map (no editing)
+ *   markers     readonly extras: [{ latitude, longitude, label, kind }]
+ *               (e.g. buyer + seller pins on one meetup map)
+ *   height      map height in px
  *   confirmLabel
  */
 export default function DeliveryMapPicker({
   value = null,
   onConfirm,
+  autoConfirm = false,
   readonly = false,
+  markers = null,
   height = 340,
   confirmLabel = 'Confirm Delivery Pin',
 }) {
@@ -42,6 +48,7 @@ export default function DeliveryMapPicker({
   const mapRef = useRef(null)
   const markerRef = useRef(null)
   const revReqRef = useRef(0)
+  const interactedRef = useRef(false)
 
   const [position, setPosition] = useState(() =>
     hasPin(value) ? [Number(value.latitude), Number(value.longitude)] : [...PH_CENTER],
@@ -59,9 +66,13 @@ export default function DeliveryMapPicker({
     if (!mapElRef.current || mapRef.current) return
     let map = null
     try {
+      const extraPins = Array.isArray(markers) ? markers.filter(hasPin) : []
+      const start = extraPins.length > 0
+        ? [Number(extraPins[0].latitude), Number(extraPins[0].longitude)]
+        : hasPin(value) ? [Number(value.latitude), Number(value.longitude)] : [...PH_CENTER]
       map = L.map(mapElRef.current, {
-        center: hasPin(value) ? [Number(value.latitude), Number(value.longitude)] : [...PH_CENTER],
-        zoom: hasPin(value) ? PIN_ZOOM : PH_ZOOM,
+        center: start,
+        zoom: hasPin(value) || extraPins.length > 0 ? PIN_ZOOM : PH_ZOOM,
         scrollWheelZoom: !readonly,
         dragging: !readonly,
         zoomControl: !readonly,
@@ -72,19 +83,38 @@ export default function DeliveryMapPicker({
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(map)
 
-      const marker = L.marker(map.getCenter(), {
-        icon: pinIcon(),
-        draggable: !readonly,
-        autoPan: true,
-      }).addTo(map)
-      markerRef.current = marker
-
-      if (!readonly) {
-        marker.on('dragend', () => {
-          const ll = marker.getLatLng()
-          movePin(ll.lat, ll.lng, { reverse: true })
+      if (readonly && extraPins.length > 0) {
+        // Meetup view: every party's pin on one locked map.
+        const bounds = []
+        extraPins.forEach((p) => {
+          const ll = [Number(p.latitude), Number(p.longitude)]
+          L.marker(ll, { icon: pinIcon(p.kind), interactive: false }).addTo(map)
+          bounds.push(ll)
         })
-        map.on('click', (e) => movePin(e.latlng.lat, e.latlng.lng, { reverse: true }))
+        if (bounds.length > 1) {
+          map.fitBounds(bounds, { padding: [40, 40] })
+        } else {
+          map.setView(bounds[0], PIN_ZOOM)
+        }
+      } else {
+        const marker = L.marker(map.getCenter(), {
+          icon: pinIcon(value?.kind),
+          draggable: !readonly,
+          autoPan: true,
+        }).addTo(map)
+        markerRef.current = marker
+
+        if (!readonly) {
+          marker.on('dragend', () => {
+            const ll = marker.getLatLng()
+            interactedRef.current = true
+            movePin(ll.lat, ll.lng, { reverse: true })
+          })
+          map.on('click', (e) => {
+            interactedRef.current = true
+            movePin(e.latlng.lat, e.latlng.lng, { reverse: true })
+          })
+        }
       }
       mapRef.current = map
     } catch {
@@ -112,6 +142,19 @@ export default function DeliveryMapPicker({
       map.panTo(ll)
     }
   }, [position])
+
+  // Auto-confirm mode: every committed move saves immediately — no
+  // button. Guarded to user interaction so mount never writes a pin.
+  useEffect(() => {
+    if (!autoConfirm || readonly || !interactedRef.current) return
+    if (!Number.isFinite(Number(position[0])) || !Number.isFinite(Number(position[1]))) return
+    onConfirm?.({
+      latitude: position[0],
+      longitude: position[1],
+      label: label.trim(),
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position, label])
 
   const movePin = (lat, lng, { reverse = false, newLabel } = {}) => {
     const latitude = Number(Number(lat).toFixed(7))
@@ -154,6 +197,7 @@ export default function DeliveryMapPicker({
   const pickSuggestion = (s) => {
     setSuggestions([])
     setQuery('')
+    interactedRef.current = true
     mapRef.current?.setView([s.latitude, s.longitude], PIN_ZOOM)
     movePin(s.latitude, s.longitude, { newLabel: s.label })
   }
@@ -164,6 +208,7 @@ export default function DeliveryMapPicker({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocating(false)
+        interactedRef.current = true
         mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], PIN_ZOOM)
         movePin(pos.coords.latitude, pos.coords.longitude, { reverse: true })
       },
@@ -181,20 +226,41 @@ export default function DeliveryMapPicker({
   }
 
   if (readonly) {
+    const extraPins = Array.isArray(markers) ? markers.filter(hasPin) : []
     return (
       <div>
         {!mapFailed && <div ref={mapElRef} className="gpm-map" style={{ height }} />}
         <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 10, lineHeight: 1.6 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-            <MapPin size={14} color="#d8622c" style={{ flexShrink: 0, marginTop: 2 }} />
-            <span>{label || 'Pinned delivery location'}</span>
-          </div>
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>
-            {Number(position[0]).toFixed(6)}, {Number(position[1]).toFixed(6)} ·{' '}
-            <a href={osmLink(position[0], position[1])} target="_blank" rel="noreferrer" style={{ color: '#fb923c' }}>
-              Open in OpenStreetMap
-            </a>
-          </div>
+          {extraPins.length > 0 ? (
+            extraPins.map((p, i) => (
+              <div key={`${p.latitude}-${p.longitude}-${i}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
+                <MapPin size={14} color={p.kind === 'seller' ? '#10b981' : '#d8622c'} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>
+                  <strong style={{ color: p.kind === 'seller' ? '#10b981' : '#fb923c' }}>
+                    {p.kind === 'seller' ? 'Seller point' : p.kind === 'buyer' ? 'Buyer point' : 'Pin'}
+                    {p.title ? ` — ${p.title}` : ''}:
+                  </strong>{' '}
+                  {p.label || 'Pinned location'}
+                  <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
+                    {' '}({Number(p.latitude).toFixed(5)}, {Number(p.longitude).toFixed(5)})
+                  </span>
+                </span>
+              </div>
+            ))
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <MapPin size={14} color="#d8622c" style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>{label || 'Pinned delivery location'}</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>
+                {Number(position[0]).toFixed(6)}, {Number(position[1]).toFixed(6)} ·{' '}
+                <a href={osmLink(position[0], position[1])} target="_blank" rel="noreferrer" style={{ color: '#fb923c' }}>
+                  Open in OpenStreetMap
+                </a>
+              </div>
+            </>
+          )}
         </div>
       </div>
     )
@@ -239,14 +305,14 @@ export default function DeliveryMapPicker({
             Latitude
             <input
               type="number" step="any" value={position[0]}
-              onChange={(e) => setPosition([Number(e.target.value) || 0, position[1]])}
+              onChange={(e) => { interactedRef.current = true; setPosition([Number(e.target.value) || 0, position[1]]) }}
             />
           </label>
           <label>
             Longitude
             <input
               type="number" step="any" value={position[1]}
-              onChange={(e) => setPosition([position[0], Number(e.target.value) || 0])}
+              onChange={(e) => { interactedRef.current = true; setPosition([position[0], Number(e.target.value) || 0]) }}
             />
           </label>
         </div>
@@ -254,17 +320,21 @@ export default function DeliveryMapPicker({
           Delivery landmark / notes
           <input
             type="text" value={label} maxLength={500}
-            onChange={(e) => setLabel(e.target.value)}
+            onChange={(e) => { interactedRef.current = true; setLabel(e.target.value) }}
             placeholder="e.g. Gate 2, blue warehouse beside the chapel"
           />
         </label>
       </div>
 
-      <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 12 }} onClick={handleConfirm}>
-        <MapPin size={15} /> {confirmLabel}
-      </button>
+      {!autoConfirm && (
+        <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 12 }} onClick={handleConfirm}>
+          <MapPin size={15} /> {confirmLabel}
+        </button>
+      )}
       <div style={{ fontSize: 11, color: '#64748b', marginTop: 8, textAlign: 'center' }}>
-        Drag the pin or click the map — address resolves automatically. Tiles © OpenStreetMap contributors.
+        {autoConfirm
+          ? 'Pin sets automatically — drag it or click the map. Tiles © OpenStreetMap contributors.'
+          : 'Drag the pin or click the map — address resolves automatically. Tiles © OpenStreetMap contributors.'}
       </div>
     </div>
   )

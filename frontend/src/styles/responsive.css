@@ -1,0 +1,114 @@
+/**
+ * Mobile Responsive Module — single place for cross-page responsive rules.
+ *
+ * BREAKPOINT STANDARD (use only these in new code):
+ *   --bp-wide:   1280px  large desktops (minor tweaks)
+ *   --bp-desktop:1024px  small laptop / landscape tablet
+ *   --bp-tablet:  768px  portrait tablet / large phone landscape
+ *   --bp-phone:   640px  phones (stack layouts, 1-col grids)
+ *   --bp-small:   480px  small phones (tighten padding/type)
+ *   --bp-xs:      400px  very small phones (last-resort fixes)
+ * (CSS vars can't drive @media, so match these literal values.)
+ *
+ * Page CSS keeps its own component queries but must follow the standard
+ * above. Shared patterns (no-zoom inputs, overflow guards, stacking
+ * helpers, table scroll) live here so pages don't reinvent them.
+ */
+
+/* ============ §1 Global safety (all viewports) ============ */
+html, body { overflow-x: clip; }
+@supports not (overflow: clip) { html, body { overflow-x: hidden; } }
+
+img, video, svg, canvas { max-width: 100%; }
+
+/* Grid children must be allowed to shrink — fixes overflow from
+   min-content (long titles, prices, monospace refs) in every grid. */
+:where(.car-grid, [class*='-grid'], [class*='grid-']) > * { min-width: 0; }
+
+/* Long strings (order refs, VINs, URLs) wrap instead of overflowing. */
+:where(.page-container, .detail-page-container, main) :where(p, h1, h2, h3, h4, span, div, td, li) {
+  overflow-wrap: break-word;
+}
+
+/* ============ §2 Small laptop ≤1024px ============ */
+@media (max-width: 1024px) {
+  .page-container,
+  .detail-page-container { padding: 28px 0 48px; }
+}
+
+/* ============ §3 Tablet & phones ≤768px ============ */
+@media (max-width: 768px) {
+  /* iOS Safari auto-zooms on focus when inputs are <16px — opt out globally. */
+  :where(input:not([type='checkbox']):not([type='radio']):not([type='submit']):not([type='button']),
+    select, textarea) { font-size: 16px; }
+
+  .page-container,
+  .detail-page-container { padding: 24px 0 48px; }
+
+  /* Two-column page splits stack. */
+  .auth-grid.two-col { grid-template-columns: 1fr; }
+
+  /* Modal sheets go near-full-screen. */
+  .modal-card { max-width: calc(100vw - 24px); }
+  .auth-card { padding: 24px 20px; }
+
+  /* Helpers */
+  .only-desktop { display: none !important; }
+  .stack-tablet { flex-direction: column !important; align-items: stretch !important; }
+}
+
+/* ============ §4 Phones ≤640px ============ */
+@media (max-width: 640px) {
+  .page-container,
+  .detail-page-container { width: min(1320px, 92vw); padding: 20px 0 56px; }
+
+  /* Listing grids collapse to one column (explicit list only — other
+     multi-col grids like stats/KPIs keep their own page queries). */
+  :where(.marketplace-cars-grid, .marketplace-parts-grid, .modern-car-grid,
+    .modern-parts-grid, .favorites-grid, .showroom-grid,
+    .seller-kpi-strip) { grid-template-columns: 1fr; }
+
+  /* Toolbars: search first, full-width, actions wrap below. */
+  :where(.toolbar-primary-row, .parts-toolbar-primary, .favorites-toolbar) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  :where(.search-input-box, .favorites-search-wrapper) { min-width: 0; width: 100%; }
+  :where(.filter-select, .filter-price-input) { width: 100%; }
+  :where(.filter-price-inputs) { width: 100%; }
+  :where(.filter-price-input) { flex: 1; }
+
+  /* Horizontally scrollable chip/tab rows instead of wrapping. */
+  :where(.marketplace-presets, .showroom-tabs, .preset-row) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -4vw;
+    padding-inline: 4vw;
+  }
+  :where(.marketplace-presets, .showroom-tabs)::-webkit-scrollbar { display: none; }
+
+  /* Tables scroll instead of breaking layout. */
+  :where(.table-scroll) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  .only-mobile { display: revert !important; }
+}
+
+/* Phones show these by default only when explicitly needed. */
+.only-mobile { display: none; }
+
+/* ============ §5 Small phones ≤480px ============ */
+@media (max-width: 480px) {
+  body { font-size: 14.5px; }
+
+  :where(.btn) { padding: 10px 16px; font-size: 13.5px; }
+
+  /* Bottom floating actions must clear the mobile quick-actions bar. */
+  :where(main) { padding-bottom: env(safe-area-inset-bottom, 0); }
+}
+
+/* ============ §6 Coarse pointers (touch) ============ */
+@media (pointer: coarse) {
+  :where(.btn, .action-btn, .nav-link, button) { min-height: 40px; }
+  :where(.car-wishlist-btn, .part-wishlist-btn) { min-height: 0; }
+}

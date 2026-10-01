@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, CheckCheck, RefreshCw, Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -7,16 +7,16 @@ import notificationsApi from '../api/notifications.js'
 import { TimeAgo } from '../utils/timeAgo.jsx'
 
 const TYPE_COLOR = {
-  order: '#fb923c',
-  payment: '#eab308',
-  chat: '#60a5fa',
-  payout: '#10b981',
-  kyc: '#a78bfa',
+  order: 'var(--color-accent)',
+  payment: 'var(--color-warning)',
+  chat: 'var(--color-info-text)',
+  payout: 'var(--color-success)',
+  kyc: 'var(--color-violet-text)',
   listing: '#f472b6',
-  dispute: '#ef4444',
+  dispute: 'var(--color-error)',
   broadcast: '#38bdf8',
-  system: '#94a3b8',
-  info: '#94a3b8',
+  system: 'var(--color-text-muted)',
+  info: 'var(--color-text-muted)',
 }
 
 const FILTERS = [
@@ -96,9 +96,9 @@ export default function Notifications() {
   if (!isAuthenticated) {
     return (
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '64px 20px', textAlign: 'center' }}>
-        <Bell size={40} style={{ color: '#64748b' }} />
-        <h2 style={{ color: '#f8fafc' }}>Notifications</h2>
-        <p style={{ color: '#94a3b8' }}>Log in to see your order updates, chat mentions, payouts, and announcements.</p>
+        <Bell size={40} style={{ color: 'var(--color-text-muted)' }} />
+        <h2 style={{ color: 'var(--color-heading)' }}>Notifications</h2>
+        <p style={{ color: 'var(--color-text-muted)' }}>Log in to see your order updates, chat mentions, payouts, and announcements.</p>
       </div>
     )
   }
@@ -107,8 +107,8 @@ export default function Notifications() {
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '32px 20px 80px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#f8fafc', margin: '0 0 4px 0' }}>Notifications</h1>
-          <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>Orders, payments, chat, payouts, and platform announcements.</p>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-heading)', margin: '0 0 4px 0' }}>Notifications</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 13, margin: 0 }}>Orders, payments, chat, payouts, and platform announcements.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="btn btn-secondary btn-sm" onClick={handleMarkAll}>
@@ -126,7 +126,7 @@ export default function Notifications() {
             key={id}
             type="button"
             onClick={() => setFilter(id)}
-            style={{ fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid #2d3748', background: filter === id ? '#1e293b' : 'transparent', color: filter === id ? '#f8fafc' : '#64748b' }}
+            style={{ fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid var(--input-border)', background: filter === id ? 'var(--card-border)' : 'transparent', color: filter === id ? 'var(--color-heading)' : 'var(--color-text-muted)' }}
           >
             {label}
           </button>
@@ -134,23 +134,23 @@ export default function Notifications() {
         <button
           type="button"
           onClick={handleClearRead}
-          style={{ fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid transparent', background: 'transparent', color: '#ef4444', display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}
+          style={{ fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', border: '1px solid transparent', background: 'transparent', color: 'var(--color-error)', display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}
         >
           <Trash2 size={12} /> Clear read
         </button>
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: 10, padding: '12px 16px', marginBottom: 14, fontSize: 13, color: '#fca5a5' }}>
+        <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--color-error)', borderRadius: 10, padding: '12px 16px', marginBottom: 14, fontSize: 13, color: '#fca5a5' }}>
           {error}
         </div>
       )}
 
-      <div style={{ background: '#161922', border: '1px solid #1e293b', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12, overflow: 'hidden' }}>
         {loading && items.length === 0 ? (
-          <p style={{ color: '#64748b', fontSize: 13, padding: 24, textAlign: 'center' }}>Loading notifications…</p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 13, padding: 24, textAlign: 'center' }}>Loading notifications…</p>
         ) : items.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13 }}>
             <Bell size={30} style={{ opacity: 0.5, marginBottom: 10 }} />
             <div>Nothing here yet.</div>
           </div>
@@ -158,22 +158,22 @@ export default function Notifications() {
           items.map((n) => (
             <div
               key={n.id}
-              style={{ display: 'flex', gap: 12, padding: '14px 16px', borderBottom: '1px solid #1e293b', background: n.read_at ? 'transparent' : 'rgba(216, 98, 44, 0.05)' }}
+              style={{ display: 'flex', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--card-border)', background: n.read_at ? 'transparent' : 'rgba(216, 98, 44, 0.05)' }}
             >
-              <span style={{ width: 10, height: 10, borderRadius: '50%', marginTop: 5, flexShrink: 0, background: TYPE_COLOR[n.type] || '#94a3b8' }} />
+              <span style={{ width: 10, height: 10, borderRadius: '50%', marginTop: 5, flexShrink: 0, background: TYPE_COLOR[n.type] || 'var(--color-text-muted)' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <strong style={{ fontSize: 14, color: '#f8fafc' }}>{n.title}</strong>
-                  <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: TYPE_COLOR[n.type] || '#94a3b8' }}>{n.type}</span>
+                  <strong style={{ fontSize: 14, color: 'var(--color-heading)' }}>{n.title}</strong>
+                  <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: TYPE_COLOR[n.type] || 'var(--color-text-muted)' }}>{n.type}</span>
                 </div>
-                {n.body && <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 2, lineHeight: 1.5 }}>{n.body}</div>}
+                {n.body && <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 2, lineHeight: 1.5 }}>{n.body}</div>}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                  <span style={{ fontSize: 11.5, color: '#64748b' }}><TimeAgo value={n.created_at} /></span>
+                  <span style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}><TimeAgo value={n.created_at} /></span>
                   {n.link && (
                     <Link
                       to={n.link}
                       onClick={() => handleOpen(n)}
-                      style={{ fontSize: 12, fontWeight: 700, color: '#fb923c', textDecoration: 'none' }}
+                      style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-accent)', textDecoration: 'none' }}
                     >
                       Open →
                     </Link>
@@ -186,7 +186,7 @@ export default function Notifications() {
                     type="button"
                     onClick={() => handleOpen(n)}
                     title="Mark as read"
-                    style={{ background: 'none', border: '1px solid #2d3748', borderRadius: 6, color: '#60a5fa', fontSize: 11, fontWeight: 700, padding: '4px 8px', cursor: 'pointer' }}
+                    style={{ background: 'none', border: '1px solid var(--input-border)', borderRadius: 6, color: 'var(--color-info-text)', fontSize: 11, fontWeight: 700, padding: '4px 8px', cursor: 'pointer' }}
                   >
                     Read
                   </button>
@@ -205,7 +205,7 @@ export default function Notifications() {
         )}
       </div>
       {meta && meta.total > items.length && (
-        <div style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>Showing {items.length} of {meta.total}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 10 }}>Showing {items.length} of {meta.total}</div>
       )}
     </div>
   )

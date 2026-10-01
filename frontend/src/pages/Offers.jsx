@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Tag, Check, X, RefreshCw, Store, User } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -14,10 +14,10 @@ function formatPrice(val) {
 }
 
 const STATUS_COLORS = {
-  pending: '#eab308',
-  accepted: '#10b981',
-  rejected: '#ef4444',
-  withdrawn: '#64748b',
+  pending: 'var(--color-warning)',
+  accepted: 'var(--color-success)',
+  rejected: 'var(--color-error)',
+  withdrawn: 'var(--color-text-muted)',
 }
 
 function OfferCard({ offer, mode, onAction, acting }) {
@@ -27,23 +27,23 @@ function OfferCard({ offer, mode, onAction, acting }) {
   const [confirming, setConfirming] = useState(null) // 'accept' | 'reject' | null
 
   return (
-    <div style={{ background: '#161922', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
+    <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12, padding: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
         <div>
-          <Link to={listingPath} style={{ fontWeight: 700, color: '#f8fafc', textDecoration: 'none', fontSize: 15 }}>
+          <Link to={listingPath} style={{ fontWeight: 700, color: 'var(--color-heading)', textDecoration: 'none', fontSize: 15 }}>
             {offer.item_title || (offer.item_type === 'car' ? 'Vehicle listing' : 'Parts listing')}
           </Link>
-          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
             {mode === 'received'
-              ? <>From <strong style={{ color: '#cbd5e1' }}>{offer.buyer?.name || 'Buyer'}</strong></>
-              : <>To <strong style={{ color: '#cbd5e1' }}>{offer.seller?.name || 'Seller'}</strong></>}
+              ? <>From <strong style={{ color: 'var(--color-text)' }}>{offer.buyer?.name || 'Buyer'}</strong></>
+              : <>To <strong style={{ color: 'var(--color-text)' }}>{offer.seller?.name || 'Seller'}</strong></>}
             {' · '}<TimeAgo value={offer.created_at} />
           </div>
         </div>
         <span style={{
           fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
-          color: STATUS_COLORS[offer.status] || '#94a3b8',
-          border: `1px solid ${STATUS_COLORS[offer.status] || '#334155'}`,
+          color: STATUS_COLORS[offer.status] || 'var(--color-text-muted)',
+          border: `1px solid ${STATUS_COLORS[offer.status] || 'var(--input-border)'}`,
           borderRadius: 12, padding: '4px 10px', height: 'fit-content',
         }}>
           {OFFER_STATUS_LABELS[offer.status] || offer.status}
@@ -51,17 +51,17 @@ function OfferCard({ offer, mode, onAction, acting }) {
       </div>
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', marginBottom: 8 }}>
-        <span style={{ fontSize: 20, fontWeight: 900, color: '#fb923c' }}>{formatPrice(offer.amount)}</span>
-        <span style={{ fontSize: 12, color: '#64748b' }}>Asking: {formatPrice(offer.item_price)}</span>
+        <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--color-accent)' }}>{formatPrice(offer.amount)}</span>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Asking: {formatPrice(offer.item_price)}</span>
       </div>
 
       {offer.message && (
-        <div style={{ fontSize: 13, color: '#cbd5e1', background: '#0f1117', border: '1px solid #1e293b', borderRadius: 8, padding: '10px 14px', marginBottom: 8 }}>
+        <div style={{ fontSize: 13, color: 'var(--color-text)', background: 'var(--color-surface-inset)', border: '1px solid var(--card-border)', borderRadius: 8, padding: '10px 14px', marginBottom: 8 }}>
           “{offer.message}”
         </div>
       )}
       {offer.seller_note && (
-        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>
           Seller note: <em>{offer.seller_note}</em>
         </div>
       )}
@@ -79,7 +79,7 @@ function OfferCard({ offer, mode, onAction, acting }) {
 
       {mode === 'mine' && offer.status === 'accepted' && !offer.checkout_used && offer.checkout_url && (
         <div style={{ marginTop: 8, background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: 8, padding: '10px 14px' }}>
-          <div style={{ fontSize: 12, color: '#10b981', fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-success)', fontWeight: 700, marginBottom: 8 }}>
             Accepted — this price is pinned to you. Check out before the seller changes their mind.
           </div>
           <Link to={offer.checkout_url} className="btn btn-primary btn-sm">
@@ -107,7 +107,7 @@ function OfferCard({ offer, mode, onAction, acting }) {
             onChange={(e) => setNote(e.target.value)}
             maxLength={500}
             placeholder={confirming === 'accept' ? 'Note for buyer (optional)' : 'Reason for declining (optional)'}
-            style={{ width: '100%', background: '#0f1117', border: '1px solid #2d3748', borderRadius: 8, padding: '10px 12px', color: '#f8fafc', fontSize: 13, outline: 'none', marginBottom: 8 }}
+            style={{ width: '100%', background: 'var(--color-surface-inset)', border: '1px solid var(--input-border)', borderRadius: 8, padding: '10px 12px', color: 'var(--color-heading)', fontSize: 13, outline: 'none', marginBottom: 8 }}
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn btn-primary btn-sm" disabled={acting} onClick={() => onAction(confirming, offer, note.trim() || undefined)}>
@@ -181,10 +181,10 @@ export default function Offers() {
   if (!isAuthenticated) {
     return (
       <div style={{ maxWidth: 640, margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
-        <Tag size={36} style={{ color: '#64748b', marginBottom: 12 }} />
+        <Tag size={36} style={{ color: 'var(--color-text-muted)', marginBottom: 12 }} />
         <h2>Price Offers</h2>
-        <p style={{ color: '#94a3b8' }}>
-          Please <Link to="/login" style={{ color: '#fb923c', fontWeight: 700 }}>log in</Link> to
+        <p style={{ color: 'var(--color-text-muted)' }}>
+          Please <Link to="/login" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>log in</Link> to
           make and manage price offers.
         </p>
       </div>
@@ -196,7 +196,7 @@ export default function Offers() {
       <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
         <Tag size={24} /> Price Offers
       </h1>
-      <p style={{ color: '#94a3b8', fontSize: 14, margin: '0 0 24px 0' }}>
+      <p style={{ color: 'var(--color-text-muted)', fontSize: 14, margin: '0 0 24px 0' }}>
         Propose your price with a comment — sellers accept exactly one offer per listing.
       </p>
 
@@ -222,25 +222,25 @@ export default function Offers() {
       </div>
 
       {notice && (
-        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', color: '#10b981', borderRadius: 8, padding: '12px 16px', fontSize: 13, marginBottom: 16 }}>
+        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid var(--color-success)', color: 'var(--color-success)', borderRadius: 8, padding: '12px 16px', fontSize: 13, marginBottom: 16 }}>
           {notice}
         </div>
       )}
       {error && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', color: '#f87171', borderRadius: 8, padding: '12px 16px', fontSize: 13, marginBottom: 16 }}>
+        <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid var(--color-error)', color: '#f87171', borderRadius: 8, padding: '12px 16px', fontSize: 13, marginBottom: 16 }}>
           {error}
         </div>
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', color: '#94a3b8', padding: 48 }}>
+        <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 48 }}>
           <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: 12 }} />
           <div>Loading offers...</div>
         </div>
       ) : offers.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#94a3b8', padding: 48, background: '#161922', border: '1px solid #1e293b', borderRadius: 12 }}>
+        <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 48, background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12 }}>
           <Tag size={32} style={{ marginBottom: 12 }} />
-          <h3 style={{ color: '#f8fafc', margin: '0 0 6px 0' }}>No offers yet</h3>
+          <h3 style={{ color: 'var(--color-heading)', margin: '0 0 6px 0' }}>No offers yet</h3>
           <p style={{ margin: 0, fontSize: 14 }}>
             {tab === 'mine'
               ? 'Browse the marketplace and tap “Make an Offer” on any listing.'

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { 
   Search, 
   Heart, 
@@ -46,6 +46,12 @@ import Favorites from './pages/Favorites.jsx'
 import Messages from './pages/Messages.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
+import OAuthCallback from './pages/OAuthCallback.jsx'
+import Welcome from './pages/Welcome.jsx'
+import Wanted from './pages/Wanted.jsx'
+import WantedNew from './pages/WantedNew.jsx'
+import WantedDetail from './pages/WantedDetail.jsx'
+import Perks from './pages/Perks.jsx'
 import SearchModal from './components/SearchModal.jsx'
 import MobileQuickActions from './components/MobileQuickActions.jsx'
 import AuthModal from './components/AuthModal.jsx'
@@ -70,11 +76,28 @@ const NAV = [
 ]
 
 const ANNOUNCEMENTS = [
-  { icon: Sparkles, text: 'Become a Sales Agent — Earn 5% commission sharing parts & car listings to Facebook' },
-  { icon: Truck, text: 'Free Nationwide Freight on Verified Parts orders over ₱8,000' },
+  { icon: Sparkles, text: 'Become a Sales Agent — Earn 3% on cars · 10% on parts sharing listings to Facebook' },
+  { icon: Truck, text: 'Nationwide freight computed at checkout · Free shipping on flagged listings' },
   { icon: ShieldCheck, text: '100-Point Garage Certified Inspection Guarantee on all vehicles' },
   { icon: MapPin, text: 'Makati Showroom & Barako Café open Tue–Sun · Test drives & Lift inspections' },
 ]
+
+function RequireAuth({ children }) {
+  const { status } = useAuth()
+  if (status === 'loading') {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', padding: 64, color: 'var(--color-text-muted)' }}>
+        <p>Checking your session…</p>
+      </div>
+    )
+  }
+  // Guests can never sit on sensitive pages (orders, receipts, checkout,
+  // wallet, inbox…) — straight to login, no preview.
+  if (status !== 'authenticated') {
+    return <Navigate to="/login" replace />
+  }
+  return children
+}
 
 function Placeholder({ title }) {
   return (
@@ -97,7 +120,8 @@ function Placeholder({ title }) {
 export default function App() {
   const { 
     isAuthenticated, 
-    user, 
+    user,
+    status: authStatus,
     logout, 
     authModal, 
     openLoginModal, 
@@ -121,6 +145,17 @@ export default function App() {
 
   const isBuyer = user?.role === 'buyer'
   const isSellerAccount = user && ['seller', 'dealer', 'parts_seller', 'admin', 'super_admin'].includes(user.role)
+
+  // Setup gate: signed-in accounts that haven't finished /welcome can't
+  // enter the app. Auth + callback + wizard routes stay accessible.
+  useEffect(() => {
+    if (authStatus === 'loading' || !isAuthenticated) return
+    if (!user?.needs_onboarding) return
+    const open = ['/welcome', '/login', '/register', '/oauth/callback']
+    if (!open.includes(location.pathname)) {
+      navigate('/welcome', { replace: true })
+    }
+  }, [authStatus, isAuthenticated, user, location.pathname, navigate])
   const navItems = [
     ...NAV.filter((item) => !(isBuyer && item.to === '/sell')),
     ...(isAuthenticated && isBuyer ? [{ to: '/become-seller', label: 'Become a Seller' }] : []),
@@ -270,7 +305,8 @@ export default function App() {
               {unreadCount > 0 && <span className="action-badge action-badge--chat">{unreadCount}</span>}
             </Link>
 
-            {/*<ThemeToggle />*/}
+            {/* Day / night theme toggle */}
+            <ThemeToggle />
 
             {isAuthenticated && <NotificationBell />}
 
@@ -436,34 +472,33 @@ export default function App() {
                     {isNight ? <SunIcon size={15} /> : <MoonIcon size={15} />}
                     <span>{isNight ? 'Day theme' : 'Night theme'}</span>
                   </button>
+                  <Link
+                    to="/wallet"
+                    className="mobile-drawer-quicklink"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <WalletIcon size={15} />
+                    <span>My Wallet & Cash-outs</span>
+                  </Link>
                   {!isBuyer && (
-                    <>
-                      <Link
-                        to="/wallet"
-                        className="mobile-drawer-quicklink"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <WalletIcon size={15} />
-                        <span>Seller Wallet & Cash-outs</span>
-                      </Link>
-                      <Link
-                        to="/seller-analytics"
-                        className="mobile-drawer-quicklink"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <BarChart3 size={15} />
-                        <span>Sales Analytics</span>
-                      </Link>
-                    </>
+                    <Link
+                      to="/seller-analytics"
+                      className="mobile-drawer-quicklink"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <BarChart3 size={15} />
+                      <span>Sales Analytics</span>
+                    </Link>
                   )}
                 </div>
 
                 <button 
                   type="button" 
                   className="btn btn-secondary mobile-drawer-logout-btn" 
-                  onClick={() => {
+                  onClick={async () => {
                     setMobileMenuOpen(false)
-                    logout()
+                    await logout()
+                    navigate('/login', { replace: true })
                   }}
                 >
                   <LogOut size={16} />
@@ -537,40 +572,46 @@ export default function App() {
           <Route path="/cars/:id" element={<CarDetail />} />
           <Route path="/parts" element={<PartsMarketplace />} />
           <Route path="/parts/:id" element={<PartDetail />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/sales-order/:orderNumber" element={<SalesOrder />} />
-          <Route path="/orders/:orderNumber" element={<SalesOrder />} />
+          <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+          <Route path="/sales-order/:orderNumber" element={<RequireAuth><SalesOrder /></RequireAuth>} />
+          <Route path="/orders/:orderNumber" element={<RequireAuth><SalesOrder /></RequireAuth>} />
           <Route path="/verify/:hash" element={<VerifyTransaction />} />
-          <Route path="/my-orders" element={<MyOrders />} />
-          <Route path="/orders" element={<MyOrders />} />
-          <Route path="/wallet" element={<Wallet />} />
-          <Route path="/seller-analytics" element={<SellerAnalytics />} />
-          <Route path="/analytics" element={<SellerAnalytics />} />
+          <Route path="/my-orders" element={<RequireAuth><MyOrders /></RequireAuth>} />
+          <Route path="/orders" element={<RequireAuth><MyOrders /></RequireAuth>} />
+          <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
+          <Route path="/seller-analytics" element={<RequireAuth><SellerAnalytics /></RequireAuth>} />
+          <Route path="/analytics" element={<RequireAuth><SellerAnalytics /></RequireAuth>} />
           <Route path="/agent" element={<AgentPortal />} />
           <Route path="/agents" element={<AgentPortal />} />
           <Route path="/agent-portal" element={<AgentPortal />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/saved" element={<Favorites />} />
           <Route path="/wishlist" element={<Favorites />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/inbox" element={<Messages />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/offers" element={<Offers />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/account" element={<Settings />} />
-          <Route path="/sell" element={<CreateListing />} />
-          <Route path="/sell/cars" element={<CreateListing defaultType="car" />} />
-          <Route path="/sell/parts" element={<CreateListing defaultType="part" />} />
-          <Route path="/create-listing" element={<CreateListing />} />
+          <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
+          <Route path="/inbox" element={<RequireAuth><Messages /></RequireAuth>} />
+          <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+          <Route path="/offers" element={<RequireAuth><Offers /></RequireAuth>} />
+          <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/account" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/sell" element={<RequireAuth><CreateListing /></RequireAuth>} />
+          <Route path="/sell/cars" element={<RequireAuth><CreateListing defaultType="car" /></RequireAuth>} />
+          <Route path="/sell/parts" element={<RequireAuth><CreateListing defaultType="part" /></RequireAuth>} />
+          <Route path="/create-listing" element={<RequireAuth><CreateListing /></RequireAuth>} />
           <Route path="/become-seller" element={<BecomeSeller />} />
-          <Route path="/my-listings" element={<MyListings />} />
-          <Route path="/seller-dashboard" element={<MyListings />} />
+          <Route path="/my-listings" element={<RequireAuth><MyListings /></RequireAuth>} />
+          <Route path="/seller-dashboard" element={<RequireAuth><MyListings /></RequireAuth>} />
           <Route path="/showroom" element={<Showroom />} />
           <Route path="/showroom/:username" element={<Showroom />} />
           <Route path="/services" element={<Placeholder title="Garage Inspection Services" />} />
           <Route path="/about" element={<Placeholder title="About Garage Marketplace" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/welcome" element={<Welcome />} />
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
+          <Route path="/wanted" element={<Wanted />} />
+          <Route path="/wanted/new" element={<WantedNew />} />
+          <Route path="/wanted/:id" element={<WantedDetail />} />
+          <Route path="/perks" element={<Perks />} />
           <Route path="*" element={<div style={{ padding: 48, textAlign: 'center' }}><h2>Page Not Found</h2><p>The page you are looking for does not exist. <Link to="/">Return to Homepage</Link></p></div>} />
         </Routes>
       </main>

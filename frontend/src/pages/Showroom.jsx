@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Building2,
@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Layers,
   ArrowRight,
+  ArrowLeft,
   X,
   Award,
   ChevronRight,
@@ -515,7 +516,7 @@ export default function Showroom() {
               className={`showroom-tab-btn ${activeTab === 'verified' ? 'active' : ''}`}
               onClick={() => setActiveTab('verified')}
             >
-              <ShieldCheck size={14} style={{ color: '#10b981' }} />
+              <ShieldCheck size={14} style={{ color: 'var(--color-success)' }} />
               <span>KYC Verified Garages</span>
             </button>
           </div>
@@ -766,6 +767,18 @@ export default function Showroom() {
       {selectedSellerUsername && (
         <div className="showcase-modal-overlay" onClick={handleCloseShowcase}>
           <div className="showcase-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Mobile page-mode back bar (desktop keeps the floating X). */}
+            <div className="showcase-mobile-bar">
+              <button
+                type="button"
+                className="showcase-back-btn"
+                onClick={handleCloseShowcase}
+                aria-label="Back to showrooms"
+              >
+                <ArrowLeft size={18} />
+                <span>Showrooms</span>
+              </button>
+            </div>
             <button
               type="button"
               className="showcase-close-btn"
@@ -798,8 +811,8 @@ export default function Showroom() {
                           <span
                             className="badge"
                             style={{
-                              background: '#ffedd5',
-                              color: '#c2410c',
+                              background: 'var(--color-warning-bg)',
+                              color: 'var(--color-warning)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: 4,
@@ -814,8 +827,8 @@ export default function Showroom() {
                           <span
                             className="badge"
                             style={{
-                              background: '#dcfce7',
-                              color: '#15803d',
+                              background: 'var(--color-success-bg)',
+                              color: 'var(--color-success)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: 4,
@@ -1017,7 +1030,7 @@ export default function Showroom() {
                                     key={i}
                                     size={14}
                                     fill={i < rev.rating ? '#f59e0b' : 'none'}
-                                    stroke={i < rev.rating ? '#f59e0b' : '#94a3b8'}
+                                    stroke={i < rev.rating ? '#f59e0b' : 'var(--color-text-muted)'}
                                   />
                                 ))}
                               </div>

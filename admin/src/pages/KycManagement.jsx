@@ -1,38 +1,20 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ShieldCheck,
   ShieldAlert,
   Clock,
   Search,
   CheckCircle2,
-  XCircle,
   Eye,
-  ExternalLink,
   RefreshCw,
-  X,
   FileText,
   UserCheck,
-  AlertCircle,
   ThumbsUp,
-  ThumbsDown,
-  Building2,
   Store,
-  Layers,
-  Calendar,
-  Sparkles,
-  Maximize2,
-  ZoomIn,
 } from 'lucide-react'
 import { adminApi } from '../api/admin.js'
 import { TimeAgo } from '../utils/timeAgo.jsx'
-
-const REJECTION_TEMPLATES = [
-  'Blurry or unreadable document scan. Please provide a clear, well-lit photo of your government-issued ID.',
-  'The submitted government ID is expired. Please upload a currently valid ID document.',
-  'Name mismatch between uploaded ID and registered seller identity. Please clarify and re-submit.',
-  'Business Permit / SEC registration document cannot be verified with official registries.',
-  'Selfie photo holding ID is missing or faces do not clearly match.',
-]
 
 export default function KycManagement() {
   const [submissions, setSubmissions] = useState([])
@@ -42,12 +24,6 @@ export default function KycManagement() {
   const [statusFilter, setStatusFilter] = useState('pending') // pending | approved | rejected | all
   const [roleFilter, setRoleFilter] = useState('all')
 
-  // Review modal state
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [reviewModalOpen, setReviewModalOpen] = useState(false)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState(null)
-  const [imagePreviewTitle, setImagePreviewTitle] = useState('')
-  const [rejectionReason, setRejectionReason] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [actionSuccess, setActionSuccess] = useState(null)
   const [actionError, setActionError] = useState(null)
@@ -78,44 +54,16 @@ export default function KycManagement() {
     fetchSubmissions()
   }
 
-  const handleOpenReview = (user) => {
-    setSelectedUser(user)
-    setRejectionReason('')
-    setActionError(null)
-    setReviewModalOpen(true)
-  }
-
-  const handleApprove = async (userToApprove = selectedUser) => {
+  const handleApprove = async (userToApprove) => {
     if (!userToApprove) return
     setActionLoading(true)
     setActionError(null)
     try {
       await adminApi.approveKyc(userToApprove.id)
       setActionSuccess(`KYC approved for @${userToApprove.username || userToApprove.name}. Verified Seller Trust Badge granted.`)
-      setReviewModalOpen(false)
       fetchSubmissions()
     } catch (err) {
       setActionError(err?.response?.data?.message || 'Failed to approve KYC verification.')
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleReject = async () => {
-    if (!selectedUser) return
-    if (!rejectionReason.trim()) {
-      setActionError('Please select a rejection reason template or provide custom compliance feedback.')
-      return
-    }
-    setActionLoading(true)
-    setActionError(null)
-    try {
-      await adminApi.rejectKyc(selectedUser.id, rejectionReason.trim())
-      setActionSuccess(`KYC rejected for @${selectedUser.username || selectedUser.name}. Feedback sent to seller.`)
-      setReviewModalOpen(false)
-      fetchSubmissions()
-    } catch (err) {
-      setActionError(err?.response?.data?.message || 'Failed to reject KYC verification.')
     } finally {
       setActionLoading(false)
     }
@@ -127,7 +75,7 @@ export default function KycManagement() {
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <span style={{ display: 'inline-flex', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>
+            <span style={{ display: 'inline-flex', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'rgba(16, 185, 129, 0.12)', color: 'var(--admin-success)' }}>
               <ShieldCheck size={22} />
             </span>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.65rem', fontWeight: 800, color: 'var(--admin-text-primary)', margin: 0 }}>
@@ -147,12 +95,19 @@ export default function KycManagement() {
       </div>
 
       {actionSuccess && (
-        <div className="admin-card" style={{ padding: '14px 18px', marginBottom: 20, borderColor: '#10b981', background: 'rgba(16, 185, 129, 0.08)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="admin-card" style={{ padding: '14px 18px', marginBottom: 20, borderColor: 'var(--admin-success)', background: 'var(--admin-success-bg)', color: 'var(--admin-success)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle2 size={18} />
             <span>{actionSuccess}</span>
           </div>
           <button type="button" onClick={() => setActionSuccess(null)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 18 }}>×</button>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="admin-card" style={{ padding: '14px 18px', marginBottom: 20, borderColor: 'var(--admin-danger)', background: 'var(--admin-danger-bg)', color: 'var(--admin-danger)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError(null)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
       )}
 
@@ -186,7 +141,7 @@ export default function KycManagement() {
           onClick={() => setStatusFilter('approved')}
           style={{
             padding: '18px 20px',
-            borderLeft: '4px solid #10b981',
+            borderLeft: '4px solid var(--admin-success)',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             background: statusFilter === 'approved' ? 'rgba(16, 185, 129, 0.04)' : undefined,
@@ -194,9 +149,9 @@ export default function KycManagement() {
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--admin-text-secondary)' }}>Verified Merchants</span>
-            <ShieldCheck size={18} style={{ color: '#10b981' }} />
+            <ShieldCheck size={18} style={{ color: 'var(--admin-success)' }} />
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10b981' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--admin-success)' }}>
             {stats?.approved_merchants ?? 0}
           </div>
           <div style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginTop: 4 }}>
@@ -209,7 +164,7 @@ export default function KycManagement() {
           onClick={() => setStatusFilter('rejected')}
           style={{
             padding: '18px 20px',
-            borderLeft: '4px solid #ef4444',
+            borderLeft: '4px solid var(--admin-danger)',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             background: statusFilter === 'rejected' ? 'rgba(239, 68, 68, 0.04)' : undefined,
@@ -217,9 +172,9 @@ export default function KycManagement() {
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--admin-text-secondary)' }}>Rejected Submissions</span>
-            <ShieldAlert size={18} style={{ color: '#ef4444' }} />
+            <ShieldAlert size={18} style={{ color: 'var(--admin-danger)' }} />
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ef4444' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--admin-danger)' }}>
             {stats?.rejected_submissions ?? 0}
           </div>
           <div style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginTop: 4 }}>
@@ -298,7 +253,7 @@ export default function KycManagement() {
           </div>
 
           {/* Search */}
-          <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 240px', maxWidth: 360 }}>
+          <form onSubmit={handleSearch} className="kyc-search-form" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 240px', maxWidth: 360 }}>
             <div style={{ position: 'relative', width: '100%' }}>
               <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--admin-text-muted)' }} />
               <input
@@ -317,7 +272,7 @@ export default function KycManagement() {
 
       {/* KYC Submissions Table */}
       <div className="admin-card" style={{ overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="kyc-queue-scroll" style={{ overflowX: 'auto' }}>
           <table className="admin-table">
             <thead>
               <tr>
@@ -379,7 +334,7 @@ export default function KycManagement() {
                             <div style={{ fontWeight: 700, color: 'var(--admin-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span>@{user.username || 'seller'}</span>
                               {isVerified && (
-                                <ShieldCheck size={14} style={{ color: '#10b981' }} title="Verified Seller Badge" />
+                                <ShieldCheck size={14} style={{ color: 'var(--admin-success)' }} title="Verified Seller Badge" />
                               )}
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
@@ -410,35 +365,27 @@ export default function KycManagement() {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {user.kyc_document_url ? (
-                            <button
-                              type="button"
+                            <Link
+                              to={`/kyc/${user.id}`}
                               className="btn btn-secondary btn-sm"
-                              style={{ padding: '4px 8px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                              onClick={() => {
-                                setImagePreviewUrl(user.kyc_document_url)
-                                setImagePreviewTitle(`Government ID Document: @${user.username || user.name}`)
-                              }}
+                              style={{ padding: '4px 8px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
                             >
                               <FileText size={12} />
                               <span>ID Scan</span>
-                            </button>
+                            </Link>
                           ) : (
                             <span style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>No ID Scan</span>
                           )}
 
                           {user.kyc_selfie_url && (
-                            <button
-                              type="button"
+                            <Link
+                              to={`/kyc/${user.id}`}
                               className="btn btn-secondary btn-sm"
-                              style={{ padding: '4px 8px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                              onClick={() => {
-                                setImagePreviewUrl(user.kyc_selfie_url)
-                                setImagePreviewTitle(`Selfie / Showroom Verification: @${user.username || user.name}`)
-                              }}
+                              style={{ padding: '4px 8px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
                             >
                               <UserCheck size={12} />
                               <span>Selfie</span>
-                            </button>
+                            </Link>
                           )}
                         </div>
                       </td>
@@ -446,7 +393,7 @@ export default function KycManagement() {
                       {/* Status */}
                       <td>
                         {isVerified ? (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 'var(--radius-pill)', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', fontSize: 12, fontWeight: 700 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 'var(--radius-pill)', background: 'rgba(16, 185, 129, 0.12)', color: 'var(--admin-success)', fontSize: 12, fontWeight: 700 }}>
                             <ShieldCheck size={14} />
                             <span>Verified Badge Active</span>
                           </div>
@@ -456,7 +403,7 @@ export default function KycManagement() {
                             <span>Pending Review</span>
                           </div>
                         ) : isRejected ? (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 'var(--radius-pill)', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', fontSize: 12, fontWeight: 700 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 'var(--radius-pill)', background: 'rgba(239, 68, 68, 0.12)', color: 'var(--admin-danger)', fontSize: 12, fontWeight: 700 }}>
                             <ShieldAlert size={14} />
                             <span>Rejected</span>
                           </div>
@@ -473,22 +420,21 @@ export default function KycManagement() {
                       {/* Actions */}
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenReview(user)}
+                          <Link
+                            to={`/kyc/${user.id}`}
                             className="btn btn-sm btn-primary"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
                           >
                             <Eye size={13} />
-                            <span>Review & Moderate</span>
-                          </button>
+                            <span>Review</span>
+                          </Link>
                           {isPending && (
                             <button
                               type="button"
                               onClick={() => handleApprove(user)}
-                              className="btn btn-sm btn-secondary"
+                              className="btn btn-sm btn-success"
                               title="Quick Approve"
-                              style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+                              disabled={actionLoading}
                             >
                               <ThumbsUp size={13} />
                             </button>
@@ -503,287 +449,6 @@ export default function KycManagement() {
           </table>
         </div>
       </div>
-
-      {/* Comprehensive KYC Inspection Modal */}
-      {reviewModalOpen && selectedUser && (
-        <div className="modal-backdrop" onClick={() => setReviewModalOpen(false)}>
-          <div
-            className="modal-container"
-            style={{ maxWidth: 780, maxHeight: '92vh' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #18191c 0%, #22242a 100%)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: '50%',
-                    background: selectedUser.is_kyc_verified ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 88, 12, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: selectedUser.is_kyc_verified ? '#10b981' : '#ea580c',
-                  }}
-                >
-                  {selectedUser.is_kyc_verified ? <ShieldCheck size={22} /> : <Clock size={22} />}
-                </div>
-                <div>
-                  <h3 className="modal-title" style={{ color: '#fff', fontSize: '1.25rem' }}>
-                    KYC Compliance Audit: @{selectedUser.username || selectedUser.name}
-                  </h3>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                    Legal Name: {selectedUser.name} · {selectedUser.email}
-                  </span>
-                </div>
-              </div>
-              <button type="button" onClick={() => setReviewModalOpen(false)} className="modal-close">
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="modal-body" style={{ padding: 24 }}>
-              {actionError && (
-                <div style={{ padding: '12px 16px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: 13, marginBottom: 18 }}>
-                  {actionError}
-                </div>
-              )}
-
-              {/* Applicant Overview Card */}
-              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 12, padding: 18, marginBottom: 20 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, fontSize: 13 }}>
-                  <div>
-                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11, fontWeight: 600 }}>Username (Public)</span>
-                    <strong style={{ color: '#fff' }}>@{selectedUser.username || 'seller'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11, fontWeight: 600 }}>Government ID Type</span>
-                    <strong style={{ color: '#fff', textTransform: 'capitalize' }}>
-                      {selectedUser.kyc_document_type?.replace('_', ' ') || 'ID Document'}
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11, fontWeight: 600 }}>Document ID Number</span>
-                    <strong style={{ color: '#fff', fontFamily: 'monospace' }}>
-                      {selectedUser.kyc_document_number || '—'}
-                    </strong>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11, fontWeight: 600 }}>Submission Date</span>
-                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                      {selectedUser.kyc_submitted_at ? new Date(selectedUser.kyc_submitted_at).toLocaleString() : '—'}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedUser.kyc_notes && (
-                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255, 255, 255, 0.06)', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                    <strong style={{ color: '#fff' }}>Applicant Notes:</strong> {selectedUser.kyc_notes}
-                  </div>
-                )}
-              </div>
-
-              {/* Document Scans Viewer */}
-              <div style={{ marginBottom: 24 }}>
-                <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--admin-text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <FileText size={16} />
-                  <span>Submitted Identity Proof & Physical Showroom Photos</span>
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  {/* Government ID Scan */}
-                  <div style={{ background: 'rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 10 }}>
-                      Government ID / Business Permit
-                    </span>
-                    {selectedUser.kyc_document_url ? (
-                      <div>
-                        <div
-                          style={{
-                            height: 180,
-                            borderRadius: 8,
-                            overflow: 'hidden',
-                            background: '#111',
-                            cursor: 'pointer',
-                            position: 'relative',
-                            marginBottom: 10,
-                          }}
-                          onClick={() => {
-                            setImagePreviewUrl(selectedUser.kyc_document_url)
-                            setImagePreviewTitle(`Government ID Document: @${selectedUser.username || selectedUser.name}`)
-                          }}
-                        >
-                          <img
-                            src={selectedUser.kyc_document_url}
-                            alt="Government ID"
-                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                          />
-                          <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '3px 6px', borderRadius: 4, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ZoomIn size={12} />
-                            <span>Enlarge</span>
-                          </div>
-                        </div>
-                        <a
-                          href={selectedUser.kyc_document_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: 'var(--admin-info)', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                        >
-                          <ExternalLink size={13} />
-                          <span>Open in Full Browser Tab</span>
-                        </a>
-                      </div>
-                    ) : (
-                      <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontSize: 13 }}>
-                        No document uploaded
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Selfie with ID */}
-                  <div style={{ background: 'rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 10 }}>
-                      Selfie Holding ID / Showroom Photo
-                    </span>
-                    {selectedUser.kyc_selfie_url ? (
-                      <div>
-                        <div
-                          style={{
-                            height: 180,
-                            borderRadius: 8,
-                            overflow: 'hidden',
-                            background: '#111',
-                            cursor: 'pointer',
-                            position: 'relative',
-                            marginBottom: 10,
-                          }}
-                          onClick={() => {
-                            setImagePreviewUrl(selectedUser.kyc_selfie_url)
-                            setImagePreviewTitle(`Selfie with ID: @${selectedUser.username || selectedUser.name}`)
-                          }}
-                        >
-                          <img
-                            src={selectedUser.kyc_selfie_url}
-                            alt="Selfie verification"
-                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                          />
-                          <div style={{ position: 'absolute', bottom: 6, right: 6, background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '3px 6px', borderRadius: 4, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <ZoomIn size={12} />
-                            <span>Enlarge</span>
-                          </div>
-                        </div>
-                        <a
-                          href={selectedUser.kyc_selfie_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: 'var(--admin-info)', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                        >
-                          <ExternalLink size={13} />
-                          <span>Open in Full Browser Tab</span>
-                        </a>
-                      </div>
-                    ) : (
-                      <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', fontSize: 13 }}>
-                        No selfie uploaded (Optional)
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Compliance Rejection Section */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--admin-text-primary)', marginBottom: 6 }}>
-                  Rejection Reason & Compliance Feedback (Required for Rejection)
-                </label>
-
-                {/* Predefined Templates */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                  {REJECTION_TEMPLATES.map((tmpl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      style={{ fontSize: 11, padding: '4px 8px' }}
-                      onClick={() => setRejectionReason(tmpl)}
-                    >
-                      Template #{idx + 1}
-                    </button>
-                  ))}
-                </div>
-
-                <textarea
-                  rows={2}
-                  placeholder="Select a template above or type specific compliance feedback explaining why the document could not be approved."
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  className="admin-input"
-                  style={{ width: '100%', fontSize: 13 }}
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="modal-footer" style={{ background: '#1c1d22', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setReviewModalOpen(false)}
-                disabled={actionLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger"
-                onClick={handleReject}
-                disabled={actionLoading}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                <ThumbsDown size={14} />
-                <span>Reject Submission</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => handleApprove()}
-                disabled={actionLoading}
-                style={{ background: '#10b981', borderColor: '#10b981', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                <ThumbsUp size={14} />
-                <span>{actionLoading ? 'Processing...' : 'Approve & Grant Verified Trust Badge'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Image Zoom Lightbox Popup */}
-      {imagePreviewUrl && (
-        <div className="modal-backdrop" onClick={() => setImagePreviewUrl(null)} style={{ zIndex: 1100 }}>
-          <div
-            className="modal-container"
-            style={{ maxWidth: 900, maxHeight: '95vh', background: '#0f1117' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header" style={{ background: '#181920', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <h3 className="modal-title" style={{ color: '#fff', fontSize: 14 }}>{imagePreviewTitle}</h3>
-              <button type="button" onClick={() => setImagePreviewUrl(null)} className="modal-close">
-                <X size={20} />
-              </button>
-            </div>
-            <div style={{ padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400, background: '#000' }}>
-              <img
-                src={imagePreviewUrl}
-                alt={imagePreviewTitle}
-                style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

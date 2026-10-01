@@ -30,6 +30,25 @@ class DeliveryFeeService
     public const MIN_FEE = 150.00;
     public const MAX_FEE = 1200.00;
 
+    /**
+     * Effective policy (thresholds configurable in Admin → Config).
+     * A 0 threshold DISABLES the promo so distance always computes —
+     * same convention as free_freight_min_quantity.
+     *
+     * @return array{threshold:float,flat_fee:float,per_km:float,min_fee:float,max_fee:float,min_quantity:int}
+     */
+    public static function policy(): array
+    {
+        return [
+            'threshold' => (float) PlatformSetting::get('free_freight_threshold', self::FREE_FREIGHT_THRESHOLD),
+            'flat_fee' => (float) PlatformSetting::get('standard_flat_fee', self::FALLBACK_FLAT_FEE),
+            'per_km' => (float) PlatformSetting::get('freight_per_km', self::PER_KM_RATE),
+            'min_fee' => (float) PlatformSetting::get('freight_min_fee', self::MIN_FEE),
+            'max_fee' => (float) PlatformSetting::get('freight_max_fee', self::MAX_FEE),
+            'min_quantity' => (int) PlatformSetting::get('free_freight_min_quantity', 0),
+        ];
+    }
+
     private const CITY_CENTROIDS = [
         'valenzuela' => [14.7008, 120.9830],
         'quezon city' => [14.6760, 121.0437],
@@ -95,7 +114,7 @@ class DeliveryFeeService
             return $this->free('Listing flagged free shipping.', $origin);
         }
 
-        if ($subtotal >= $threshold) {
+        if ($subtotal >= $threshold && $threshold > 0) {
             return $this->free("Free freight for orders at/above ₱{$threshold}.", $origin);
         }
 

@@ -48,13 +48,18 @@ class OAuthController extends Controller
             return $error;
         }
 
-        $request->validate(['role' => ['sometimes', 'in:buyer,seller']]);
+        $request->validate([
+            'role' => ['sometimes', 'in:buyer,seller'],
+            'frontend' => ['sometimes', 'boolean'],
+        ]);
 
         // Stateless: no session needed for pure API/SPA. Role intent is
-        // round-tripped via `state` so signup keeps buyer/seller choice.
+        // round-tripped via `state` so signup keeps buyer/seller choice;
+        // browser flows append |web so the callback reliably 302s back to
+        // the SPA even when the Accept header doesn't say text/html.
         $driver = Socialite::driver($provider)->stateless();
         if ($role = $request->query('role')) {
-            $driver->with(['state' => $role]);
+            $driver->with(['state' => $role . ($request->boolean('frontend') ? '|web' : '')]);
         }
 
         $url = $driver->redirect()->getTargetUrl();
@@ -83,7 +88,11 @@ class OAuthController extends Controller
             ], 401);
         }
 
-        $role = $request->input('role', $request->query('state', 'buyer'));
+        $rawState = (string) $request->query('state', 'buyer');
+        $isWebFlow = str_contains($rawState, '|web');
+        $stateRole = explode('|', $rawState)[0] ?: 'buyer';
+
+        $role = $request->input('role', $stateRole);
 
         $user = $this->auth->findOrCreateOAuthUser(
             provider: $provider,
@@ -97,7 +106,13 @@ class OAuthController extends Controller
         $token = $this->auth->issueToken($user, "oauth:{$provider}");
 
         // Browser flow → hand the token to the SPA via redirect.
-        if ($request->boolean('frontend') || str_contains($request->header('Accept', ''), 'text/html')) {
+        // Detected via ?frontend=1, the |web state marker, an HTML Accept
+        // header, or Sec-Fetch-Mode: navigate (browsers always send it on
+        // address-bar navigations; API clients never do) — whichever
+        // survives the provider round-trip.
+        $isBrowserNavigation = str_contains($request->header('Sec-Fetch-Mode', ''), 'navigate')
+            || str_contains($request->header('Accept', ''), 'text/html');
+        if ($request->boolean('frontend') || $isWebFlow || $isBrowserNavigation) {
             $target = rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/')
                 .'/oauth/callback?'.http_build_query(['token' => $token, 'provider' => $provider]);
 

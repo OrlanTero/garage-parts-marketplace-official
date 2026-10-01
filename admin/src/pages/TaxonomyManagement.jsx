@@ -93,7 +93,7 @@ export default function TaxonomyManagement() {
     fetchTaxonomy()
   }, [])
 
-  // Configurations → Variables (delivery services, freight rules).
+  // Configurations → Variables (delivery services, freight rules, agent subscription).
   const [variables, setVariables] = useState({
     delivery_services: [],
     free_freight_threshold: '10000',
@@ -103,6 +103,9 @@ export default function TaxonomyManagement() {
     freight_min_fee: '150',
     freight_max_fee: '1200',
     free_freight_min_quantity: '0',
+    agent_subscription_fee: '100',
+    agent_referral_reward: '50',
+    agent_subscription_duration_days: '365',
   })
   const [varsLoaded, setVarsLoaded] = useState(false)
   const [varSaving, setVarSaving] = useState(false)
@@ -120,6 +123,9 @@ export default function TaxonomyManagement() {
         freight_min_fee: data?.freight_min_fee?.value ?? '150',
         freight_max_fee: data?.freight_max_fee?.value ?? '1200',
         free_freight_min_quantity: data?.free_freight_min_quantity?.value ?? '0',
+        agent_subscription_fee: data?.agent_subscription_fee?.value ?? '100',
+        agent_referral_reward: data?.agent_referral_reward?.value ?? '50',
+        agent_subscription_duration_days: data?.agent_subscription_duration_days?.value ?? '365',
       })
       setVarsLoaded(true)
     } catch {
@@ -145,6 +151,9 @@ export default function TaxonomyManagement() {
         freight_min_fee: variables.freight_min_fee,
         freight_max_fee: variables.freight_max_fee,
         free_freight_min_quantity: variables.free_freight_min_quantity,
+        agent_subscription_fee: variables.agent_subscription_fee,
+        agent_referral_reward: variables.agent_referral_reward,
+        agent_subscription_duration_days: variables.agent_subscription_duration_days,
       })
       setActionSuccess('Configuration variables saved — delivery fees and tracking links resolve from these live.')
     } catch (err) {
@@ -984,12 +993,59 @@ export default function TaxonomyManagement() {
                 </div>
               </div>
 
+              <div className="admin-card" style={{ padding: '18px 20px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Tag size={17} style={{ color: 'var(--color-rust)' }} />
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>Sales Agent Subscription</h3>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--admin-text-muted)', margin: '0 0 14px 0', lineHeight: 1.6 }}>
+                  Becoming a Sales Agent requires verified KYC + this yearly fee. When a referred signup also
+                  becomes an active agent, the referrer earns the wallet reward (default ₱50) exactly once.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label className="admin-label">Yearly subscription fee (₱/year)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="admin-input"
+                      value={variables.agent_subscription_fee}
+                      onChange={(e) => setVariables({ ...variables, agent_subscription_fee: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Referral reward (₱ to wallet)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="admin-input"
+                      value={variables.agent_referral_reward}
+                      onChange={(e) => setVariables({ ...variables, agent_referral_reward: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">Validity (days, 365 = 1 yr)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="3650"
+                      step="1"
+                      className="admin-input"
+                      value={variables.agent_subscription_duration_days}
+                      onChange={(e) => setVariables({ ...variables, agent_subscription_duration_days: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <button type="button" className="btn btn-primary" onClick={saveVariables} disabled={varSaving} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <CheckCircle2 size={15} /> {varSaving ? 'Saving…' : 'Save Variables'}
                 </button>
                 <span style={{ fontSize: 12, color: 'var(--admin-text-muted)' }}>
-                  Applies instantly to quotes, checkout, and tracking links.
+                  Applies instantly to quotes, checkout, tracking links, and agent subscriptions.
                 </span>
               </div>
             </>

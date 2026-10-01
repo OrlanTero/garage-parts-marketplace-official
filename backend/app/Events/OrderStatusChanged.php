@@ -36,6 +36,9 @@ class OrderStatusChanged implements ShouldBroadcastNow
             $channels[] = new PrivateChannel('user.' . $this->order->seller_id);
         }
 
+        // Back-office staff watch every order from the admin portal.
+        $channels[] = new PrivateChannel('staff.orders');
+
         return $channels;
     }
 

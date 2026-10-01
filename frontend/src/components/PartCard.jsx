@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Truck, Star, Heart, ArrowRight, PackageCheck, MapPin, Tag } from 'lucide-react'
 import { useFavorites } from '../context/FavoritesContext.jsx'
+import { partShipsFree, useFreightPolicy } from '../utils/freight.js'
 import './Cards.css'
 
 const CATEGORY_PLACEHOLDERS = {
@@ -39,6 +40,7 @@ export default function PartCard({
 }) {
   const { isPartSaved, togglePartFavorite } = useFavorites()
   const [imgLoaded, setImgLoaded] = useState(false)
+  const freightPolicy = useFreightPolicy()
 
   if (!part) return null
 
@@ -65,7 +67,7 @@ export default function PartCard({
 
   const rating = part.rating || 4.9
   const reviews = part.reviews || 16
-  const freeShip = part.freeShip != null ? part.freeShip : (priceNum >= 8000)
+  const freeShip = partShipsFree(part, priceNum, freightPolicy)
   const brand = part.brand || ''
   const partNumber = part.part_number || ''
   const location = part.loc || part.city || 'Verified Depot'

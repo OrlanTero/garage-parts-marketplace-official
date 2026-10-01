@@ -20,10 +20,15 @@ function unwrapSession(payload) {
 
 export const sessionManager = {
   // --- Credential flows ---
-  register: ({ name, email, password, password_confirmation, role = 'buyer' }) =>
-    client
-      .post('/auth/register', { name, email, password, password_confirmation, role })
-      .then((r) => unwrapSession(r.data)),
+  register: ({ name, email, password, password_confirmation, role = 'buyer', referral_code = '' }) => {
+    const payload = { name, email, password, password_confirmation, role }
+    // Agent recruitment referral (?ref=CODE) — stored as referred_by_user_id.
+    try {
+      const stored = referral_code || localStorage.getItem('gpm_referral_agent_code') || ''
+      if (stored && stored.trim()) payload.referral_code = stored.trim().toUpperCase()
+    } catch { /* storage unavailable */ }
+    return client.post('/auth/register', payload).then((r) => unwrapSession(r.data))
+  },
 
   login: ({ email, password, device_name }) =>
     client.post('/auth/login', { email, password, device_name }).then((r) => unwrapSession(r.data)),
@@ -43,7 +48,7 @@ export const sessionManager = {
   me: () => client.get('/auth/me').then((r) => r.data),
 
   // --- OAuth flows ---
-  /** Ask backend for the provider URL (role travels as signup intent). */
+  /** Ask backend for the provider URL (role travels as signup intent). API/Postman use. */
   oauthRedirectUrl: (provider, role = 'buyer') => {
     if (!SUPPORTED_OAUTH_PROVIDERS.includes(provider)) throw new Error(`Unsupported provider: ${provider}`)
     return client
@@ -51,11 +56,19 @@ export const sessionManager = {
       .then((r) => r.data.url)
   },
 
-  /** Full browser redirect (used by the login screen later). */
-  startOAuth: (provider, role = 'buyer') =>
-    sessionManager.oauthRedirectUrl(provider, role).then((url) => {
-      window.location.assign(url)
-    }),
+  /**
+   * Full browser redirect — no XHR (axios would follow Google's 302
+   * cross-origin and die on CORS). The backend 302s straight to Google
+   * with a |web state marker; Google returns to the backend callback,
+   * which 302s to /oauth/callback?token=… in the SPA.
+   */
+  startOAuth: (provider, role = 'buyer') => {
+    if (!SUPPORTED_OAUTH_PROVIDERS.includes(provider)) throw new Error(`Unsupported provider: ${provider}`)
+    const base = String(client.defaults?.baseURL || '').replace(/\/$/, '')
+    const url = `${base}/auth/oauth/${provider}/redirect?${new URLSearchParams({ role, frontend: '1' }).toString()}`
+    window.location.assign(url)
+    return Promise.resolve(url)
+  },
 
   /**
    * Called on the /oauth/callback route (built later): pulls ?token= from the URL,

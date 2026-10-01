@@ -37,6 +37,17 @@ class AdminCarModerationController extends Controller
         return CarResource::collection($query->paginate((int) ($request->query('per_page', 20))));
     }
 
+    /** GET a single listing with full review relations for the detail page. */
+    public function show(Car $car): CarResource
+    {
+        return new CarResource($car->loadMissing([
+            'seller:id,name,email,username,role,phone',
+            'inspector:id,name,username',
+            'approver:id,name,username',
+            'media',
+        ]));
+    }
+
     public function scheduleInspection(Request $request, Car $car): JsonResponse
     {
         $validated = $request->validate([

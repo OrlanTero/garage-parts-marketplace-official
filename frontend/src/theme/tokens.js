@@ -1,7 +1,8 @@
 /**
- * Rust & Steel — Brand Theme Module
- * Single source of truth for every color, gradient, and usage rule.
- * Import via `import { theme } from '@/theme/tokens'` or consume CSS vars.
+ * Rust & Steel — Brand Theme Module (JS mirror of src/styles/tokens.css).
+ * Single source of truth for canvas/SVG/JS consumers.
+ * CSS consumers must use var(--*) tokens — never hardcode these hexes
+ * for surfaces or text. See src/styles/index.css for the directory map.
  */
 
 export const theme = {
@@ -16,6 +17,30 @@ export const theme = {
     concreteGray: '#A7A7A7',
     offWhite: '#F7F5EF',
     black: '#1A1A1A',
+  },
+  day: {
+    text: '#4c5156',
+    textMuted: '#626b75',
+    background: '#f5f2eb',
+    surface: '#ffffff',
+    border: '#e3ddd3',
+    heading: '#14171a',
+    inputBg: '#ffffff',
+    inputBorder: '#cfc9bb',
+    inputText: '#14171a',
+    inputPlaceholder: '#6f777f',
+  },
+  night: {
+    text: '#c3c9d1',
+    textMuted: '#8b94a0',
+    background: '#101216',
+    surface: '#181b20',
+    border: '#2b313a',
+    heading: '#f1f4f8',
+    inputBg: '#12151a',
+    inputBorder: '#333b46',
+    inputText: '#f1f4f8',
+    inputPlaceholder: '#8b94a0',
   },
   semantic: {
     primary: '#8B4A2F',

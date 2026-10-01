@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    VEHICLE & PART DETAIL VIEW STYLES
    ========================================================================== */
 
@@ -127,7 +127,7 @@
 }
 
 .detail-header-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 24px;
@@ -182,7 +182,7 @@
 .detail-price-save {
   font-size: 12px;
   font-weight: 700;
-  color: #15803d;
+  color: var(--color-success);
   background: #dcfce7;
   padding: 3px 8px;
   border-radius: var(--radius-pill);
@@ -210,7 +210,7 @@
 
 /* Specs Table Card */
 .detail-specs-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 24px;
@@ -258,7 +258,7 @@
 
 /* Seller Card */
 .detail-seller-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
@@ -314,7 +314,7 @@
 
 /* Description Section */
 .detail-desc-card {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 24px;
@@ -333,6 +333,17 @@
   line-height: 1.7;
   color: var(--color-text);
   font-size: 14.5px;
+}
+
+/* --- Tablet/phone: gallery + info stack (standard bp-phone — see styles/responsive.css) --- */
+@media (max-width: 640px) {
+  .detail-main-media { aspect-ratio: 4 / 3; border-radius: var(--radius-lg); }
+  .detail-thumbs-strip { gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .detail-thumbs-strip::-webkit-scrollbar { display: none; }
+  .detail-header-card,
+  .detail-specs-card,
+  .detail-seller-card { padding: 18px 16px; border-radius: var(--radius-lg); }
+  .detail-actions-row { gap: 10px; }
 }
 
 /* --- Mobile: wrap price/seller rows, stack CTAs --- */

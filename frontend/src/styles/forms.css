@@ -1,0 +1,212 @@
+﻿/**
+ * Form primitives — single input system for the entire app.
+ *
+ * Pattern: <label class="field-label"> + <input class="field-input"> +
+ *          <p class="field-hint|field-error">. Wrapping icon: .input-wrap > .eye.
+ *
+ * Contrast contract (both themes):
+ *  - input bg vs page bg: >= 3:1 (visible well)
+ *  - input text vs input bg: >= 7:1
+ *  - placeholder vs input bg: >= 4.5:1
+ *  - focus ring always visible (rust in day, orange in night)
+ *
+ * The `:root[data-theme]` prefixed rules below intentionally outrank legacy
+ * page CSS (e.g. AuthModal hardcoding #fff) so night mode stays readable
+ * without editing every page file.
+ */
+
+/* ---------- Labels / hints ---------- */
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 6px 2px;
+}
+.field-label .req { color: var(--color-error); }
+.field-hint { font-size: 12px; color: var(--color-text-muted); margin-top: 6px; }
+.field-error { font-size: 12px; color: var(--color-error); margin-top: 6px; font-weight: 600; }
+
+/* ---------- Core controls ---------- */
+.field-input,
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='number'],
+input[type='tel'],
+input[type='url'],
+input[type='search'],
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input:not([type]),
+select,
+textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--radius-md);
+  background: var(--input-bg);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--input-text);
+  outline: none;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+/* Pills where the design calls for them (search, filters) */
+.field-input--pill,
+.filters input,
+.filters select {
+  border-radius: var(--radius-pill);
+}
+
+.field-input:hover,
+input:hover, select:hover, textarea:hover { border-color: var(--input-border-hover); }
+
+.field-input:focus,
+input:focus, select:focus, textarea:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-ring);
+  background: var(--input-bg);
+}
+
+.field-input::placeholder,
+input::placeholder, textarea::placeholder {
+  color: var(--input-placeholder);
+  opacity: 1; /* Firefox dims by default */
+}
+
+.field-input:disabled,
+input:disabled, select:disabled, textarea:disabled {
+  background: var(--input-bg-disabled);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.field-input[aria-invalid='true'],
+.field-input--error,
+input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='true'] {
+  border-color: var(--input-error-border);
+}
+.field-input[aria-invalid='true']:focus,
+input[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px var(--input-error-ring);
+}
+
+select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--input-icon) 50%),
+    linear-gradient(135deg, var(--input-icon) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+  cursor: pointer;
+}
+select option {
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+textarea { min-height: 96px; resize: vertical; }
+
+/* Icon affordances inside inputs */
+.input-wrap { position: relative; }
+.input-wrap .eye,
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--input-icon);
+  cursor: pointer;
+  padding: 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+}
+.eye-btn:hover, .input-wrap .eye:hover { color: var(--color-heading); }
+.input-leading-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--input-icon);
+  pointer-events: none;
+}
+.field-input--with-icon { padding-left: 40px; }
+.field-input--with-trailing { padding-right: 40px; }
+
+/* Checkboxes / radios keep native contrast via color-scheme + accent */
+input[type='checkbox'], input[type='radio'] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  accent-color: var(--color-rust);
+}
+:root[data-theme='night'] input[type='checkbox'],
+:root[data-theme='night'] input[type='radio'] { accent-color: #e06c35; }
+
+/* Chrome autofill (otherwise yellow/white breaks night) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--input-text);
+  -webkit-box-shadow: 0 0 0 40px var(--input-bg) inset;
+  caret-color: var(--input-text);
+}
+
+/* ---------- High-specificity theme overrides ----------
+   These beat legacy `background: #fff` rules in page CSS. */
+:root[data-theme='day'] .field-input,
+:root[data-theme='day'] .filters input,
+:root[data-theme='day'] .filters select,
+:root[data-theme='day'] .mobile-drawer-search input,
+:root[data-theme='day'] .topbar--solid .topbar-search input {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+:root[data-theme='day'] .field-input::placeholder,
+:root[data-theme='day'] .filters input::placeholder {
+  color: var(--input-placeholder);
+}
+
+:root[data-theme='night'] .field-input,
+:root[data-theme='night'] .filters input,
+:root[data-theme='night'] .filters select,
+:root[data-theme='night'] .mobile-drawer-search input,
+:root[data-theme='night'] .mobile-drawer-search,
+:root[data-theme='night'] .topbar--solid .topbar-search,
+:root[data-theme='night'] .topbar--solid .topbar-search input,
+:root[data-theme='night'] input[type='text'],
+:root[data-theme='night'] input[type='email'],
+:root[data-theme='night'] input[type='password'],
+:root[data-theme='night'] input[type='number'],
+:root[data-theme='night'] input[type='tel'],
+:root[data-theme='night'] input[type='search'],
+:root[data-theme='night'] select,
+:root[data-theme='night'] textarea {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+:root[data-theme='night'] .field-input::placeholder,
+:root[data-theme='night'] input::placeholder,
+:root[data-theme='night'] textarea::placeholder {
+  color: var(--input-placeholder);
+}
+:root[data-theme='night'] .field-input:focus,
+:root[data-theme='night'] input:focus,
+:root[data-theme='night'] select:focus,
+:root[data-theme='night'] textarea:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 3px var(--input-focus-ring);
+}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Car,
   Search,
@@ -8,6 +9,7 @@ import {
   Calendar,
   Wrench,
   Eye,
+  MoreVertical,
   RefreshCw,
   AlertCircle,
   MapPin,
@@ -30,6 +32,9 @@ export default function ListingModeration() {
   const [staffList, setStaffList] = useState([])
   const [selectedCar, setSelectedCar] = useState(null)
   const [modalMode, setModalMode] = useState(null) // 'schedule' | 'record' | 'reject' | 'preview'
+  const [openMenuId, setOpenMenuId] = useState(null) // floating row-action menu
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, up: false })
+  const menuRef = useRef(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState(null)
   const [actionSuccess, setActionSuccess] = useState(null)
@@ -90,6 +95,44 @@ export default function ListingModeration() {
     e.preventDefault()
     fetchCars()
   }
+
+  // Floating row menu: fixed-positioned so the table scroll container
+  // never clips it; flips upward near the viewport bottom.
+  const toggleMenu = (car, e) => {
+    e.stopPropagation()
+    if (openMenuId === car.id) {
+      setOpenMenuId(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    const MENU_W = 210
+    const MENU_H = 236
+    const left = Math.max(8, Math.min(rect.right - MENU_W, window.innerWidth - MENU_W - 8))
+    const opensUp = rect.bottom + MENU_H + 8 > window.innerHeight
+    setMenuPos({ top: opensUp ? rect.top - MENU_H - 8 : rect.bottom + 6, left, up: opensUp })
+    setOpenMenuId(car.id)
+  }
+
+  useEffect(() => {
+    if (openMenuId === null) return
+    const close = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpenMenuId(null)
+    }
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpenMenuId(null)
+    }
+    const onScrollResize = () => setOpenMenuId(null)
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onScrollResize, true)
+    window.addEventListener('resize', onScrollResize)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onScrollResize, true)
+      window.removeEventListener('resize', onScrollResize)
+    }
+  }, [openMenuId])
 
   const handleOpenSchedule = (car) => {
     setSelectedCar(car)
@@ -211,15 +254,15 @@ export default function ListingModeration() {
       </div>
 
       {actionSuccess && (
-        <div className="admin-card" style={{ padding: '12px 16px', marginBottom: 16, borderColor: 'var(--color-emerald)', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--color-emerald)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="admin-card" style={{ padding: '12px 16px', marginBottom: 16, borderColor: 'var(--admin-success)', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--admin-success)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>{actionSuccess}</span>
           <button type="button" onClick={() => setActionSuccess(null)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>×</button>
         </div>
       )}
 
       {/* Filter Tabs */}
-      <div className="admin-card" style={{ padding: '16px 20px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, maxWidth: 380 }}>
+      <div className="admin-card mod-filter-card" style={{ padding: '16px 20px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <form onSubmit={handleSearch} className="mod-search-form" style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, maxWidth: 380 }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--admin-text-muted)' }} />
             <input
@@ -280,7 +323,7 @@ export default function ListingModeration() {
       </div>
 
       {/* Listings Table */}
-      <div className="admin-card" style={{ overflow: 'hidden' }}>
+      <div className="admin-card mod-queue-card">
         {loading ? (
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--admin-text-muted)' }}>
             <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: 12 }} />
@@ -288,11 +331,12 @@ export default function ListingModeration() {
           </div>
         ) : cars.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--admin-text-muted)' }}>
-            <ShieldCheck size={36} style={{ color: 'var(--color-emerald)', marginBottom: 12 }} />
+            <ShieldCheck size={36} style={{ color: 'var(--admin-success)', marginBottom: 12 }} />
             <h3 style={{ margin: '0 0 6px 0', color: 'var(--admin-text-primary)' }}>No Vehicles in this Queue</h3>
             <p style={{ margin: 0, fontSize: 14 }}>All vehicle builds in this status have been inspected and processed.</p>
           </div>
         ) : (
+          <div className="table-container mod-queue-table">
           <table className="admin-table">
             <thead>
               <tr>
@@ -330,7 +374,7 @@ export default function ListingModeration() {
                           <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)' }}>
                             {car.year} · {car.brand} {car.model} · VIN: {car.vin || 'N/A'}
                           </div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)' }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-rust)' }}>
                             ₱ {Number(car.price || 0).toLocaleString('en-PH')}
                           </div>
                         </div>
@@ -371,7 +415,7 @@ export default function ListingModeration() {
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 700, color: 'var(--color-emerald)', fontSize: 14 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--admin-success)', fontSize: 14 }}>
                         {car.score || car.inspection_score || 'Pending'}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--admin-text-muted)' }}>
@@ -397,59 +441,62 @@ export default function ListingModeration() {
                         </span>
                       )}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenSchedule(car)}
-                          className="btn btn-secondary btn-sm"
-                          title="Schedule inspection slot"
-                        >
-                          <Calendar size={13} />
-                          <span>Schedule</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRecord(car)}
-                          className="btn btn-secondary btn-sm"
-                          title="Record inspector checklist & score"
-                        >
-                          <Wrench size={13} />
-                          <span>Record Score</span>
-                        </button>
-                        {!isApproved && (
-                          <button
-                            type="button"
-                            onClick={() => handleApprove(car)}
-                            className="btn btn-primary btn-sm"
-                            style={{ background: 'var(--color-emerald)', borderColor: 'var(--color-emerald)' }}
-                            title="Approve and publish to marketplace"
-                          >
-                            <CheckCircle2 size={13} />
-                            <span>Approve</span>
-                          </button>
-                        )}
-                        {car.status !== 'rejected' && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenReject(car)}
-                            className="btn btn-secondary btn-sm"
-                            style={{ color: 'var(--color-danger)' }}
-                            title="Reject listing"
-                          >
-                            <XCircle size={13} />
-                            <span>Reject</span>
-                          </button>
-                        )}
-                      </div>
+                    <td style={{ textAlign: 'right', width: 56 }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm mod-menu-toggle"
+                        onClick={(e) => toggleMenu(car, e)}
+                        aria-label={`Actions for ${car.title}`}
+                        aria-expanded={openMenuId === car.id}
+                        title="Actions"
+                      >
+                        <MoreVertical size={15} />
+                      </button>
                     </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
+
+      {/* Floating row-action menu (fixed — never clipped by table scroll) */}
+      {openMenuId !== null && (() => {
+        const menuCar = cars.find((c) => c.id === openMenuId)
+        if (!menuCar) return null
+        const menuApproved = menuCar.status === 'active' && menuCar.is_approved
+        const close = () => setOpenMenuId(null)
+        return (
+          <div
+            ref={menuRef}
+            className="mod-menu"
+            role="menu"
+            style={{ top: menuPos.top, left: menuPos.left }}
+          >
+            <Link to={`/moderation/${menuCar.id}`} className="mod-menu-item" role="menuitem" onClick={close}>
+              <Eye size={14} /> <span>Open full review</span>
+            </Link>
+            <button type="button" className="mod-menu-item" role="menuitem" onClick={() => { close(); handleOpenSchedule(menuCar) }}>
+              <Calendar size={14} /> <span>Schedule inspection</span>
+            </button>
+            <button type="button" className="mod-menu-item" role="menuitem" onClick={() => { close(); handleOpenRecord(menuCar) }}>
+              <Wrench size={14} /> <span>Record score</span>
+            </button>
+            {!menuApproved && (
+              <button type="button" className="mod-menu-item mod-menu-item--success" role="menuitem" onClick={() => { close(); handleApprove(menuCar) }}>
+                <CheckCircle2 size={14} /> <span>Approve & publish</span>
+              </button>
+            )}
+            {menuCar.status !== 'rejected' && (
+              <button type="button" className="mod-menu-item mod-menu-item--danger" role="menuitem" onClick={() => { close(); handleOpenReject(menuCar) }}>
+                <XCircle size={14} /> <span>Reject listing</span>
+              </button>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Schedule Inspection Modal */}
       {modalMode === 'schedule' && selectedCar && (
@@ -459,7 +506,7 @@ export default function ListingModeration() {
             <p style={{ fontSize: 13, color: 'var(--admin-text-secondary)', marginBottom: 16 }}>
               Designate inspection method and slot for <strong>{selectedCar.title}</strong>.
             </p>
-            {actionError && <div style={{ color: 'var(--color-danger)', fontSize: 13, marginBottom: 12 }}>{actionError}</div>}
+            {actionError && <div style={{ color: 'var(--admin-danger)', fontSize: 13, marginBottom: 12 }}>{actionError}</div>}
             <form onSubmit={submitSchedule}>
               <div style={{ marginBottom: 14 }}>
                 <label className="admin-label">Inspection Method</label>
@@ -569,7 +616,7 @@ export default function ListingModeration() {
                 This inspection is assigned to you.
               </div>
             ) : null}
-            {actionError && <div style={{ color: 'var(--color-danger)', fontSize: 13, marginBottom: 12 }}>{actionError}</div>}
+            {actionError && <div style={{ color: 'var(--admin-danger)', fontSize: 13, marginBottom: 12 }}>{actionError}</div>}
             <form onSubmit={submitRecord}>
               <div style={{ marginBottom: 14 }}>
                 <label className="admin-label">Checklist Outcome</label>
@@ -581,7 +628,7 @@ export default function ListingModeration() {
                       checked={inspectionData.passed === true}
                       onChange={() => setInspectionData({ ...inspectionData, passed: true, inspection_score: '96/100' })}
                     />
-                    <span style={{ color: 'var(--color-emerald)', fontWeight: 600 }}>Passed & Roadworthy</span>
+                    <span style={{ color: 'var(--admin-success)', fontWeight: 600 }}>Passed & Roadworthy</span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                     <input
@@ -590,7 +637,7 @@ export default function ListingModeration() {
                       checked={inspectionData.passed === false}
                       onChange={() => setInspectionData({ ...inspectionData, passed: false, inspection_score: '52/100' })}
                     />
-                    <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>Failed Checkpoints</span>
+                    <span style={{ color: 'var(--admin-danger)', fontWeight: 600 }}>Failed Checkpoints</span>
                   </label>
                 </div>
               </div>
@@ -632,13 +679,13 @@ export default function ListingModeration() {
       {modalMode === 'reject' && selectedCar && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ maxWidth: 460 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 12px 0', color: 'var(--color-danger)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 12px 0', color: 'var(--admin-danger)' }}>
               Reject Vehicle Listing
             </h2>
             <p style={{ fontSize: 13, color: 'var(--admin-text-secondary)', marginBottom: 16 }}>
               Provide clear feedback to the seller regarding why <strong>{selectedCar.title}</strong> cannot be approved.
             </p>
-            {actionError && <div style={{ color: 'var(--color-danger)', fontSize: 13, marginBottom: 12 }}>{actionError}</div>}
+            {actionError && <div style={{ color: 'var(--admin-danger)', fontSize: 13, marginBottom: 12 }}>{actionError}</div>}
             <form onSubmit={submitReject}>
               <div style={{ marginBottom: 18 }}>
                 <label className="admin-label">Rejection Reason</label>

@@ -12,24 +12,28 @@ import BuyersManagement from './pages/BuyersManagement.jsx'
 import SellersManagement from './pages/SellersManagement.jsx'
 import DealersManagement from './pages/DealersManagement.jsx'
 import CarsManagement from './pages/CarsManagement.jsx'
+import CarDetail from './pages/CarDetail.jsx'
 import BiddingManagement from './pages/BiddingManagement.jsx'
+import WantedManagement from './pages/WantedManagement.jsx'
 import ShowroomManagement from './pages/ShowroomManagement.jsx'
 import FundsManagement from './pages/FundsManagement.jsx'
 import PartsManagement from './pages/PartsManagement.jsx'
 import TaxonomyManagement from './pages/TaxonomyManagement.jsx'
 import InventoryManagement from './pages/InventoryManagement.jsx'
 import ListingModeration from './pages/ListingModeration.jsx'
+import ListingModerationDetail from './pages/ListingModerationDetail.jsx'
 import KycManagement from './pages/KycManagement.jsx'
+import KycDetail from './pages/KycDetail.jsx'
 import SellerApplications from './pages/SellerApplications.jsx'
 import AppointmentMonitoring from './pages/AppointmentMonitoring.jsx'
 import ChatModeration from './pages/ChatModeration.jsx'
 import PromotionsManagement from './pages/PromotionsManagement.jsx'
+import PerksManagement from './pages/PerksManagement.jsx'
 import OrdersManagement from './pages/OrdersManagement.jsx'
 import CarTransactions from './pages/CarTransactions.jsx'
 import OrderDetail from './pages/OrderDetail.jsx'
 import PayoutsManagement from './pages/PayoutsManagement.jsx'
 import DisputesManagement from './pages/DisputesManagement.jsx'
-import VerificationsManagement from './pages/VerificationsManagement.jsx'
 import ReviewsModeration from './pages/ReviewsModeration.jsx'
 import GaragesManagement from './pages/GaragesManagement.jsx'
 import NotificationsBroadcasting from './pages/NotificationsBroadcasting.jsx'
@@ -74,14 +78,18 @@ export default function App() {
             <Route path="sellers" element={<SellersManagement />} />
             <Route path="dealers" element={<DealersManagement />} />
             <Route path="cars" element={<CarsManagement />} />
+  <Route path="cars/:id" element={<CarDetail />} />
             <Route path="auctions" element={<BiddingManagement />} />
+  <Route path="wanted" element={<WantedManagement />} />
             <Route path="showroom" element={<ShowroomManagement />} />
             <Route path="showroom-management" element={<ShowroomManagement />} />
             <Route path="funds" element={<FundsManagement />} />
             <Route path="wallet" element={<FundsManagement />} />
             <Route path="treasury" element={<FundsManagement />} />
             <Route path="moderation" element={<ListingModeration />} />
+  <Route path="moderation/:id" element={<ListingModerationDetail />} />
             <Route path="kyc" element={<KycManagement />} />
+  <Route path="kyc/:id" element={<KycDetail />} />
             <Route path="seller-applications" element={<SellerApplications />} />
             <Route path="taxonomy" element={<TaxonomyManagement />} />
             <Route path="configurations" element={<TaxonomyManagement />} />
@@ -93,9 +101,9 @@ export default function App() {
             <Route path="appointments" element={<AppointmentMonitoring />} />
             <Route path="chat-moderation" element={<ChatModeration />} />
             <Route path="promotions" element={<PromotionsManagement />} />
+  <Route path="perks" element={<PerksManagement />} />
             <Route path="payouts" element={<PayoutsManagement />} />
             <Route path="disputes" element={<DisputesManagement />} />
-            <Route path="verifications" element={<VerificationsManagement />} />
             <Route path="reviews" element={<ReviewsModeration />} />
             <Route path="garages" element={<GaragesManagement />} />
             <Route path="notifications" element={<NotificationsBroadcasting />} />
