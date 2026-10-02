@@ -27,10 +27,16 @@ client.interceptors.request.use((config) => {
 })
 
 // Drop dead tokens so AuthProvider falls back to guest instead of looping 401s.
+// Broadcasts session expiry so the app can bounce to /login immediately.
 client.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error?.response?.status === 401 && tokenStorage.get()) tokenStorage.clear()
+    if (error?.response?.status === 401 && tokenStorage.get()) {
+      tokenStorage.clear()
+      try {
+        window.dispatchEvent(new Event('gpm:session-expired'))
+      } catch { /* non-browser (tests) — ignore */ }
+    }
     return Promise.reject(error)
   },
 )

@@ -41,6 +41,17 @@ export function AuthProvider({ children }) {
     refresh()
   }, [refresh])
 
+  // A dead/expired token anywhere (401) drops the session immediately so
+  // route guards bounce to /login instead of stranding the user.
+  useEffect(() => {
+    const onExpired = () => {
+      setUser(null)
+      setStatus('guest')
+    }
+    window.addEventListener('gpm:session-expired', onExpired)
+    return () => window.removeEventListener('gpm:session-expired', onExpired)
+  }, [])
+
   const login = useCallback(async (input) => {
     const { user: u } = await sessionManager.login(input)
     setUser(u)
